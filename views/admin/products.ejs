@@ -1,25 +1,25 @@
 <%- include('../partials/admin-header', { currentPage: 'products' }) %>
 
-<div class="admin-page" style="padding: 40px 20px;">
+<div class="admin-page">
     <div class="container">
-        <h1 style="margin-bottom: 40px; color: #333;">📦 Quản Lý Sản Phẩm</h1>
+        <h1 class="admin-page__title">📦 Quản Lý Sản Phẩm</h1>
         
         <!-- Add Product Form -->
-        <div style="background: white; border-radius: 12px; padding: 30px; margin-bottom: 40px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
-            <h3 style="margin: 0 0 20px 0;">➕ Thêm Sản Phẩm Mới</h3>
+        <div class="admin-section">
+            <h3 class="admin-section__title">➕ Thêm Sản Phẩm Mới</h3>
             <form action="/admin/products" method="POST" enctype="multipart/form-data">
-                <div style="display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                <div class="admin-form__grid">
                     <div>
-                        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Tên sản phẩm*</label>
-                        <input type="text" name="name" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        <label class="admin-form__label">Tên sản phẩm*</label>
+                        <input type="text" name="name" required class="admin-form__input">
                     </div>
                     <div>
-                        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Slug</label>
-                        <input type="text" name="slug" placeholder="auto-generated" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        <label class="admin-form__label">Slug</label>
+                        <input type="text" name="slug" placeholder="auto-generated" class="admin-form__input">
                     </div>
                     <div>
-                        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Danh mục*</label>
-                        <select name="category_id" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        <label class="admin-form__label">Danh mục*</label>
+                        <select name="category_id" required class="admin-form__select">
                             <% if (categories && categories.length > 0) { %>
                                 <% categories.forEach(cat => { %>
                                     <option value="<%= cat.id %>"><%= cat.name %></option>
@@ -30,56 +30,56 @@
                         </select>
                     </div>
                     <div>
-                        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Giá*</label>
-                        <input type="number" name="price" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        <label class="admin-form__label">Giá*</label>
+                        <input type="number" name="price" required class="admin-form__input">
                     </div>
                     <div>
-                        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Số lượng</label>
-                        <input type="number" name="stock_quantity" value="0" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        <label class="admin-form__label">Số lượng</label>
+                        <input type="number" name="stock_quantity" value="0" class="admin-form__input">
                     </div>
                     <div>
-                        <label style="display: block; margin-bottom: 8px; font-weight: 500;">SKU</label>
-                        <input type="text" name="sku" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        <label class="admin-form__label">SKU</label>
+                        <input type="text" name="sku" class="admin-form__input">
                     </div>
                 </div>
-                <div style="margin-top: 20px;">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Mô tả</label>
-                    <textarea name="description" rows="3" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;"></textarea>
+                <div class="admin-form__field">
+                    <label class="admin-form__label">Mô tả</label>
+                    <textarea name="description" rows="3" class="admin-form__textarea"></textarea>
                 </div>
-                <div style="margin-top: 20px;">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Hình ảnh</label>
-                    <input type="file" name="images" multiple accept="image/*" style="padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                <div class="admin-form__field">
+                    <label class="admin-form__label">Hình ảnh</label>
+                    <input type="file" name="images" multiple accept="image/*" class="admin-form__input">
                 </div>
-                <button type="submit" style="margin-top: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 12px 30px; border-radius: 6px; cursor: pointer; font-weight: 600;">Thêm Sản Phẩm</button>
+                <button type="submit" class="admin-form__submit">Thêm Sản Phẩm</button>
             </form>
         </div>
         
         <!-- Products List -->
         <% if (products && products.length > 0) { %>
-            <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
-                <table style="width: 100%; border-collapse: collapse;">
+            <div class="admin-table-wrapper">
+                <table class="admin-table">
                     <thead>
-                        <tr style="background: #f8f9fa; border-bottom: 2px solid #eee;">
-                            <th style="padding: 15px; text-align: left;">ID</th>
-                            <th style="padding: 15px; text-align: left;">Tên</th>
-                            <th style="padding: 15px; text-align: left;">Danh Mục</th>
-                            <th style="padding: 15px; text-align: right;">Giá</th>
-                            <th style="padding: 15px; text-align: center;">Kho</th>
-                            <th style="padding: 15px; text-align: center;">Thao Tác</th>
+                        <tr>
+                            <th>ID</th>
+                            <th>Tên</th>
+                            <th>Danh Mục</th>
+                            <th class="text-right">Giá</th>
+                            <th class="text-center">Kho</th>
+                            <th class="text-center">Thao Tác</th>
                         </tr>
                     </thead>
                     <tbody>
                         <% products.forEach(product => { %>
-                            <tr style="border-bottom: 1px solid #eee;">
-                                <td style="padding: 15px;"><%= product.id %></td>
-                                <td style="padding: 15px;"><strong><%= product.name %></strong></td>
-                                <td style="padding: 15px;"><%= product.category_name || 'N/A' %></td>
-                                <td style="padding: 15px; text-align: right; font-weight: 600; color: #d32f2f;"><%= product.price.toLocaleString('vi-VN') %>đ</td>
-                                <td style="padding: 15px; text-align: center;"><%= product.stock_quantity %></td>
-                                <td style="padding: 15px; text-align: center;">
-                                    <button onclick="openImageModal(<%= product.id %>, '<%= product.name.replace(/'/g, "\\'") %>')" style="padding: 6px 12px; font-size: 12px; background: #e8f5e9; color: #2e7d32; border: none; border-radius: 4px; cursor: pointer; margin-right: 5px;">🖼️ Ảnh</button>
-                                    <button onclick="openEditModal(<%= product.id %>, '<%= product.name.replace(/'/g, "\\'") %>', <%= product.category_id || 'null' %>, <%= product.price %>, <%= product.stock_quantity %>, '<%= (product.description || '').replace(/'/g, "\\'").replace(/\n/g, '\\n') %>')" style="padding: 6px 12px; font-size: 12px; background: #e3f2fd; color: #1976d2; border: none; border-radius: 4px; cursor: pointer; margin-right: 5px;">Sửa</button>
-                                    <button onclick="deleteProduct(<%= product.id %>)" style="padding: 6px 12px; font-size: 12px; background: #ffebee; color: #c62828; border: none; border-radius: 4px; cursor: pointer;">Xóa</button>
+                            <tr>
+                                <td><%= product.id %></td>
+                                <td><strong><%= product.name %></strong></td>
+                                <td><%= product.category_name || 'N/A' %></td>
+                                <td class="text-right admin-table__price"><%= product.price.toLocaleString('vi-VN') %>đ</td>
+                                <td class="text-center"><%= product.stock_quantity %></td>
+                                <td class="text-center">
+                                    <button onclick="openImageModal(<%= product.id %>, '<%= product.name.replace(/'/g, "\\'") %>')" class="admin-btn admin-btn--image">🖼️ Ảnh</button>
+                                    <button onclick="openEditModal(<%= product.id %>, '<%= product.name.replace(/'/g, "\\'") %>', <%= product.category_id || 'null' %>, <%= product.price %>, <%= product.stock_quantity %>, '<%= (product.description || '').replace(/'/g, "\\'").replace(/\n/g, '\\n') %>')" class="admin-btn admin-btn--edit">Sửa</button>
+                                    <button onclick="deleteProduct(<%= product.id %>)" class="admin-btn admin-btn--delete">Xóa</button>
                                 </td>
                             </tr>
                         <% }) %>
@@ -87,27 +87,27 @@
                 </table>
             </div>
         <% } else { %>
-            <div style="text-align: center; padding: 60px; background: white; border-radius: 12px;">
-                <span style="font-size: 64px;">📦</span>
-                <h3 style="margin: 20px 0 10px 0; color: #333;">Chưa có sản phẩm nào</h3>
+            <div class="admin-empty">
+                <span class="admin-empty__icon">📦</span>
+                <h3 class="admin-empty__title">Chưa có sản phẩm nào</h3>
             </div>
         <% } %>
     </div>
 </div>
 
 <!-- Edit Modal -->
-<div id="editModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
-    <div style="background: white; border-radius: 12px; padding: 30px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto;">
-        <h3 style="margin: 0 0 20px 0;">✏️ Sửa Sản Phẩm</h3>
+<div id="editModal" class="admin-modal">
+    <div class="admin-modal__content">
+        <h3 class="admin-modal__title">✏️ Sửa Sản Phẩm</h3>
         <form id="editForm">
             <input type="hidden" id="editProductId">
-            <div style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 500;">Tên sản phẩm*</label>
-                <input type="text" id="editName" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+            <div class="admin-form__field">
+                <label class="admin-form__label">Tên sản phẩm*</label>
+                <input type="text" id="editName" required class="admin-form__input">
             </div>
-            <div style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 500;">Danh mục*</label>
-                <select id="editCategoryId" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+            <div class="admin-form__field">
+                <label class="admin-form__label">Danh mục*</label>
+                <select id="editCategoryId" required class="admin-form__select">
                     <% if (categories && categories.length > 0) { %>
                         <% categories.forEach(cat => { %>
                             <option value="<%= cat.id %>"><%= cat.name %></option>
@@ -115,362 +115,78 @@
                     <% } %>
                 </select>
             </div>
-            <div style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 500;">Giá*</label>
-                <input type="number" id="editPrice" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+            <div class="admin-form__field">
+                <label class="admin-form__label">Giá*</label>
+                <input type="number" id="editPrice" required class="admin-form__input">
             </div>
-            <div style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 500;">Số lượng</label>
-                <input type="number" id="editStock" value="0" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+            <div class="admin-form__field">
+                <label class="admin-form__label">Số lượng</label>
+                <input type="number" id="editStock" value="0" class="admin-form__input">
             </div>
-            <div style="margin-bottom: 20px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 500;">Mô tả</label>
-                <textarea id="editDescription" rows="3" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;"></textarea>
+            <div class="admin-form__field">
+                <label class="admin-form__label">Mô tả</label>
+                <textarea id="editDescription" rows="3" class="admin-form__textarea"></textarea>
             </div>
-            <div style="display: flex; gap: 10px;">
-                <button type="submit" style="flex: 1; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: 600;">Lưu Thay Đổi</button>
-                <button type="button" onclick="closeEditModal()" style="flex: 1; background: #f5f5f5; color: #333; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: 600;">Hủy</button>
+            <div class="admin-modal__buttons">
+                <button type="submit" class="admin-form__submit">Lưu Thay Đổi</button>
+                <button type="button" onclick="closeEditModal()" class="admin-btn admin-btn--add">Hủy</button>
             </div>
         </form>
     </div>
+</div>
+
 <!-- Image Management Modal -->
-<div id="imageModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
-    <div style="background: white; border-radius: 12px; padding: 30px; max-width: 700px; width: 90%; max-height: 90vh; overflow-y: auto;">
-        <h3 style="margin: 0 0 20px 0;">🖼️ Quản Lý Ảnh: <span id="imageModalProductName"></span></h3>
+<div id="imageModal" class="admin-modal">
+    <div class="admin-modal__content" style="max-width: 700px;">
+        <h3 class="admin-modal__title">🖼️ Quản Lý Ảnh: <span id="imageModalProductName"></span></h3>
         <input type="hidden" id="imageModalProductId">
         
         <!-- Current Images -->
-        <div id="currentImages" style="margin-bottom: 20px;">
-            <h4 style="margin: 0 0 10px 0; color: #666;">Ảnh hiện tại:</h4>
-            <div id="imagesGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 15px;">
+        <div id="currentImages">
+            <h4 class="admin-form__label">Ảnh hiện tại:</h4>
+            <div id="imagesGrid" class="admin-form__grid">
                 <p style="color: #999;">Đang tải...</p>
             </div>
         </div>
         
         <!-- Add New Image -->
-        <div style="border-top: 1px solid #eee; padding-top: 20px;">
-            <h4 style="margin: 0 0 10px 0; color: #666;">Thêm ảnh mới:</h4>
+        <div class="admin-form__field" style="border-top: 1px solid #eee; padding-top: 20px;">
+            <h4 class="admin-form__label">Thêm ảnh mới:</h4>
             <form id="addImageForm" enctype="multipart/form-data" style="display: flex; gap: 10px; align-items: flex-end;">
                 <div style="flex: 1;">
-                    <input type="file" id="newImageFile" name="image" accept="image/*" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                    <input type="file" id="newImageFile" name="image" accept="image/*" class="admin-form__input">
                 </div>
                 <label style="display: flex; align-items: center; gap: 5px;">
                     <input type="checkbox" id="isPrimaryImage"> Ảnh chính
                 </label>
-                <button type="submit" style="padding: 10px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 6px; cursor: pointer;">Thêm</button>
+                <button type="submit" class="admin-form__submit" style="margin-top: 0;">Thêm</button>
             </form>
             <p style="margin-top: 10px; color: #999; font-size: 13px;">Hoặc nhập URL ảnh:</p>
             <div style="display: flex; gap: 10px;">
-                <input type="text" id="newImageUrl" placeholder="https://example.com/image.jpg" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                <button onclick="addImageByUrl()" style="padding: 10px 20px; background: #4caf50; color: white; border: none; border-radius: 6px; cursor: pointer;">Thêm URL</button>
+                <input type="text" id="newImageUrl" placeholder="https://example.com/image.jpg" class="admin-form__input" style="flex: 1;">
+                <button onclick="addImageByUrl()" class="admin-btn admin-btn--image" style="padding: 10px 20px; background: #4caf50;">Thêm URL</button>
             </div>
         </div>
         
-        <button onclick="closeImageModal()" style="margin-top: 20px; width: 100%; background: #f5f5f5; color: #333; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: 600;">Đóng</button>
+        <button onclick="closeImageModal()" class="admin-btn admin-btn--add" style="margin-top: 20px; width: 100%; padding: 12px;">Đóng</button>
     </div>
 </div>
 
-<!-- Toast Notification Container -->
-<div id="toastContainer" style="position: fixed; top: 20px; right: 20px; z-index: 10000;"></div>
+<!-- Toast Container -->
+<div id="toastContainer"></div>
 
-<!-- Confirm Modal Dialog -->
-<div id="confirmModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10001; align-items: center; justify-content: center;">
-    <div style="background: white; border-radius: 16px; padding: 30px; max-width: 400px; width: 90%; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.3); animation: modalFadeIn 0.2s ease;">
-        <h3 id="confirmTitle" style="margin: 0 0 15px 0; font-size: 20px; color: #333;">Xác nhận</h3>
-        <p id="confirmMessage" style="margin: 0 0 25px 0; color: #666; font-size: 15px;">Bạn có chắc muốn thực hiện?</p>
-        <div style="display: flex; gap: 12px; justify-content: center;">
-            <button id="confirmYes" style="padding: 12px 30px; background: #f44336; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">Xác nhận</button>
-            <button id="confirmNo" style="padding: 12px 30px; background: #f5f5f5; color: #333; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">Hủy</button>
+<!-- Confirm Modal -->
+<div id="confirmModal">
+    <div class="confirm-modal__content">
+        <h3 id="confirmTitle" class="confirm-modal__title">Xác nhận</h3>
+        <p id="confirmMessage" class="confirm-modal__message">Bạn có chắc muốn thực hiện?</p>
+        <div class="confirm-modal__buttons">
+            <button id="confirmYes" class="confirm-modal__btn confirm-modal__btn--yes">Xác nhận</button>
+            <button id="confirmNo" class="confirm-modal__btn confirm-modal__btn--no">Hủy</button>
         </div>
     </div>
 </div>
 
-<script>
-// Toast notification
-function showToast(message, type = 'success') {
-    const container = document.getElementById('toastContainer');
-    const toast = document.createElement('div');
-    const bgColor = type === 'success' ? 'linear-gradient(135deg, #4caf50, #45a049)' : 
-                    type === 'error' ? 'linear-gradient(135deg, #f44336, #d32f2f)' : 
-                    'linear-gradient(135deg, #2196f3, #1976d2)';
-    const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
-    
-    toast.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 12px; background: ${bgColor}; color: white; padding: 16px 24px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.25); margin-bottom: 10px; min-width: 280px; animation: slideInRight 0.3s ease;">
-            <span style="font-size: 20px;">${icon}</span>
-            <span style="font-size: 14px; font-weight: 500;">${message}</span>
-            <button onclick="this.parentElement.parentElement.remove()" style="margin-left: auto; background: none; border: none; color: white; font-size: 18px; cursor: pointer;">×</button>
-        </div>
-    `;
-    container.appendChild(toast);
-    setTimeout(() => {
-        toast.style.animation = 'slideOutRight 0.3s ease';
-        setTimeout(() => toast.remove(), 300);
-    }, 4000);
-}
-
-// Custom confirm modal
-function showConfirm(message, title = 'Xác nhận', yesText = 'Xác nhận', yesColor = '#f44336') {
-    return new Promise((resolve) => {
-        const modal = document.getElementById('confirmModal');
-        document.getElementById('confirmTitle').textContent = title;
-        document.getElementById('confirmMessage').textContent = message;
-        document.getElementById('confirmYes').textContent = yesText;
-        document.getElementById('confirmYes').style.background = yesColor;
-        modal.style.display = 'flex';
-        
-        document.getElementById('confirmYes').onclick = () => {
-            modal.style.display = 'none';
-            resolve(true);
-        };
-        document.getElementById('confirmNo').onclick = () => {
-            modal.style.display = 'none';
-            resolve(false);
-        };
-    });
-}
-
-// Edit Modal Functions
-function openEditModal(id, name, categoryId, price, stock, description) {
-    document.getElementById('editProductId').value = id;
-    document.getElementById('editName').value = name;
-    document.getElementById('editCategoryId').value = categoryId || '';
-    document.getElementById('editPrice').value = price;
-    document.getElementById('editStock').value = stock;
-    document.getElementById('editDescription').value = description || '';
-    document.getElementById('editModal').style.display = 'flex';
-}
-
-function closeEditModal() {
-    document.getElementById('editModal').style.display = 'none';
-}
-
-document.getElementById('editForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const id = document.getElementById('editProductId').value;
-    const data = {
-        name: document.getElementById('editName').value,
-        category_id: document.getElementById('editCategoryId').value,
-        price: document.getElementById('editPrice').value,
-        stock_quantity: document.getElementById('editStock').value,
-        description: document.getElementById('editDescription').value
-    };
-    
-    try {
-        const response = await fetch(`/admin/products/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'same-origin',
-            body: JSON.stringify(data)
-        });
-        
-        if (response.ok) {
-            showToast('Cập nhật sản phẩm thành công!', 'success');
-            setTimeout(() => location.reload(), 1500);
-        } else {
-            const result = await response.json();
-            showToast('Lỗi: ' + (result.message || 'Không thể cập nhật sản phẩm'), 'error');
-        }
-    } catch (error) {
-        showToast('Lỗi: ' + error.message, 'error');
-    }
-});
-
-document.getElementById('editModal').addEventListener('click', function(e) {
-    if (e.target === this) closeEditModal();
-});
-
-// Delete Product
-async function deleteProduct(productId) {
-    const confirmed = await showConfirm('Bạn có chắc muốn xóa sản phẩm này?', 'Xóa Sản Phẩm', 'Xóa', '#f44336');
-    if (!confirmed) return;
-    
-    try {
-        const response = await fetch(`/admin/products/${productId}`, {
-            method: 'DELETE',
-            credentials: 'same-origin'
-        });
-        if (response.ok) {
-            showToast('Xóa sản phẩm thành công!', 'success');
-            setTimeout(() => location.reload(), 1500);
-        } else {
-            const result = await response.json();
-            showToast('Lỗi xóa sản phẩm: ' + (result.message || 'Unknown error'), 'error');
-        }
-    } catch (error) {
-        showToast('Lỗi: ' + error.message, 'error');
-    }
-}
-
-// Image Modal Functions
-async function openImageModal(productId, productName) {
-    document.getElementById('imageModalProductId').value = productId;
-    document.getElementById('imageModalProductName').textContent = productName;
-    document.getElementById('imageModal').style.display = 'flex';
-    
-    // Load product images
-    await loadProductImages(productId);
-}
-
-function closeImageModal() {
-    document.getElementById('imageModal').style.display = 'none';
-}
-
-async function loadProductImages(productId) {
-    const grid = document.getElementById('imagesGrid');
-    grid.innerHTML = '<p style="color: #999;">Đang tải...</p>';
-    
-    try {
-        const response = await fetch(`/admin/products/${productId}/images`, { credentials: 'same-origin' });
-        const data = await response.json();
-        
-        if (data.images && data.images.length > 0) {
-            grid.innerHTML = data.images.map(img => `
-                <div style="position: relative; border: 2px solid ${img.is_primary ? '#667eea' : '#eee'}; border-radius: 8px; overflow: hidden;">
-                    <img src="${img.image_url}" alt="" style="width: 100%; height: 120px; object-fit: cover;">
-                    ${img.is_primary ? '<span style="position: absolute; top: 5px; left: 5px; background: #667eea; color: white; padding: 2px 6px; font-size: 10px; border-radius: 4px;">Chính</span>' : ''}
-                    <div style="position: absolute; bottom: 5px; right: 5px; display: flex; gap: 5px;">
-                        ${!img.is_primary ? `<button onclick="setPrimaryImage(${img.id})" style="padding: 3px 8px; font-size: 10px; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer;">★</button>` : ''}
-                        <button onclick="deleteImage(${img.id})" style="padding: 3px 8px; font-size: 10px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;">×</button>
-                    </div>
-                </div>
-            `).join('');
-        } else {
-            grid.innerHTML = '<p style="color: #999;">Chưa có ảnh nào</p>';
-        }
-    } catch (error) {
-        grid.innerHTML = '<p style="color: #f44336;">Lỗi tải ảnh</p>';
-    }
-}
-
-async function deleteImage(imageId) {
-    if (!confirm('Bạn có chắc muốn xóa ảnh này?')) return;
-    
-    const productId = document.getElementById('imageModalProductId').value;
-    
-    try {
-        const response = await fetch(`/admin/products/images/${imageId}`, {
-            method: 'DELETE',
-            credentials: 'same-origin'
-        });
-        
-        if (response.ok) {
-            alert('✅ Đã xóa ảnh!');
-            await loadProductImages(productId);
-        } else {
-            alert('❌ Lỗi xóa ảnh');
-        }
-    } catch (error) {
-        alert('❌ Lỗi: ' + error.message);
-    }
-}
-
-async function setPrimaryImage(imageId) {
-    const productId = document.getElementById('imageModalProductId').value;
-    
-    try {
-        const response = await fetch(`/admin/products/images/${imageId}/primary`, {
-            method: 'PUT',
-            credentials: 'same-origin'
-        });
-        
-        if (response.ok) {
-            alert('✅ Đã đặt làm ảnh chính!');
-            await loadProductImages(productId);
-        } else {
-            alert('❌ Lỗi');
-        }
-    } catch (error) {
-        alert('❌ Lỗi: ' + error.message);
-    }
-}
-
-async function addImageByUrl() {
-    const url = document.getElementById('newImageUrl').value;
-    if (!url) {
-        alert('❌ Vui lòng nhập URL ảnh');
-        return;
-    }
-    
-    const productId = document.getElementById('imageModalProductId').value;
-    const isPrimary = document.getElementById('isPrimaryImage').checked;
-    
-    try {
-        const response = await fetch(`/admin/products/${productId}/images`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'same-origin',
-            body: JSON.stringify({ image_url: url, is_primary: isPrimary })
-        });
-        
-        if (response.ok) {
-            alert('✅ Đã thêm ảnh!');
-            document.getElementById('newImageUrl').value = '';
-            await loadProductImages(productId);
-        } else {
-            alert('❌ Lỗi thêm ảnh');
-        }
-    } catch (error) {
-        alert('❌ Lỗi: ' + error.message);
-    }
-}
-
-document.getElementById('addImageForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const fileInput = document.getElementById('newImageFile');
-    if (!fileInput.files[0]) {
-        alert('❌ Vui lòng chọn file ảnh');
-        return;
-    }
-    
-    const productId = document.getElementById('imageModalProductId').value;
-    const isPrimary = document.getElementById('isPrimaryImage').checked;
-    
-    const formData = new FormData();
-    formData.append('image', fileInput.files[0]);
-    formData.append('is_primary', isPrimary);
-    
-    try {
-        const response = await fetch(`/admin/products/${productId}/images/upload`, {
-            method: 'POST',
-            credentials: 'same-origin',
-            body: formData
-        });
-        
-        if (response.ok) {
-            alert('✅ Đã tải lên ảnh!');
-            fileInput.value = '';
-            await loadProductImages(productId);
-        } else {
-            alert('❌ Lỗi tải lên ảnh');
-        }
-    } catch (error) {
-        alert('❌ Lỗi: ' + error.message);
-    }
-});
-
-document.getElementById('imageModal').addEventListener('click', function(e) {
-    if (e.target === this) closeImageModal();
-});
-</script>
-
-<style>
-@keyframes slideInRight {
-    from { transform: translateX(100%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
-}
-@keyframes slideOutRight {
-    from { transform: translateX(0); opacity: 1; }
-    to { transform: translateX(100%); opacity: 0; }
-}
-@keyframes modalFadeIn {
-    from { transform: scale(0.9); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
-}
-</style>
+<script src="/js/admin/products.js"></script>
 
 <%- include('../partials/admin-footer') %>
-
-

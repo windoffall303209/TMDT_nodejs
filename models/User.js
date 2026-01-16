@@ -41,7 +41,7 @@ class User {
 
     // Find user by ID
     static async findById(id) {
-        const query = 'SELECT id, email, full_name, phone, role, email_verified, marketing_consent, created_at FROM users WHERE id = ? AND is_active = TRUE';
+        const query = 'SELECT id, email, full_name, phone, avatar_url, birthday, role, email_verified, email_verified_at, phone_verified, marketing_consent, created_at FROM users WHERE id = ? AND is_active = TRUE';
         const [rows] = await pool.execute(query, [id]);
         return rows[0] || null;
     }
@@ -51,12 +51,49 @@ class User {
         return await bcrypt.compare(plainPassword, hashedPassword);
     }
 
-    // Update user profile
+    // Update user profile (basic)
     static async updateProfile(id, data) {
         const { full_name, phone } = data;
         const query = 'UPDATE users SET full_name = ?, phone = ? WHERE id = ?';
         await pool.execute(query, [full_name, phone, id]);
         return await this.findById(id);
+    }
+
+    // Update full profile with all fields
+    static async updateFullProfile(id, data) {
+        const { full_name, phone, birthday } = data;
+        const query = 'UPDATE users SET full_name = ?, phone = ?, birthday = ? WHERE id = ?';
+        await pool.execute(query, [full_name, phone || null, birthday || null, id]);
+        return await this.findById(id);
+    }
+
+    // Update avatar
+    static async updateAvatar(id, avatarUrl) {
+        const query = 'UPDATE users SET avatar_url = ? WHERE id = ?';
+        await pool.execute(query, [avatarUrl, id]);
+        return await this.findById(id);
+    }
+
+    // Change password
+    static async changePassword(id, oldPassword, newPassword) {
+        // Get user with password hash
+        const [rows] = await pool.execute('SELECT password_hash FROM users WHERE id = ?', [id]);
+        if (!rows[0]) {
+            throw new Error('User not found');
+        }
+
+        // Verify old password
+        const isValid = await bcrypt.compare(oldPassword, rows[0].password_hash);
+        if (!isValid) {
+            throw new Error('Mật khẩu hiện tại không đúng');
+        }
+
+        // Hash new password
+        const newPasswordHash = await bcrypt.hash(newPassword, 10);
+        
+        // Update password
+        await pool.execute('UPDATE users SET password_hash = ? WHERE id = ?', [newPasswordHash, id]);
+        return true;
     }
 
     // Update marketing consent

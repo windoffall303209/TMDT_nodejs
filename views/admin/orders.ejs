@@ -1,38 +1,38 @@
 <%- include('../partials/admin-header', { currentPage: 'orders' }) %>
 
-<div class="admin-page" style="padding: 40px 20px;">
+<div class="admin-page">
     <div class="container">
-        <h1 style="margin-bottom: 40px; color: #333;">🛒 Quản Lý Đơn Hàng</h1>
+        <h1 class="admin-page__title">🛒 Quản Lý Đơn Hàng</h1>
         
         <% if (orders && orders.length > 0) { %>
-            <div class="orders-table" style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
-                <table style="width: 100%; border-collapse: collapse;">
+            <div class="admin-table-wrapper">
+                <table class="admin-table">
                     <thead>
-                        <tr style="background: #f8f9fa; border-bottom: 2px solid #eee;">
-                            <th style="padding: 15px; text-align: left;">Mã Đơn</th>
-                            <th style="padding: 15px; text-align: left;">Khách Hàng</th>
-                            <th style="padding: 15px; text-align: right;">Tổng Tiền</th>
-                            <th style="padding: 15px; text-align: center;">Thanh Toán</th>
-                            <th style="padding: 15px; text-align: center;">Trạng Thái</th>
-                            <th style="padding: 15px; text-align: center;">Ngày</th>
-                            <th style="padding: 15px; text-align: center;">Thao Tác</th>
+                        <tr>
+                            <th>Mã Đơn</th>
+                            <th>Khách Hàng</th>
+                            <th class="text-right">Tổng Tiền</th>
+                            <th class="text-center">Thanh Toán</th>
+                            <th class="text-center">Trạng Thái</th>
+                            <th class="text-center">Ngày</th>
+                            <th class="text-center">Thao Tác</th>
                         </tr>
                     </thead>
                     <tbody>
                         <% orders.forEach(order => { %>
-                            <tr style="border-bottom: 1px solid #eee;">
-                                <td style="padding: 15px;"><strong><%= order.order_code %></strong></td>
-                                <td style="padding: 15px;"><%= order.user_name || order.recipient_name || 'N/A' %></td>
-                                <td style="padding: 15px; text-align: right; font-weight: 600; color: #d32f2f;">
+                            <tr>
+                                <td><strong><%= order.order_code %></strong></td>
+                                <td><%= order.user_name || order.recipient_name || 'N/A' %></td>
+                                <td class="text-right admin-table__price">
                                     <%= (order.final_amount || order.total_amount || 0).toLocaleString('vi-VN') %>đ
                                 </td>
-                                <td style="padding: 15px; text-align: center;">
-                                    <span style="padding: 4px 10px; border-radius: 12px; font-size: 12px; background: <%= order.payment_status === 'paid' ? '#e8f5e9' : '#fff3e0' %>; color: <%= order.payment_status === 'paid' ? '#2e7d32' : '#ef6c00' %>;">
+                                <td class="text-center">
+                                    <span class="admin-table__badge" style="background: <%= order.payment_status === 'paid' ? '#e8f5e9' : '#fff3e0' %>; color: <%= order.payment_status === 'paid' ? '#2e7d32' : '#ef6c00' %>;">
                                         <%= order.payment_status === 'paid' ? 'Đã TT' : 'Chưa TT' %>
                                     </span>
                                 </td>
-                                <td style="padding: 15px; text-align: center;">
-                                    <select onchange="updateOrderStatus('<%= order.id %>', this.value)" style="padding: 6px 12px; border: 1px solid #ddd; border-radius: 4px;">
+                                <td class="text-center">
+                                    <select onchange="updateOrderStatus('<%= order.id %>', this.value)" class="admin-form__select" style="padding: 6px 12px;">
                                         <option value="pending" <%= order.status === 'pending' ? 'selected' : '' %>>Chờ xử lý</option>
                                         <option value="confirmed" <%= order.status === 'confirmed' ? 'selected' : '' %>>Đã xác nhận</option>
                                         <option value="shipping" <%= order.status === 'shipping' ? 'selected' : '' %>>Đang giao</option>
@@ -40,9 +40,9 @@
                                         <option value="cancelled" <%= order.status === 'cancelled' ? 'selected' : '' %>>Đã hủy</option>
                                     </select>
                                 </td>
-                                <td style="padding: 15px; text-align: center;"><%= new Date(order.created_at).toLocaleDateString('vi-VN') %></td>
-                                <td style="padding: 15px; text-align: center;">
-                                    <button onclick="viewOrderDetail('<%= order.id %>')" style="padding: 6px 12px; font-size: 12px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer;">Chi tiết</button>
+                                <td class="text-center" style="color: #666;"><%= new Date(order.created_at).toLocaleDateString('vi-VN') %></td>
+                                <td class="text-center">
+                                    <button onclick="viewOrderDetail('<%= order.id %>')" class="admin-btn" style="background: #667eea; color: white;">Chi tiết</button>
                                 </td>
                             </tr>
                         <% }) %>
@@ -50,35 +50,14 @@
                 </table>
             </div>
         <% } else { %>
-            <div style="text-align: center; padding: 60px; background: white; border-radius: 12px;">
-                <span style="font-size: 64px;">📭</span>
-                <h3 style="margin: 20px 0 10px 0; color: #333;">Chưa có đơn hàng nào</h3>
+            <div class="admin-empty">
+                <span class="admin-empty__icon">📭</span>
+                <h3 class="admin-empty__title">Chưa có đơn hàng nào</h3>
             </div>
         <% } %>
     </div>
 </div>
 
-<script>
-async function updateOrderStatus(orderId, status) {
-    try {
-        const response = await fetch(`/admin/orders/${orderId}/status`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status })
-        });
-        if (response.ok) {
-            alert('Cập nhật trạng thái thành công!');
-        } else {
-            alert('Lỗi cập nhật trạng thái');
-        }
-    } catch (error) {
-        alert('Lỗi: ' + error.message);
-    }
-}
-
-function viewOrderDetail(orderId) {
-    alert('Chi tiết đơn hàng #' + orderId + ' - Chức năng đang phát triển');
-}
-</script>
+<script src="/js/admin/orders.js"></script>
 
 <%- include('../partials/admin-footer') %>

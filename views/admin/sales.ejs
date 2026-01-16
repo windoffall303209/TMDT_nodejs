@@ -1,65 +1,65 @@
 <%- include('../partials/admin-header', { currentPage: 'sales' }) %>
 
-<div class="admin-page" style="padding: 40px 20px;">
+<div class="admin-page">
     <div class="container">
-        <h1 style="margin-bottom: 40px; color: #333;">🏷️ Quản Lý Khuyến Mãi</h1>
+        <h1 class="admin-page__title">🏷️ Quản Lý Khuyến Mãi</h1>
         
         <!-- Add Sale Form -->
-        <div style="background: white; border-radius: 12px; padding: 30px; margin-bottom: 40px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
-            <h3 style="margin: 0 0 20px 0;">➕ Thêm Khuyến Mãi</h3>
+        <div class="admin-section">
+            <h3 class="admin-section__title">➕ Thêm Khuyến Mãi</h3>
             <form action="/admin/sales" method="POST">
-                <div style="display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                <div class="admin-form__grid">
                     <div>
-                        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Tên*</label>
-                        <input type="text" name="name" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        <label class="admin-form__label">Tên*</label>
+                        <input type="text" name="name" required class="admin-form__input">
                     </div>
                     <div>
-                        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Loại</label>
-                        <select name="type" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        <label class="admin-form__label">Loại</label>
+                        <select name="type" class="admin-form__select">
                             <option value="percentage">Phần trăm (%)</option>
                             <option value="fixed">Số tiền (VNĐ)</option>
                         </select>
                     </div>
                     <div>
-                        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Giá trị*</label>
-                        <input type="number" name="value" required step="0.01" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        <label class="admin-form__label">Giá trị*</label>
+                        <input type="number" name="value" required step="0.01" class="admin-form__input">
                     </div>
                     <div>
-                        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Ngày bắt đầu</label>
-                        <input type="datetime-local" name="start_date" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        <label class="admin-form__label">Ngày bắt đầu</label>
+                        <input type="datetime-local" name="start_date" class="admin-form__input">
                     </div>
                     <div>
-                        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Ngày kết thúc</label>
-                        <input type="datetime-local" name="end_date" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        <label class="admin-form__label">Ngày kết thúc</label>
+                        <input type="datetime-local" name="end_date" class="admin-form__input">
                     </div>
                 </div>
-                <button type="submit" style="margin-top: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 12px 30px; border-radius: 6px; cursor: pointer; font-weight: 600;">Thêm Khuyến Mãi</button>
+                <button type="submit" class="admin-form__submit">Thêm Khuyến Mãi</button>
             </form>
         </div>
         
         <% if (sales && sales.length > 0) { %>
-            <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
-                <table style="width: 100%; border-collapse: collapse;">
+            <div class="admin-table-wrapper">
+                <table class="admin-table">
                     <thead>
-                        <tr style="background: #f8f9fa; border-bottom: 2px solid #eee;">
-                            <th style="padding: 15px; text-align: left;">ID</th>
-                            <th style="padding: 15px; text-align: left;">Tên</th>
-                            <th style="padding: 15px; text-align: center;">Loại</th>
-                            <th style="padding: 15px; text-align: center;">Giá trị</th>
-                            <th style="padding: 15px; text-align: center;">Trạng thái</th>
+                        <tr>
+                            <th>ID</th>
+                            <th>Tên</th>
+                            <th class="text-center">Loại</th>
+                            <th class="text-center">Giá trị</th>
+                            <th class="text-center">Trạng thái</th>
                         </tr>
                     </thead>
                     <tbody>
                         <% sales.forEach(sale => { %>
-                            <tr style="border-bottom: 1px solid #eee;">
-                                <td style="padding: 15px;"><%= sale.id %></td>
-                                <td style="padding: 15px;"><strong><%= sale.name %></strong></td>
-                                <td style="padding: 15px; text-align: center;"><%= sale.type === 'percentage' ? 'Phần trăm' : 'Cố định' %></td>
-                                <td style="padding: 15px; text-align: center; font-weight: 600; color: #d32f2f;">
+                            <tr>
+                                <td><%= sale.id %></td>
+                                <td><strong><%= sale.name %></strong></td>
+                                <td class="text-center"><%= sale.type === 'percentage' ? 'Phần trăm' : 'Cố định' %></td>
+                                <td class="text-center admin-table__price">
                                     <%= sale.type === 'percentage' ? '-' + sale.value + '%' : '-' + (sale.value || 0).toLocaleString('vi-VN') + 'đ' %>
                                 </td>
-                                <td style="padding: 15px; text-align: center;">
-                                    <span style="padding: 4px 10px; border-radius: 12px; font-size: 12px; background: <%= sale.is_active ? '#e8f5e9' : '#ffebee' %>; color: <%= sale.is_active ? '#2e7d32' : '#c62828' %>;">
+                                <td class="text-center">
+                                    <span class="admin-table__badge" style="background: <%= sale.is_active ? '#e8f5e9' : '#ffebee' %>; color: <%= sale.is_active ? '#2e7d32' : '#c62828' %>;">
                                         <%= sale.is_active ? 'Hoạt động' : 'Hết hạn' %>
                                     </span>
                                 </td>
@@ -69,9 +69,9 @@
                 </table>
             </div>
         <% } else { %>
-            <div style="text-align: center; padding: 60px; background: white; border-radius: 12px;">
-                <span style="font-size: 64px;">🏷️</span>
-                <h3 style="margin: 20px 0 10px 0; color: #333;">Chưa có khuyến mãi</h3>
+            <div class="admin-empty">
+                <span class="admin-empty__icon">🏷️</span>
+                <h3 class="admin-empty__title">Chưa có khuyến mãi</h3>
             </div>
         <% } %>
     </div>

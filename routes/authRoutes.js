@@ -13,9 +13,12 @@ router.post('/login', authController.login);
 router.post('/logout', authController.logout);
 router.get('/logout', authController.logout);
 
-// Protected routes
+// Protected routes - Profile
 router.get('/profile', verifyToken, authController.getProfile);
 router.post('/profile', verifyToken, authController.updateProfile);
+router.post('/profile/update', verifyToken, authController.updateFullProfile);
+router.post('/profile/avatar', verifyToken, authController.handleAvatarUpload);
+router.post('/change-password', verifyToken, authController.changePassword);
 
 // Address management
 router.post('/address', verifyToken, authController.createAddress);

@@ -1,7 +1,38 @@
 const User = require('../models/User');
 const { generateToken } = require('../middleware/auth');
 const emailService = require('../services/emailService');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
+// Configure multer for avatar upload
+const avatarStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadDir = 'public/uploads/avatars';
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        const uniqueName = `avatar_${req.user.id}_${Date.now()}${path.extname(file.originalname)}`;
+        cb(null, uniqueName);
+    }
+});
+
+const uploadAvatar = multer({
+    storage: avatarStorage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = /jpeg|jpg|png|gif|webp/;
+        const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+        const mimetype = allowedTypes.test(file.mimetype);
+        if (extname && mimetype) {
+            return cb(null, true);
+        }
+        cb(new Error('Chỉ chấp nhận file ảnh (jpeg, jpg, png, gif, webp)'));
+    }
+}).single('avatar');
 // Register new user
 exports.register = async (req, res) => {
     try {
@@ -216,4 +247,107 @@ exports.createAddress = async (req, res) => {
         console.error('Create address error:', error);
         res.status(400).json({ success: false, message: error.message });
     }
+};
+
+// Update full profile (name, phone, birthday)
+exports.updateFullProfile = async (req, res) => {
+    try {
+        const { full_name, phone, birthday } = req.body;
+        
+        if (!full_name || full_name.trim().length < 2) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Họ tên phải có ít nhất 2 ký tự' 
+            });
+        }
+
+        const updatedUser = await User.updateFullProfile(req.user.id, {
+            full_name: full_name.trim(),
+            phone: phone?.trim() || null,
+            birthday: birthday || null
+        });
+
+        res.json({
+            success: true,
+            message: 'Cập nhật thông tin thành công',
+            user: updatedUser
+        });
+    } catch (error) {
+        console.error('Update profile error:', error);
+        res.status(400).json({ success: false, message: error.message });
+    }
+};
+
+// Change password
+exports.changePassword = async (req, res) => {
+    try {
+        const { current_password, new_password, confirm_password } = req.body;
+        
+        // Validation
+        if (!current_password || !new_password || !confirm_password) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Vui lòng điền đầy đủ thông tin' 
+            });
+        }
+
+        if (new_password.length < 6) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Mật khẩu mới phải có ít nhất 6 ký tự' 
+            });
+        }
+
+        if (new_password !== confirm_password) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Xác nhận mật khẩu không khớp' 
+            });
+        }
+
+        await User.changePassword(req.user.id, current_password, new_password);
+
+        res.json({
+            success: true,
+            message: 'Đổi mật khẩu thành công'
+        });
+    } catch (error) {
+        console.error('Change password error:', error);
+        res.status(400).json({ success: false, message: error.message });
+    }
+};
+
+// Upload avatar
+exports.handleAvatarUpload = (req, res) => {
+    uploadAvatar(req, res, async (err) => {
+        if (err) {
+            console.error('Avatar upload error:', err);
+            return res.status(400).json({ 
+                success: false, 
+                message: err.message || 'Lỗi upload ảnh' 
+            });
+        }
+
+        if (!req.file) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Vui lòng chọn file ảnh' 
+            });
+        }
+
+        try {
+            const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+            const updatedUser = await User.updateAvatar(req.user.id, avatarUrl);
+
+            res.json({
+                success: true,
+                message: 'Cập nhật ảnh đại diện thành công',
+                avatar_url: avatarUrl,
+                user: updatedUser
+            });
+        } catch (error) {
+            console.error('Update avatar error:', error);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    });
 };

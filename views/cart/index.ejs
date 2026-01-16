@@ -1,109 +1,112 @@
 <%- include('../partials/header') %>
 
-<div class="cart-page" style="padding: 40px 0; background: #f5f5f5; min-height: 80vh;">
+<!-- Load Cart CSS -->
+<link rel="stylesheet" href="/css/cart.css">
+
+<div class="cart-page">
     <div class="container">
-        <h1 style="margin: 0 0 30px 0; font-size: 28px; font-weight: 700; color: #333;">🛒 Giỏ hàng của bạn</h1>
+        <h1 class="cart-page__title">🛒 Giỏ hàng của bạn</h1>
         
         <% if (!cart || !cart.items || cart.items.length === 0) { %>
-            <div style="text-align: center; padding: 60px; background: white; border-radius: 12px;">
-                <span style="font-size: 64px;">🛒</span>
-                <h2 style="margin: 20px 0 10px 0; color: #333;">Giỏ hàng trống</h2>
-                <p style="color: #666;">Thêm sản phẩm vào giỏ hàng để mua sắm</p>
-                <a href="/products" style="display: inline-block; margin-top: 20px; padding: 14px 28px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">Tiếp tục mua sắm</a>
+            <div class="cart-empty">
+                <span class="cart-empty__icon">🛒</span>
+                <h2 class="cart-empty__title">Giỏ hàng trống</h2>
+                <p class="cart-empty__text">Thêm sản phẩm vào giỏ hàng để mua sắm</p>
+                <a href="/products" class="cart-empty__btn">Tiếp tục mua sắm</a>
             </div>
         <% } else { %>
-            <div style="display: grid; grid-template-columns: 1fr 350px; gap: 30px;">
+            <div class="cart-grid">
                 <!-- Cart Items -->
-                <div style="background: white; border-radius: 12px; padding: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+                <div class="cart-items-container">
                     <!-- Select All -->
-                    <div style="display: flex; align-items: center; gap: 15px; padding-bottom: 15px; border-bottom: 2px solid #f0f0f0; margin-bottom: 15px;">
-                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                            <input type="checkbox" id="selectAll" onchange="toggleSelectAll()" style="width: 20px; height: 20px; cursor: pointer;">
-                            <span style="font-weight: 600; color: #333;">Chọn tất cả (<%= cart.items.length %> sản phẩm)</span>
+                    <div class="cart-select-all">
+                        <label>
+                            <input type="checkbox" id="selectAll" onchange="toggleSelectAll()" class="cart-select-all__checkbox">
+                            <span class="cart-select-all__text">Chọn tất cả (<%= cart.items.length %> sản phẩm)</span>
                         </label>
                     </div>
                     
                     <!-- Items List -->
                     <div id="cartItems">
                         <% cart.items.forEach((item, index) => { %>
-                            <div class="cart-item" data-item-id="<%= item.id %>" data-price="<%= item.subtotal %>" style="display: flex; gap: 15px; padding: 20px 0; <%= index < cart.items.length - 1 ? 'border-bottom: 1px solid #f0f0f0;' : '' %>">
+                            <div class="cart-item <%= index < cart.items.length - 1 ? 'cart-item--bordered' : '' %>" data-item-id="<%= item.id %>" data-price="<%= item.subtotal %>">
                                 <!-- Checkbox -->
-                                <div style="display: flex; align-items: center;">
-                                    <input type="checkbox" class="item-checkbox" value="<%= item.id %>" data-price="<%= item.subtotal %>" onchange="updateSelectedTotal()" style="width: 20px; height: 20px; cursor: pointer;">
+                                <div class="cart-item__checkbox-wrapper">
+                                    <input type="checkbox" class="item-checkbox cart-item__checkbox" value="<%= item.id %>" data-price="<%= item.subtotal %>" onchange="updateSelectedTotal()">
                                 </div>
                                 
                                 <!-- Image -->
-                                <div style="width: 100px; height: 100px; border-radius: 10px; overflow: hidden; background: #f5f5f5; flex-shrink: 0;">
+                                <div class="cart-item__image">
                                     <% if (item.product_image) { %>
-                                        <img src="<%= item.product_image %>" alt="<%= item.product_name %>" style="width: 100%; height: 100%; object-fit: cover;">
+                                        <img src="<%= item.product_image %>" alt="<%= item.product_name %>">
                                     <% } else { %>
-                                        <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 40px;">👕</div>
+                                        <div class="cart-item__image-placeholder">👕</div>
                                     <% } %>
                                 </div>
                                 
                                 <!-- Info -->
-                                <div style="flex: 1; min-width: 0;">
-                                    <a href="/products/<%= item.product_slug %>" style="font-weight: 600; color: #333; text-decoration: none; display: block; margin-bottom: 8px;">
+                                <div class="cart-item__info">
+                                    <a href="/products/<%= item.product_slug %>" class="cart-item__name">
                                         <%= item.product_name %>
                                     </a>
                                     <% if (item.size || item.color) { %>
-                                        <p style="color: #666; font-size: 13px; margin: 0 0 8px 0;">
+                                        <p class="cart-item__variant">
                                             <% if (item.size) { %>Size: <%= item.size %><% } %>
                                             <% if (item.color) { %> | Màu: <%= item.color %><% } %>
                                         </p>
                                     <% } %>
-                                    <p style="color: #d32f2f; font-weight: 600; margin: 0;"><%= item.unit_price.toLocaleString('vi-VN') %>đ</p>
+                                    <p class="cart-item__unit-price"><%= item.unit_price.toLocaleString('vi-VN') %>đ</p>
                                 </div>
                                 
                                 <!-- Quantity -->
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                    <button onclick="updateQuantity(<%= item.id %>, <%= item.quantity - 1 %>)" style="width: 32px; height: 32px; border: 1px solid #ddd; background: white; border-radius: 6px; cursor: pointer; font-size: 18px;">−</button>
-                                    <input type="number" value="<%= item.quantity %>" min="1" readonly style="width: 50px; text-align: center; border: 1px solid #ddd; border-radius: 6px; padding: 6px;">
-                                    <button onclick="updateQuantity(<%= item.id %>, <%= item.quantity + 1 %>)" style="width: 32px; height: 32px; border: 1px solid #ddd; background: white; border-radius: 6px; cursor: pointer; font-size: 18px;">+</button>
+                                <div class="cart-item__quantity">
+                                    <button onclick="updateQuantity(<%= item.id %>, <%= item.quantity - 1 %>)" class="cart-item__qty-btn">−</button>
+                                    <input type="number" value="<%= item.quantity %>" min="1" readonly class="cart-item__qty-input">
+                                    <button onclick="updateQuantity(<%= item.id %>, <%= item.quantity + 1 %>)" class="cart-item__qty-btn">+</button>
                                 </div>
                                 
                                 <!-- Subtotal -->
-                                <div style="text-align: right; min-width: 120px;">
-                                    <p style="color: #d32f2f; font-weight: 700; font-size: 16px; margin: 0;"><%= item.subtotal.toLocaleString('vi-VN') %>đ</p>
+                                <div class="cart-item__subtotal">
+                                    <p class="cart-item__subtotal-price"><%= item.subtotal.toLocaleString('vi-VN') %>đ</p>
                                 </div>
                                 
                                 <!-- Remove -->
-                                <button onclick="removeItem(<%= item.id %>)" style="width: 36px; height: 36px; border: none; background: #ffebee; color: #c62828; border-radius: 8px; cursor: pointer; font-size: 18px;">×</button>
+                                <button onclick="removeItem(<%= item.id %>)" class="cart-item__remove">×</button>
                             </div>
                         <% }) %>
                     </div>
                 </div>
                 
                 <!-- Order Summary -->
-                <div style="position: sticky; top: 20px;">
-                    <div style="background: white; border-radius: 12px; padding: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
-                        <h3 style="margin: 0 0 20px 0; font-size: 18px; color: #333;">📦 Tổng đơn hàng</h3>
+                <div class="cart-summary-wrapper">
+                    <div class="cart-summary">
+                        <h3 class="cart-summary__title">📦 Tổng đơn hàng</h3>
                         
-                        <div style="margin-bottom: 15px;">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                                <span style="color: #666;">Sản phẩm đã chọn:</span>
-                                <span id="selectedCount" style="font-weight: 500;">0</span>
+                        <div class="cart-summary__rows">
+                            <div class="cart-summary__row">
+                                <span class="cart-summary__label">Sản phẩm đã chọn:</span>
+                                <span id="selectedCount" class="cart-summary__value">0</span>
                             </div>
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                                <span style="color: #666;">Tạm tính:</span>
-                                <span id="selectedSubtotal" style="font-weight: 500;">0đ</span>
+                            <div class="cart-summary__row">
+                                <span class="cart-summary__label">Tạm tính:</span>
+                                <span id="selectedSubtotal" class="cart-summary__value">0đ</span>
                             </div>
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                                <span style="color: #666;">Phí vận chuyển:</span>
-                                <span id="shippingFee" style="font-weight: 500;">30.000đ</span>
+                            <div class="cart-summary__row">
+                                <span class="cart-summary__label">Phí vận chuyển:</span>
+                                <span id="shippingFee" class="cart-summary__value">30.000đ</span>
                             </div>
                         </div>
                         
-                        <div style="display: flex; justify-content: space-between; padding-top: 15px; border-top: 2px solid #333;">
-                            <span style="font-size: 18px; font-weight: 600;">Tổng cộng:</span>
-                            <span id="selectedTotal" style="font-size: 22px; font-weight: 700; color: #d32f2f;">0đ</span>
+                        <div class="cart-summary__total">
+                            <span class="cart-summary__total-label">Tổng cộng:</span>
+                            <span id="selectedTotal" class="cart-summary__total-value">0đ</span>
                         </div>
                         
-                        <button onclick="checkoutSelected()" id="checkoutBtn" disabled style="width: 100%; margin-top: 20px; padding: 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; opacity: 0.5;">
+                        <button onclick="checkoutSelected()" id="checkoutBtn" disabled class="cart-summary__checkout-btn">
                             ✨ Thanh toán (<span id="checkoutCount">0</span> sản phẩm)
                         </button>
                         
-                        <a href="/products" style="display: block; text-align: center; margin-top: 15px; padding: 14px; background: #f5f5f5; color: #333; text-decoration: none; border-radius: 10px; font-weight: 500;">
+                        <a href="/products" class="cart-summary__continue-btn">
                             Tiếp tục mua sắm
                         </a>
                     </div>
@@ -114,89 +117,6 @@
 </div>
 
 <script src="/js/main.js"></script>
-<script>
-function toggleSelectAll() {
-    const selectAll = document.getElementById('selectAll');
-    const checkboxes = document.querySelectorAll('.item-checkbox');
-    checkboxes.forEach(cb => cb.checked = selectAll.checked);
-    updateSelectedTotal();
-}
-
-function updateSelectedTotal() {
-    const checkboxes = document.querySelectorAll('.item-checkbox:checked');
-    let total = 0;
-    let count = 0;
-    
-    checkboxes.forEach(cb => {
-        total += parseInt(cb.dataset.price) || 0;
-        count++;
-    });
-    
-    const shippingFee = total >= 500000 ? 0 : 30000;
-    const grandTotal = total + shippingFee;
-    
-    document.getElementById('selectedCount').textContent = count;
-    document.getElementById('selectedSubtotal').textContent = total.toLocaleString('vi-VN') + 'đ';
-    document.getElementById('shippingFee').textContent = shippingFee === 0 ? 'Miễn phí' : '30.000đ';
-    document.getElementById('selectedTotal').textContent = grandTotal.toLocaleString('vi-VN') + 'đ';
-    document.getElementById('checkoutCount').textContent = count;
-    
-    const checkoutBtn = document.getElementById('checkoutBtn');
-    checkoutBtn.disabled = count === 0;
-    checkoutBtn.style.opacity = count === 0 ? '0.5' : '1';
-    
-    // Update select all checkbox
-    const allCheckboxes = document.querySelectorAll('.item-checkbox');
-    document.getElementById('selectAll').checked = checkboxes.length === allCheckboxes.length && allCheckboxes.length > 0;
-}
-
-function checkoutSelected() {
-    const checkboxes = document.querySelectorAll('.item-checkbox:checked');
-    if (checkboxes.length === 0) {
-        alert('❌ Vui lòng chọn ít nhất một sản phẩm để thanh toán');
-        return;
-    }
-    
-    const selectedIds = Array.from(checkboxes).map(cb => cb.value);
-    
-    // Store selected items and redirect to checkout
-    sessionStorage.setItem('selectedCartItems', JSON.stringify(selectedIds));
-    window.location.href = '/orders/checkout?items=' + selectedIds.join(',');
-}
-
-function updateQuantity(itemId, newQuantity) {
-    if (newQuantity < 1) {
-        removeItem(itemId);
-        return;
-    }
-    
-    fetch('/cart/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify({ cart_item_id: itemId, quantity: newQuantity })
-    })
-    .then(res => res.json())
-    .then(() => location.reload())
-    .catch(err => console.error(err));
-}
-
-function removeItem(itemId) {
-    if (!confirm('Bạn có chắc muốn xóa sản phẩm này?')) return;
-    
-    fetch('/cart/remove', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify({ cart_item_id: itemId })
-    })
-    .then(res => res.json())
-    .then(() => location.reload())
-    .catch(err => console.error(err));
-}
-
-// Initialize
-document.addEventListener('DOMContentLoaded', updateSelectedTotal);
-</script>
+<script src="/js/cart.js"></script>
 
 <%- include('../partials/footer') %>

@@ -1,80 +1,60 @@
 <%- include('../partials/header') %>
 
+<!-- Load Product List CSS -->
+<link rel="stylesheet" href="/css/product-list.css">
+
 <div class="products-page">
     <div class="container">
-        <h1><%= category ? category.name : 'Sản Phẩm' %></h1>
+        <h1 class="products-page__title"><%= category ? category.name : 'Sản Phẩm' %></h1>
         
-        <div class="product-grid" style="margin-top: 40px; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 30px;">
+        <div class="products-grid">
             <% if (products && products.length > 0) { %>
                 <% products.forEach(product => { %>
-                    <div class="product-card" style="border: 1px solid #eee; border-radius: 12px; overflow: hidden; transition: transform 0.3s, box-shadow 0.3s; background: white;">
-                        <a href="/products/<%= product.slug || product.id %>" style="text-decoration: none; color: inherit;">
-                            <div style="height: 300px; overflow: hidden; position: relative; background: #f5f5f5;">
+                    <div class="product-card">
+                        <a href="/products/<%= product.slug || product.id %>">
+                            <div class="product-card__image">
                                 <% if (product.primary_image) { %>
                                     <img src="<%= product.primary_image %>" 
-                                         alt="<%= product.name %>" 
-                                         style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s;"
+                                         alt="<%= product.name %>"
                                          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                    <div style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center; position: absolute; top: 0; left: 0; background: #f5f5f5;">
-                                        <span style="font-size: 64px;">👕</span>
+                                    <div class="product-card__image-fallback">
+                                        <span class="product-card__image-icon">👕</span>
                                     </div>
                                 <% } else { %>
-                                    <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
-                                        <span style="font-size: 64px;">👕</span>
+                                    <div class="product-card__image-placeholder">
+                                        <span class="product-card__image-icon">👕</span>
                                     </div>
                                 <% } %>
                             </div>
-                            <div style="padding: 20px;">
-                                <h3 style="margin: 0 0 10px 0; font-size: 16px; font-weight: 600; color: #333;"><%= product.name %></h3>
+                            <div class="product-card__info">
+                                <h3 class="product-card__name"><%= product.name %></h3>
                                 <% if (product.price !== product.final_price && product.final_price) { %>
-                                    <p style="margin: 0; color: #999; text-decoration: line-through; font-size: 14px;">
+                                    <p class="product-card__price-original">
                                         <%= product.price.toLocaleString('vi-VN') %>đ
                                     </p>
                                 <% } %>
-                                <p style="margin: 5px 0 0 0; font-size: 20px; font-weight: 700; color: #d32f2f;">
+                                <p class="product-card__price">
                                     <%= (product.final_price || product.price).toLocaleString('vi-VN') %>đ
                                 </p>
                             </div>
                         </a>
-                        <div style="padding: 0 20px 20px 20px;">
-                            <button onclick="addToCart(<%= product.id %>)" class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 14px; cursor: pointer;">
+                        <div class="product-card__actions">
+                            <button onclick="addToCart(<%= product.id %>)" class="product-card__add-btn">
                                 🛒 Thêm vào giỏ hàng
                             </button>
                         </div>
                     </div>
                 <% }) %>
             <% } else { %>
-                <p style="text-align: center; padding: 60px 20px; grid-column: 1/-1;">
-                    Chưa có sản phẩm trong danh mục này.
-                    <br><br>
-                    <a href="/" class="btn btn-primary">Về trang chủ</a>
-                </p>
+                <div class="products-empty">
+                    <p>Chưa có sản phẩm trong danh mục này.</p>
+                    <a href="/" class="btn btn-primary products-empty__link">Về trang chủ</a>
+                </div>
             <% } %>
         </div>
     </div>
 </div>
 
-<script>
-function addToCart(productId) {
-    fetch('/cart/add', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ product_id: productId, quantity: 1 })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.message) {
-            alert('✅ ' + data.message);
-            if (typeof updateCartCount === 'function') {
-                updateCartCount();
-            }
-        }
-    })
-    .catch(err => {
-        console.error('Add to cart error:', err);
-        alert('Có lỗi xảy ra khi thêm vào giỏ hàng');
-    });
-}
-</script>
+<script src="/js/main.js"></script>
 
 <%- include('../partials/footer') %>
