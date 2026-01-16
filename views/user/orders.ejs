@@ -1,0 +1,90 @@
+<%- include('../partials/header') %>
+
+<div style="max-width: 1000px; margin: 0 auto; padding: 40px 20px;">
+    <h1 style="font-size: 28px; margin-bottom: 30px; color: #333;">Lịch Sử Đơn Hàng</h1>
+    
+    <% if (orders && orders.length > 0) { %>
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+            <% orders.forEach(order => { %>
+                <div style="background: white; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); overflow: hidden;">
+                    <!-- Order Header -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px; background: #f8f9fa; border-bottom: 1px solid #eee;">
+                        <div>
+                            <span style="font-weight: 600; color: #333;">Đơn hàng #<%= order.id %></span>
+                            <span style="margin-left: 15px; color: #666; font-size: 14px;"><%= new Date(order.created_at).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) %></span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <% 
+                            const statusColors = {
+                                'pending': { bg: '#fff3e0', color: '#e65100', text: 'Chờ xác nhận' },
+                                'confirmed': { bg: '#e3f2fd', color: '#1565c0', text: 'Đã xác nhận' },
+                                'processing': { bg: '#e8f5e9', color: '#2e7d32', text: 'Đang xử lý' },
+                                'shipped': { bg: '#f3e5f5', color: '#7b1fa2', text: 'Đang giao' },
+                                'delivered': { bg: '#e8f5e9', color: '#2e7d32', text: 'Đã giao' },
+                                'cancelled': { bg: '#ffebee', color: '#c62828', text: 'Đã hủy' }
+                            };
+                            const status = statusColors[order.status] || { bg: '#f5f5f5', color: '#666', text: order.status };
+                            %>
+                            <span style="padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 500; background: <%= status.bg %>; color: <%= status.color %>;"><%= status.text %></span>
+                        </div>
+                    </div>
+                    
+                    <!-- Order Items -->
+                    <div style="padding: 20px;">
+                        <% if (order.items && order.items.length > 0) { %>
+                            <% order.items.forEach(item => { %>
+                                <div style="display: flex; gap: 15px; padding: 10px 0; border-bottom: 1px solid #f0f0f0;">
+                                    <div style="width: 60px; height: 60px; background: #f5f5f5; border-radius: 8px; overflow: hidden; flex-shrink: 0;">
+                                        <% if (item.image_url) { %>
+                                            <img src="<%= item.image_url %>" alt="<%= item.product_name %>" style="width: 100%; height: 100%; object-fit: cover;">
+                                        <% } else { %>
+                                            <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #ccc;">
+                                                <span style="font-size: 24px;">📦</span>
+                                            </div>
+                                        <% } %>
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <div style="font-weight: 500; color: #333;"><%= item.product_name %></div>
+                                        <div style="font-size: 13px; color: #666; margin-top: 4px;">x<%= item.quantity %></div>
+                                    </div>
+                                    <div style="font-weight: 600; color: #d32f2f;">
+                                        <%= (item.price * item.quantity).toLocaleString('vi-VN') %>đ
+                                    </div>
+                                </div>
+                            <% }) %>
+                        <% } else { %>
+                            <p style="color: #999; font-size: 14px;">Không có thông tin sản phẩm</p>
+                        <% } %>
+                    </div>
+                    
+                    <!-- Order Footer -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: #fafafa; border-top: 1px solid #eee;">
+                        <div style="font-size: 14px; color: #666;">
+                            <% 
+                            const paymentLabels = {
+                                'cod': 'Thanh toán khi nhận hàng',
+                                'vnpay': 'VNPay',
+                                'momo': 'MoMo'
+                            };
+                            %>
+                            <%= paymentLabels[order.payment_method] || order.payment_method %>
+                        </div>
+                        <div>
+                            <span style="color: #666; font-size: 14px;">Tổng cộng: </span>
+                            <span style="font-size: 18px; font-weight: 700; color: #d32f2f;"><%= order.total_amount.toLocaleString('vi-VN') %>đ</span>
+                        </div>
+                    </div>
+                </div>
+            <% }) %>
+        </div>
+    <% } else { %>
+        <div style="text-align: center; padding: 60px; background: white; border-radius: 12px;">
+            <span style="font-size: 64px;">📋</span>
+            <h3 style="margin: 20px 0 10px 0; color: #333;">Chưa có đơn hàng nào</h3>
+            <p style="color: #666; margin-bottom: 20px;">Bạn chưa đặt đơn hàng nào. Hãy khám phá các sản phẩm của chúng tôi!</p>
+            <a href="/products" style="display: inline-block; padding: 12px 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">Mua sắm ngay</a>
+        </div>
+    <% } %>
+</div>
+
+<%- include('../partials/footer') %>

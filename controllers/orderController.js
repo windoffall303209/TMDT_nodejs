@@ -40,14 +40,18 @@ exports.createOrder = async (req, res) => {
             return res.status(401).json({ message: 'Please login to place order' });
         }
 
-        const { address_id, payment_method, notes } = req.body;
+        const { address_id, payment_method, notes, shipping_fee, discount_amount, voucher_code } = req.body;
 
         if (!address_id || !payment_method) {
             return res.status(400).json({ message: 'Address and payment method are required' });
         }
 
-        // Create order
-        const orderResult = await Order.create(req.user.id, address_id, payment_method, notes);
+        // Parse shipping and discount values
+        const shippingFee = parseInt(shipping_fee) || 0;
+        const discountAmount = parseInt(discount_amount) || 0;
+
+        // Create order with shipping and discount
+        const orderResult = await Order.create(req.user.id, address_id, payment_method, notes, shippingFee, discountAmount, voucher_code);
         
         // Get full order details
         const order = await Order.findById(orderResult.id);

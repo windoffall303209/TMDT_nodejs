@@ -2,7 +2,7 @@ const pool = require('../config/database');
 
 class Order {
     // Create order from cart
-    static async create(userId, addressId, paymentMethod, notes = null) {
+    static async create(userId, addressId, paymentMethod, notes = null, shippingFeeFromUI = null, discountAmount = 0, voucherCode = null) {
         const connection = await pool.getConnection();
         
         try {
@@ -29,9 +29,11 @@ class Order {
             // Generate order code
             const orderCode = `ORD${Date.now()}${Math.floor(Math.random() * 1000)}`;
 
-            // Calculate shipping fee (simplified - can be more complex)
-            const shippingFee = cartData.subtotal >= 500000 ? 0 : 30000;
-            const finalAmount = cartData.subtotal + shippingFee;
+            // Use shipping fee from frontend if provided, otherwise calculate
+            const shippingFee = shippingFeeFromUI !== null ? shippingFeeFromUI : (cartData.subtotal >= 500000 ? 0 : 30000);
+            
+            // Calculate final amount: subtotal + shipping - discount
+            const finalAmount = cartData.subtotal + shippingFee - discountAmount;
 
             // Create order
             const orderQuery = `
@@ -211,18 +213,30 @@ class Order {
         return null;
     }
 
-    // Get user orders
+    // Get user orders with items
     static async findByUser(userId, limit = 20, offset = 0) {
         const query = `
-            SELECT o.*,
-                   (SELECT COUNT(*) FROM order_items WHERE order_id = o.id) as item_count
+            SELECT o.*
             FROM orders o
             WHERE o.user_id = ?
             ORDER BY o.created_at DESC
             LIMIT ? OFFSET ?
         `;
         
-        const [orders] = await pool.execute(query, [userId, limit, offset]);
+        const [orders] = await pool.execute(query, [userId, String(limit), String(offset)]);
+        
+        // Fetch items for each order
+        for (let order of orders) {
+            const [items] = await pool.execute(`
+                SELECT oi.*, p.name as product_name, 
+                       (SELECT pi.image_url FROM product_images pi WHERE pi.product_id = oi.product_id AND pi.is_primary = TRUE LIMIT 1) as image_url
+                FROM order_items oi
+                LEFT JOIN products p ON oi.product_id = p.id
+                WHERE oi.order_id = ?
+            `, [order.id]);
+            order.items = items;
+        }
+        
         return orders;
     }
 

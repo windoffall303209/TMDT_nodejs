@@ -11,11 +11,11 @@ router.post('/create', verifyToken, orderController.createOrder);
 router.get('/buy-now/:productId', verifyToken, orderController.showBuyNow);
 router.post('/buy-now/create', verifyToken, orderController.createBuyNowOrder);
 
+// Order history (requires login) - must be before :orderCode route
+router.get('/history', verifyToken, orderController.getOrderHistory);
+
 // Order confirmation (public with order code)
 router.get('/:orderCode/confirmation', optionalAuth, orderController.orderConfirmation);
-
-// Order history (requires login)
-router.get('/history', verifyToken, orderController.getOrderHistory);
 
 // Payment callbacks
 router.get('/payment/vnpay/callback', orderController.vnpayReturn);

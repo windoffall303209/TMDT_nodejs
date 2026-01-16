@@ -175,9 +175,30 @@
                                     <p style="margin: 0; font-size: 13px; color: #e65100;">💡 Mua thêm <%= (500000 - cart.subtotal).toLocaleString('vi-VN') %>đ để được miễn phí vận chuyển!</p>
                                 </div>
                             <% } %>
+                            
+                            <!-- Voucher/Promo Code Input -->
+                            <div style="margin-bottom: 15px;">
+                                <div style="display: flex; gap: 10px;">
+                                    <input type="text" id="voucherCode" name="voucher_code" placeholder="Nhập mã giảm giá" style="flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+                                    <button type="button" onclick="applyVoucher()" style="padding: 12px 20px; background: #4caf50; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">Áp dụng</button>
+                                </div>
+                                <div id="voucherMessage" style="margin-top: 8px; font-size: 13px;"></div>
+                            </div>
+                            
+                            <!-- Discount Row (hidden by default) -->
+                            <div id="discountRow" style="display: none; justify-content: space-between; margin-bottom: 10px;">
+                                <span style="color: #2e7d32;">Giảm giá:</span>
+                                <span id="discountAmount" style="font-weight: 500; color: #2e7d32;">-0đ</span>
+                            </div>
+                            
+                            <!-- Hidden fields for backend -->
+                            <input type="hidden" name="shipping_fee" id="shippingFeeInput" value="<%= shippingFee %>">
+                            <input type="hidden" name="discount_amount" id="discountInput" value="0">
+                            <input type="hidden" name="subtotal" value="<%= cart.subtotal %>">
+                            
                             <div style="display: flex; justify-content: space-between; padding-top: 15px; border-top: 2px solid #333;">
                                 <span style="font-size: 18px; font-weight: 600; color: #333;">Tổng cộng:</span>
-                                <span style="font-size: 22px; font-weight: 700; color: #d32f2f;"><%= (cart.subtotal + shippingFee).toLocaleString('vi-VN') %>đ</span>
+                                <span id="totalAmount" style="font-size: 22px; font-weight: 700; color: #d32f2f;"><%= (cart.subtotal + shippingFee).toLocaleString('vi-VN') %>đ</span>
                             </div>
                         </div>
                         
@@ -272,15 +293,79 @@ document.getElementById('checkoutForm')?.addEventListener('submit', function(e) 
     const addressSelected = document.querySelector('input[name="address_id"]:checked');
     if (!addressSelected) {
         e.preventDefault();
-        alert('❌ Vui lòng chọn hoặc thêm địa chỉ giao hàng');
+        alert('Vui lòng chọn hoặc thêm địa chỉ giao hàng');
         return;
     }
     
     // Show loading
     const btn = document.getElementById('submitBtn');
-    btn.textContent = '⏳ Đang xử lý...';
+    btn.textContent = 'Đang xử lý...';
     btn.disabled = true;
 });
+
+// Voucher system
+const checkoutSubtotal = <%= cart.subtotal %>;
+const checkoutShippingFee = checkoutSubtotal >= 500000 ? 0 : 30000;
+let currentDiscount = 0;
+
+// Sample voucher codes (in real app, this would be validated on server)
+const validVouchers = {
+    'GIAM10': { type: 'percent', value: 10, maxDiscount: 100000, minOrder: 200000 },
+    'GIAM20': { type: 'percent', value: 20, maxDiscount: 200000, minOrder: 500000 },
+    'FREESHIP': { type: 'fixed', value: checkoutShippingFee, minOrder: 0 },
+    'VIP50K': { type: 'fixed', value: 50000, minOrder: 300000 }
+};
+
+function applyVoucher() {
+    const code = document.getElementById('voucherCode').value.toUpperCase().trim();
+    const messageEl = document.getElementById('voucherMessage');
+    const discountRowEl = document.getElementById('discountRow');
+    const discountAmountEl = document.getElementById('discountAmount');
+    const discountInput = document.getElementById('discountInput');
+    const totalEl = document.getElementById('totalAmount');
+    
+    if (!code) {
+        messageEl.innerHTML = '<span style="color: #f44336;">Vui lòng nhập mã giảm giá</span>';
+        return;
+    }
+    
+    const voucher = validVouchers[code];
+    
+    if (!voucher) {
+        messageEl.innerHTML = '<span style="color: #f44336;">Mã giảm giá không hợp lệ</span>';
+        currentDiscount = 0;
+    } else if (checkoutSubtotal < voucher.minOrder) {
+        messageEl.innerHTML = '<span style="color: #f44336;">Đơn hàng tối thiểu ' + voucher.minOrder.toLocaleString('vi-VN') + 'đ để sử dụng mã này</span>';
+        currentDiscount = 0;
+    } else {
+        // Calculate discount
+        if (voucher.type === 'percent') {
+            currentDiscount = Math.floor(checkoutSubtotal * voucher.value / 100);
+            if (voucher.maxDiscount && currentDiscount > voucher.maxDiscount) {
+                currentDiscount = voucher.maxDiscount;
+            }
+        } else {
+            currentDiscount = voucher.value;
+        }
+        
+        messageEl.innerHTML = '<span style="color: #2e7d32;">✅ Áp dụng thành công! Giảm ' + currentDiscount.toLocaleString('vi-VN') + 'đ</span>';
+    }
+    
+    // Update UI
+    if (currentDiscount > 0) {
+        discountRowEl.style.display = 'flex';
+        discountAmountEl.textContent = '-' + currentDiscount.toLocaleString('vi-VN') + 'đ';
+    } else {
+        discountRowEl.style.display = 'none';
+    }
+    
+    // Update hidden input
+    discountInput.value = currentDiscount;
+    
+    // Update total
+    const total = checkoutSubtotal + checkoutShippingFee - currentDiscount;
+    totalEl.textContent = total.toLocaleString('vi-VN') + 'đ';
+}
 </script>
 
 <%- include('../partials/footer') %>
