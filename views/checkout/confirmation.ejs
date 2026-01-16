@@ -1,0 +1,152 @@
+<%- include('../partials/header') %>
+
+<div class="confirmation-page" style="padding: 60px 0; background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%); min-height: 80vh;">
+    <div class="container" style="max-width: 700px;">
+        
+        <!-- Success Message -->
+        <div style="text-align: center; background: white; border-radius: 16px; padding: 50px 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 25px;">
+                <span style="font-size: 40px;">✓</span>
+            </div>
+            
+            <h1 style="margin: 0 0 15px 0; font-size: 28px; font-weight: 700; color: #333;">
+                Đặt hàng thành công!
+            </h1>
+            <p style="margin: 0 0 20px 0; color: #666; font-size: 16px;">
+                Cảm ơn bạn đã đặt hàng. Đơn hàng của bạn đang được xử lý.
+            </p>
+            
+            <div style="display: inline-block; padding: 12px 25px; background: #f5f5f5; border-radius: 8px; margin-bottom: 30px;">
+                <span style="color: #666;">Mã đơn hàng:</span>
+                <strong style="color: #667eea; font-size: 18px; margin-left: 8px;"><%= order.order_code %></strong>
+            </div>
+        </div>
+        
+        <!-- Order Details -->
+        <div style="background: white; border-radius: 16px; padding: 30px; margin-top: 25px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+            <h3 style="margin: 0 0 20px 0; font-size: 18px; color: #333; display: flex; align-items: center; gap: 10px;">
+                📦 Chi tiết đơn hàng
+            </h3>
+            
+            <!-- Items -->
+            <div style="border: 1px solid #eee; border-radius: 10px; overflow: hidden; margin-bottom: 20px;">
+                <% if (order.items && order.items.length > 0) { %>
+                    <% order.items.forEach((item, index) => { %>
+                        <div style="display: flex; gap: 15px; padding: 15px; <%= index < order.items.length - 1 ? 'border-bottom: 1px solid #eee;' : '' %>">
+                            <div style="width: 60px; height: 60px; border-radius: 8px; overflow: hidden; background: #f5f5f5; flex-shrink: 0;">
+                                <% if (item.product_image) { %>
+                                    <img src="<%= item.product_image %>" alt="<%= item.product_name %>" style="width: 100%; height: 100%; object-fit: cover;">
+                                <% } else { %>
+                                    <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">👕</div>
+                                <% } %>
+                            </div>
+                            <div style="flex: 1;">
+                                <div style="font-weight: 500; color: #333;"><%= item.product_name %></div>
+                                <div style="color: #666; font-size: 13px; margin-top: 3px;">SL: <%= item.quantity %></div>
+                            </div>
+                            <div style="text-align: right; font-weight: 600; color: #d32f2f;">
+                                <%= item.subtotal.toLocaleString('vi-VN') %>đ
+                            </div>
+                        </div>
+                    <% }) %>
+                <% } %>
+            </div>
+            
+            <!-- Summary -->
+            <div style="padding: 15px; background: #f9f9f9; border-radius: 10px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="color: #666;">Tạm tính:</span>
+                    <span><%= order.total_amount.toLocaleString('vi-VN') %>đ</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="color: #666;">Phí vận chuyển:</span>
+                    <span style="color: <%= order.shipping_fee === 0 ? '#2e7d32' : '#333' %>;"><%= order.shipping_fee === 0 ? 'Miễn phí' : order.shipping_fee.toLocaleString('vi-VN') + 'đ' %></span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding-top: 12px; border-top: 2px solid #333; margin-top: 8px;">
+                    <span style="font-weight: 600; font-size: 16px;">Tổng cộng:</span>
+                    <span style="font-weight: 700; font-size: 18px; color: #d32f2f;"><%= order.final_amount.toLocaleString('vi-VN') %>đ</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Shipping Info -->
+        <div style="background: white; border-radius: 16px; padding: 30px; margin-top: 25px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+            <h3 style="margin: 0 0 20px 0; font-size: 18px; color: #333; display: flex; align-items: center; gap: 10px;">
+                📍 Địa chỉ giao hàng
+            </h3>
+            <div style="padding: 15px; background: #f9f9f9; border-radius: 10px;">
+                <div style="font-weight: 600; color: #333;"><%= order.shipping_name %> - <%= order.shipping_phone %></div>
+                <div style="color: #666; margin-top: 8px;">
+                    <%= order.address_line %><%= order.ward ? ', ' + order.ward : '' %><%= order.district ? ', ' + order.district : '' %>, <%= order.city %>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Payment Info -->
+        <div style="background: white; border-radius: 16px; padding: 30px; margin-top: 25px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+            <h3 style="margin: 0 0 20px 0; font-size: 18px; color: #333; display: flex; align-items: center; gap: 10px;">
+                💳 Thanh toán
+            </h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px; background: #f9f9f9; border-radius: 10px;">
+                <div>
+                    <div style="font-weight: 500; color: #333;">
+                        <% if (order.payment_method === 'cod') { %>
+                            💵 Thanh toán khi nhận hàng (COD)
+                        <% } else if (order.payment_method === 'vnpay') { %>
+                            🏦 VNPay
+                        <% } else if (order.payment_method === 'momo') { %>
+                            📱 Ví MoMo
+                        <% } else { %>
+                            <%= order.payment_method %>
+                        <% } %>
+                    </div>
+                </div>
+                <span style="padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 500; background: <%= order.payment_status === 'paid' ? '#e8f5e9' : '#fff3e0' %>; color: <%= order.payment_status === 'paid' ? '#2e7d32' : '#e65100' %>;">
+                    <%= order.payment_status === 'paid' ? 'Đã thanh toán' : 'Chờ thanh toán' %>
+                </span>
+            </div>
+        </div>
+        
+        <!-- Status Timeline -->
+        <div style="background: white; border-radius: 16px; padding: 30px; margin-top: 25px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+            <h3 style="margin: 0 0 20px 0; font-size: 18px; color: #333; display: flex; align-items: center; gap: 10px;">
+                🚚 Trạng thái đơn hàng
+            </h3>
+            <div style="display: flex; align-items: center; gap: 10px; padding: 15px; background: #e3f2fd; border-radius: 10px;">
+                <span style="font-size: 24px;">📋</span>
+                <div>
+                    <div style="font-weight: 600; color: #1976d2;">
+                        <% if (order.status === 'pending') { %>
+                            Đang xử lý
+                        <% } else if (order.status === 'confirmed') { %>
+                            Đã xác nhận
+                        <% } else if (order.status === 'shipping') { %>
+                            Đang giao hàng
+                        <% } else if (order.status === 'delivered') { %>
+                            Đã giao hàng
+                        <% } else if (order.status === 'cancelled') { %>
+                            Đã hủy
+                        <% } else { %>
+                            <%= order.status %>
+                        <% } %>
+                    </div>
+                    <div style="color: #666; font-size: 13px; margin-top: 3px;">Đơn hàng của bạn đang được xử lý</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Actions -->
+        <div style="display: flex; gap: 15px; margin-top: 30px; justify-content: center;">
+            <a href="/" style="display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
+                🏠 Về trang chủ
+            </a>
+            <a href="/orders/history" style="display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px; background: white; color: #333; text-decoration: none; border-radius: 8px; font-weight: 600; border: 2px solid #e0e0e0;">
+                📋 Xem đơn hàng
+            </a>
+        </div>
+    </div>
+</div>
+
+<script src="/js/main.js"></script>
+
+<%- include('../partials/footer') %>

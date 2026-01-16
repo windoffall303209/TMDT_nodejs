@@ -1,0 +1,12 @@
+<%- include('../partials/header') %>
+
+<div class="user-profile-page">
+    <div class="container">
+        <h1>Tài Khoản</h1>
+        <% if (user) { %>
+            <p>Xin chào, <%= user.full_name %></p>
+        <% } %>
+   </div>
+</div>
+
+<%- include('../partials/footer') %>

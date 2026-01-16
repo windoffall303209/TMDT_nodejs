@@ -1,0 +1,46 @@
+<%- include('../partials/header') %>
+
+<div class="auth-page">
+    <div class="auth-container">
+        <h1>Đăng ký</h1>
+        
+        <% if (error) { %>
+            <div class="alert alert-error"><%= error %></div>
+        <% } %>
+        
+        <form action="/auth/register" method="POST" class="auth-form">
+            <div class="form-group">
+                <label for="full_name">Họ và tên *</label>
+                <input type="text" id="full_name" name="full_name" value="<%= formData.full_name || '' %>" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="email">Email *</label>
+                <input type="email" id="email" name="email" value="<%= formData.email || '' %>" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="phone">Số điện thoại</label>
+                <input type="tel" id="phone" name="phone" value="<%= formData.phone || '' %>">
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Mật khẩu *</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            
+            <div class="form-check">
+                <input type="checkbox" id="marketing_consent" name="marketing_consent">
+                <label for="marketing_consent">Tôi muốn nhận email khuyến mãi và tin tức</label>
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-block">Đăng ký</button>
+        </form>
+        
+        <div class="auth-footer">
+            <p>Đã có tài khoản? <a href="/auth/login">Đăng nhập</a></p>
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/footer') %>

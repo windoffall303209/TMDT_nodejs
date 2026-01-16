@@ -1,0 +1,35 @@
+<%- include('../partials/header') %>
+
+<div class="auth-page">
+    <div class="auth-container">
+        <h1>Đăng nhập</h1>
+        
+        <% if (error) { %>
+            <div style="padding: 15px 20px; margin-bottom: 20px; border-radius: 8px; background: <%= error.includes('khóa') ? '#fff3e0' : '#ffebee' %>; border-left: 4px solid <%= error.includes('khóa') ? '#ff9800' : '#f44336' %>; color: <%= error.includes('khóa') ? '#e65100' : '#c62828' %>;">
+                <strong><%= error.includes('khóa') ? '⚠️ Tài khoản bị khóa' : '❌ Lỗi đăng nhập' %></strong>
+                <p style="margin: 8px 0 0 0; font-size: 14px;"><%= error %></p>
+            </div>
+        <% } %>
+        
+        <form action="/auth/login" method="POST" class="auth-form">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" value="<%= email %>" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Mật khẩu</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-block">Đăng nhập</button>
+        </form>
+        
+        <div class="auth-footer">
+            <p>Chưa có tài khoản? <a href="/auth/register">Đăng ký ngay</a></p>
+            <a href="/auth/forgot-password">Quên mật khẩu?</a>
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/footer') %>

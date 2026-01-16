@@ -1,0 +1,58 @@
+<%- include('../partials/header') %>
+
+<div class="search-results-page" style="padding: 40px 0; min-height: 60vh;">
+    <div class="container">
+        <div style="margin-bottom: 30px;">
+            <h1 style="margin: 0 0 10px 0; font-size: 28px; font-weight: 700; color: #333;">
+                Kết quả tìm kiếm
+            </h1>
+            <p style="margin: 0; color: #666; font-size: 16px;">
+                <% if (products && products.length > 0) { %>
+                    Tìm thấy <strong><%= products.length %></strong> sản phẩm cho "<strong><%= query %></strong>"
+                <% } else { %>
+                    Không tìm thấy sản phẩm nào cho "<strong><%= query %></strong>"
+                <% } %>
+            </p>
+        </div>
+        
+        <% if (products && products.length > 0) { %>
+            <div class="product-grid">
+                <% products.forEach(product => { %>
+                    <%- include('../partials/product-card', { product }) %>
+                <% }) %>
+            </div>
+        <% } else { %>
+            <div style="text-align: center; padding: 80px 20px; background: #f9f9f9; border-radius: 16px;">
+                <span style="font-size: 80px; display: block; margin-bottom: 20px;">🔍</span>
+                <h2 style="margin: 0 0 15px 0; color: #333; font-weight: 600;">Không tìm thấy kết quả</h2>
+                <p style="margin: 0 0 30px 0; color: #666; max-width: 400px; margin-left: auto; margin-right: auto;">
+                    Rất tiếc, không tìm thấy sản phẩm nào phù hợp với "<%= query %>". 
+                    Vui lòng thử tìm kiếm với từ khóa khác.
+                </p>
+                <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+                    <a href="/products" style="display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; transition: transform 0.2s;">
+                        Xem tất cả sản phẩm
+                    </a>
+                    <a href="/" style="display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px; background: #f0f0f0; color: #333; text-decoration: none; border-radius: 8px; font-weight: 600; transition: transform 0.2s;">
+                        Về trang chủ
+                    </a>
+                </div>
+            </div>
+            
+            <div style="margin-top: 60px;">
+                <h3 style="margin: 0 0 25px 0; font-size: 22px; font-weight: 600; color: #333;">
+                    💡 Gợi ý tìm kiếm
+                </h3>
+                <ul style="color: #555; line-height: 2; padding-left: 20px;">
+                    <li>Kiểm tra lại chính tả từ khóa</li>
+                    <li>Sử dụng từ khóa chung chung hơn</li>
+                    <li>Thử tìm kiếm theo tên danh mục: <a href="/products/category/nam" style="color: #667eea;">Nam</a>, <a href="/products/category/nu" style="color: #667eea;">Nữ</a>, <a href="/products/category/tre-em" style="color: #667eea;">Trẻ Em</a></li>
+                </ul>
+            </div>
+        <% } %>
+    </div>
+</div>
+
+<script src="/js/main.js"></script>
+
+<%- include('../partials/footer') %>

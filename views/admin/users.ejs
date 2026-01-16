@@ -1,0 +1,87 @@
+<%- include('../partials/admin-header', { currentPage: 'users' }) %>
+
+<div class="admin-page" style="padding: 40px 20px;">
+    <div class="container">
+        <h1 style="margin-bottom: 40px; color: #333;">👥 Quản Lý Người Dùng</h1>
+        
+        <% if (users && users.length > 0) { %>
+            <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: #f8f9fa; border-bottom: 2px solid #eee;">
+                            <th style="padding: 15px; text-align: left;">ID</th>
+                            <th style="padding: 15px; text-align: left;">Họ Tên</th>
+                            <th style="padding: 15px; text-align: left;">Email</th>
+                            <th style="padding: 15px; text-align: center;">Vai Trò</th>
+                            <th style="padding: 15px; text-align: center;">Trạng Thái</th>
+                            <th style="padding: 15px; text-align: center;">Ngày Tạo</th>
+                            <th style="padding: 15px; text-align: center;">Thao Tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% users.forEach(u => { %>
+                            <tr style="border-bottom: 1px solid #eee;">
+                                <td style="padding: 15px;"><%= u.id %></td>
+                                <td style="padding: 15px;"><strong><%= u.full_name %></strong></td>
+                                <td style="padding: 15px;"><%= u.email %></td>
+                                <td style="padding: 15px; text-align: center;">
+                                    <span style="padding: 4px 10px; border-radius: 12px; font-size: 12px; background: <%= u.role === 'admin' ? '#e3f2fd' : '#f5f5f5' %>; color: <%= u.role === 'admin' ? '#1976d2' : '#666' %>;">
+                                        <%= u.role === 'admin' ? 'Admin' : 'Khách hàng' %>
+                                    </span>
+                                </td>
+                                <td style="padding: 15px; text-align: center;">
+                                    <% const isActive = Boolean(u.is_active); %>
+                                    <span style="padding: 4px 10px; border-radius: 12px; font-size: 12px; background: <%= isActive ? '#e8f5e9' : '#ffebee' %>; color: <%= isActive ? '#2e7d32' : '#c62828' %>;">
+                                        <%= isActive ? 'Hoạt động' : 'Bị khóa' %>
+                                    </span>
+                                </td>
+                                <td style="padding: 15px; text-align: center;"><%= new Date(u.created_at).toLocaleDateString('vi-VN') %></td>
+                                <td style="padding: 15px; text-align: center;">
+                                    <% if (u.role !== 'admin') { %>
+                                        <button onclick="toggleUserStatus('<%= u.id %>', <%= isActive %>)" style="padding: 6px 12px; font-size: 12px; background: <%= isActive ? '#ffebee' : '#e8f5e9' %>; color: <%= isActive ? '#c62828' : '#2e7d32' %>; border: none; border-radius: 4px; cursor: pointer;">
+                                            <%= isActive ? '🔒 Khóa' : '🔓 Mở khóa' %>
+                                        </button>
+                                    <% } else { %>
+                                        <span style="color: #999; font-size: 12px;">-</span>
+                                    <% } %>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+        <% } else { %>
+            <div style="text-align: center; padding: 60px; background: white; border-radius: 12px;">
+                <span style="font-size: 64px;">👤</span>
+                <h3 style="margin: 20px 0 10px 0; color: #333;">Chưa có người dùng nào</h3>
+            </div>
+        <% } %>
+    </div>
+</div>
+
+<script>
+async function toggleUserStatus(userId, currentStatus) {
+    const action = currentStatus ? 'khóa' : 'mở khóa';
+    if (!confirm(`Bạn có chắc muốn ${action} người dùng này?`)) return;
+    
+    try {
+        const response = await fetch(`/admin/users/${userId}/status`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ is_active: String(!currentStatus) })
+        });
+        if (response.ok) {
+            alert(`✅ Đã ${action} người dùng thành công!`);
+            location.reload();
+        } else {
+            const result = await response.json();
+            alert('❌ Lỗi: ' + (result.message || 'Không thể cập nhật trạng thái'));
+        }
+    } catch (error) {
+        alert('❌ Lỗi: ' + error.message);
+    }
+}
+</script>
+
+<%- include('../partials/admin-footer') %>
