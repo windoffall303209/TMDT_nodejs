@@ -1,3 +1,17 @@
+/**
+ * =============================================================================
+ * AUTH CONTROLLER - Điều khiển xác thực người dùng
+ * =============================================================================
+ * File này chứa các hàm xử lý logic liên quan đến xác thực:
+ * - Đăng ký tài khoản mới
+ * - Đăng nhập / Đăng xuất
+ * - Quản lý profile người dùng
+ * - Upload avatar
+ * - Đổi mật khẩu
+ * - Quản lý địa chỉ giao hàng
+ * =============================================================================
+ */
+
 const User = require('../models/User');
 const { generateToken } = require('../middleware/auth');
 const emailService = require('../services/emailService');
@@ -5,24 +19,52 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-// Configure multer for avatar upload
+// =============================================================================
+// CẤU HÌNH UPLOAD AVATAR
+// =============================================================================
+
+/**
+ * Cấu hình lưu trữ file avatar
+ *
+ * @description Định nghĩa thư mục lưu và cách đặt tên file avatar
+ */
 const avatarStorage = multer.diskStorage({
+    /**
+     * Xác định thư mục lưu file
+     * @param {Object} req - Request object
+     * @param {Object} file - File upload
+     * @param {Function} cb - Callback function
+     */
     destination: (req, file, cb) => {
         const uploadDir = 'public/uploads/avatars';
+        // Tạo thư mục nếu chưa tồn tại
         if (!fs.existsSync(uploadDir)) {
             fs.mkdirSync(uploadDir, { recursive: true });
         }
         cb(null, uploadDir);
     },
+    /**
+     * Đặt tên file upload
+     * @description Tên file = avatar_[userId]_[timestamp].[extension]
+     */
     filename: (req, file, cb) => {
         const uniqueName = `avatar_${req.user.id}_${Date.now()}${path.extname(file.originalname)}`;
         cb(null, uniqueName);
     }
 });
 
+/**
+ * Middleware upload avatar với các ràng buộc
+ * - Giới hạn dung lượng: 5MB
+ * - Chỉ chấp nhận file ảnh: jpeg, jpg, png, gif, webp
+ */
 const uploadAvatar = multer({
     storage: avatarStorage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+    limits: { fileSize: 5 * 1024 * 1024 }, // Giới hạn 5MB
+    /**
+     * Lọc file hợp lệ
+     * @description Chỉ cho phép upload file ảnh
+     */
     fileFilter: (req, file, cb) => {
         const allowedTypes = /jpeg|jpg|png|gif|webp/;
         const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
@@ -32,18 +74,40 @@ const uploadAvatar = multer({
         }
         cb(new Error('Chỉ chấp nhận file ảnh (jpeg, jpg, png, gif, webp)'));
     }
-}).single('avatar');
-// Register new user
+}).single('avatar'); // Chỉ cho phép upload 1 file với field name 'avatar'
+
+// =============================================================================
+// ĐĂNG KÝ / ĐĂNG NHẬP / ĐĂNG XUẤT
+// =============================================================================
+
+/**
+ * Đăng ký tài khoản mới
+ *
+ * @description Tạo tài khoản người dùng mới, gửi email chào mừng,
+ *              tạo token JWT và đăng nhập tự động
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.body - Dữ liệu đăng ký
+ * @param {string} req.body.email - Email đăng ký (bắt buộc)
+ * @param {string} req.body.password - Mật khẩu (bắt buộc)
+ * @param {string} req.body.full_name - Họ tên (bắt buộc)
+ * @param {string} [req.body.phone] - Số điện thoại
+ * @param {string} [req.body.marketing_consent] - Đồng ý nhận email marketing
+ * @param {Object} res - Response object từ Express
+ *
+ * @returns {Redirect|JSON} Redirect về trang chủ hoặc trả về JSON với token
+ */
 exports.register = async (req, res) => {
     try {
+        // Lấy dữ liệu từ form đăng ký
         const { email, password, full_name, phone, marketing_consent } = req.body;
 
-        // Basic validation
+        // Validate dữ liệu bắt buộc
         if (!email || !password || !full_name) {
             return res.status(400).json({ message: 'Email, password and full name are required' });
         }
 
-        // Create user
+        // Tạo user mới trong database
         const user = await User.create({
             email,
             password,
@@ -52,23 +116,24 @@ exports.register = async (req, res) => {
             marketing_consent: marketing_consent === 'on' || marketing_consent === true
         });
 
-        // Send welcome email
+        // Gửi email chào mừng (async, không chờ kết quả)
         emailService.sendWelcomeEmail(user).catch(err => console.error('Email error:', err));
 
-        // Generate token
+        // Tạo JWT token cho user
         const token = generateToken(user);
 
-        // Set cookie
+        // Lưu token vào cookie (httpOnly để bảo mật)
         res.cookie('token', token, {
             httpOnly: true,
-            maxAge: 24 * 60 * 60 * 1000 // 24 hours
+            maxAge: 24 * 60 * 60 * 1000 // Cookie hết hạn sau 24 giờ
         });
 
-        // Redirect or respond
+        // Redirect về trang chủ nếu là request HTML
         if (req.accepts('html')) {
             return res.redirect('/');
         }
-        
+
+        // Trả về JSON cho API request
         res.status(201).json({
             message: 'Registration successful',
             user: { id: user.id, email: user.email, full_name: user.full_name },
@@ -76,55 +141,69 @@ exports.register = async (req, res) => {
         });
     } catch (error) {
         console.error('Registration error:', error);
-        
+
+        // Hiển thị lại form đăng ký với lỗi
         if (req.accepts('html')) {
             return res.render('auth/register', {
                 error: error.message,
                 formData: req.body
             });
         }
-        
+
         res.status(400).json({ message: error.message });
     }
 };
 
-// Login user
+/**
+ * Đăng nhập
+ *
+ * @description Xác thực email/password, tạo JWT token,
+ *              merge giỏ hàng khách vào tài khoản
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.body - Thông tin đăng nhập
+ * @param {string} req.body.email - Email đăng nhập
+ * @param {string} req.body.password - Mật khẩu
+ * @param {Object} res - Response object từ Express
+ *
+ * @returns {Redirect|JSON} Redirect về trang chủ hoặc trả về JSON với token
+ */
 exports.login = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        // Basic validation
+        // Validate dữ liệu bắt buộc
         if (!email || !password) {
             return res.status(400).json({ message: 'Email and password are required' });
         }
 
-        // Find user
+        // Tìm user theo email
         const user = await User.findByEmail(email);
         if (!user) {
             throw new Error('Email hoặc mật khẩu không đúng');
         }
 
-        // Verify password
+        // Kiểm tra mật khẩu
         const isValid = await User.verifyPassword(password, user.password_hash);
         if (!isValid) {
             throw new Error('Email hoặc mật khẩu không đúng');
         }
 
-        // Check if account is locked
+        // Kiểm tra tài khoản có bị khóa không
         if (user.is_active === false || user.is_active === 0) {
             throw new Error('Tài khoản của bạn đã bị khóa do vi phạm điều khoản sử dụng. Vui lòng liên hệ hỗ trợ.');
         }
 
-        // Generate token
+        // Tạo JWT token
         const token = generateToken(user);
 
-        // Set cookie
+        // Lưu token vào cookie
         res.cookie('token', token, {
             httpOnly: true,
-            maxAge: 24 * 60 * 60 * 1000 // 24 hours
+            maxAge: 24 * 60 * 60 * 1000 // 24 giờ
         });
 
-        // Merge guest cart if exists
+        // Merge giỏ hàng của khách (session) vào tài khoản đã đăng nhập
         if (req.session && req.session.id) {
             const Cart = require('../models/Cart');
             await Cart.mergeGuestCart(user.id, req.session.id).catch(err => {
@@ -132,11 +211,12 @@ exports.login = async (req, res) => {
             });
         }
 
-        // Redirect or respond
+        // Redirect về trang chủ
         if (req.accepts('html')) {
             return res.redirect('/');
         }
-        
+
+        // Trả về JSON cho API
         res.json({
             message: 'Login successful',
             user: { id: user.id, email: user.email, full_name: user.full_name, role: user.role },
@@ -144,49 +224,99 @@ exports.login = async (req, res) => {
         });
     } catch (error) {
         console.error('Login error:', error);
-        
+
+        // Hiển thị lại form đăng nhập với lỗi
         if (req.accepts('html')) {
             return res.render('auth/login', {
                 error: error.message,
                 email: req.body.email
             });
         }
-        
+
         res.status(401).json({ message: error.message });
     }
 };
 
-// Logout user
+/**
+ * Đăng xuất
+ *
+ * @description Xóa cookie token để đăng xuất người dùng
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} res - Response object từ Express
+ *
+ * @returns {Redirect|JSON} Redirect về trang chủ hoặc trả về JSON
+ */
 exports.logout = (req, res) => {
+    // Xóa cookie chứa token
     res.clearCookie('token');
-    
+
     if (req.accepts('html')) {
         return res.redirect('/');
     }
-    
+
     res.json({ message: 'Logout successful' });
 };
 
-// Get current user profile
+// =============================================================================
+// QUẢN LÝ PROFILE
+// =============================================================================
+
+/**
+ * Lấy thông tin profile người dùng
+ *
+ * @description Hiển thị trang profile với thông tin user hiện tại
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} res - Response object từ Express
+ *
+ * @returns {Render|JSON} Render trang profile hoặc trả về JSON
+ */
 exports.getProfile = async (req, res) => {
     try {
+        // Lấy thông tin user từ database (mới nhất)
         const user = await User.findById(req.user.id);
-        
-        if (req.accepts('html')) {
-            return res.render('user/profile', { user });
+
+        if (!user) {
+            // User không tồn tại - redirect về login
+            return res.redirect('/auth/login');
         }
-        
+
+        if (req.accepts('html')) {
+            return res.render('user/profile', {
+                user,
+                category: null,
+                path: '/auth/profile'
+            });
+        }
+
         res.json({ user });
     } catch (error) {
+        console.error('Profile Error:', error);
+        if (req.accepts('html')) {
+            return res.redirect('/auth/login');
+        }
         res.status(500).json({ message: error.message });
     }
 };
 
-// Update user profile
+/**
+ * Cập nhật thông tin profile cơ bản
+ *
+ * @description Cập nhật họ tên và số điện thoại
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.body.full_name - Họ tên mới
+ * @param {Object} req.body.phone - Số điện thoại mới
+ * @param {Object} res - Response object từ Express
+ *
+ * @returns {Redirect|JSON} Redirect về trang profile hoặc trả về JSON
+ */
 exports.updateProfile = async (req, res) => {
     try {
         const { full_name, phone } = req.body;
-        
+
+        // Cập nhật profile trong database
         const updatedUser = await User.updateProfile(req.user.id, {
             full_name,
             phone
@@ -195,7 +325,7 @@ exports.updateProfile = async (req, res) => {
         if (req.accepts('html')) {
             return res.redirect('/user/profile');
         }
-        
+
         res.json({
             message: 'Profile updated successfully',
             user: updatedUser
@@ -205,29 +335,62 @@ exports.updateProfile = async (req, res) => {
     }
 };
 
-// Render register page
+/**
+ * Hiển thị trang đăng ký
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} res - Response object từ Express
+ */
 exports.showRegister = (req, res) => {
     res.render('auth/register', { error: null, formData: {} });
 };
 
-// Render login page
+/**
+ * Hiển thị trang đăng nhập
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} res - Response object từ Express
+ */
 exports.showLogin = (req, res) => {
     res.render('auth/login', { error: null, email: '' });
 };
 
-// Create address
+// =============================================================================
+// QUẢN LÝ ĐỊA CHỈ
+// =============================================================================
+
+/**
+ * Tạo địa chỉ giao hàng mới
+ *
+ * @description Thêm địa chỉ giao hàng mới cho người dùng
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.body - Thông tin địa chỉ
+ * @param {string} req.body.full_name - Họ tên người nhận
+ * @param {string} req.body.phone - Số điện thoại
+ * @param {string} req.body.address_line - Địa chỉ chi tiết
+ * @param {string} [req.body.ward] - Phường/Xã
+ * @param {string} [req.body.district] - Quận/Huyện
+ * @param {string} req.body.city - Tỉnh/Thành phố
+ * @param {boolean} [req.body.is_default] - Đặt làm địa chỉ mặc định
+ * @param {Object} res - Response object từ Express
+ *
+ * @returns {JSON} Trả về JSON với địa chỉ vừa tạo
+ */
 exports.createAddress = async (req, res) => {
     try {
         const Address = require('../models/Address');
         const { full_name, phone, address_line, ward, district, city, is_default } = req.body;
-        
+
+        // Validate dữ liệu bắt buộc
         if (!full_name || !phone || !address_line || !city) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Vui lòng điền đầy đủ thông tin bắt buộc' 
+            return res.status(400).json({
+                success: false,
+                message: 'Vui lòng điền đầy đủ thông tin bắt buộc'
             });
         }
-        
+
+        // Tạo địa chỉ mới
         const address = await Address.create(req.user.id, {
             full_name,
             phone,
@@ -237,7 +400,7 @@ exports.createAddress = async (req, res) => {
             city,
             is_default: is_default || true
         });
-        
+
         res.json({
             success: true,
             message: 'Đã lưu địa chỉ thành công',
@@ -249,18 +412,33 @@ exports.createAddress = async (req, res) => {
     }
 };
 
-// Update full profile (name, phone, birthday)
+/**
+ * Cập nhật đầy đủ thông tin profile
+ *
+ * @description Cập nhật họ tên, số điện thoại và ngày sinh
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.body - Thông tin cập nhật
+ * @param {string} req.body.full_name - Họ tên (tối thiểu 2 ký tự)
+ * @param {string} [req.body.phone] - Số điện thoại
+ * @param {string} [req.body.birthday] - Ngày sinh (YYYY-MM-DD)
+ * @param {Object} res - Response object từ Express
+ *
+ * @returns {JSON} Trả về JSON với thông tin user đã cập nhật
+ */
 exports.updateFullProfile = async (req, res) => {
     try {
         const { full_name, phone, birthday } = req.body;
-        
+
+        // Validate họ tên
         if (!full_name || full_name.trim().length < 2) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Họ tên phải có ít nhất 2 ký tự' 
+            return res.status(400).json({
+                success: false,
+                message: 'Họ tên phải có ít nhất 2 ký tự'
             });
         }
 
+        // Cập nhật profile
         const updatedUser = await User.updateFullProfile(req.user.id, {
             full_name: full_name.trim(),
             phone: phone?.trim() || null,
@@ -278,33 +456,53 @@ exports.updateFullProfile = async (req, res) => {
     }
 };
 
-// Change password
+// =============================================================================
+// ĐỔI MẬT KHẨU
+// =============================================================================
+
+/**
+ * Đổi mật khẩu
+ *
+ * @description Thay đổi mật khẩu của người dùng đã đăng nhập
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.body - Thông tin đổi mật khẩu
+ * @param {string} req.body.current_password - Mật khẩu hiện tại
+ * @param {string} req.body.new_password - Mật khẩu mới (tối thiểu 6 ký tự)
+ * @param {string} req.body.confirm_password - Xác nhận mật khẩu mới
+ * @param {Object} res - Response object từ Express
+ *
+ * @returns {JSON} Trả về JSON với thông báo thành công/thất bại
+ */
 exports.changePassword = async (req, res) => {
     try {
         const { current_password, new_password, confirm_password } = req.body;
-        
-        // Validation
+
+        // Validate dữ liệu bắt buộc
         if (!current_password || !new_password || !confirm_password) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Vui lòng điền đầy đủ thông tin' 
+            return res.status(400).json({
+                success: false,
+                message: 'Vui lòng điền đầy đủ thông tin'
             });
         }
 
+        // Validate độ dài mật khẩu mới
         if (new_password.length < 6) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Mật khẩu mới phải có ít nhất 6 ký tự' 
+            return res.status(400).json({
+                success: false,
+                message: 'Mật khẩu mới phải có ít nhất 6 ký tự'
             });
         }
 
+        // Kiểm tra xác nhận mật khẩu
         if (new_password !== confirm_password) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Xác nhận mật khẩu không khớp' 
+            return res.status(400).json({
+                success: false,
+                message: 'Xác nhận mật khẩu không khớp'
             });
         }
 
+        // Thực hiện đổi mật khẩu
         await User.changePassword(req.user.id, current_password, new_password);
 
         res.json({
@@ -317,26 +515,45 @@ exports.changePassword = async (req, res) => {
     }
 };
 
-// Upload avatar
+// =============================================================================
+// UPLOAD AVATAR
+// =============================================================================
+
+/**
+ * Xử lý upload avatar
+ *
+ * @description Upload và cập nhật ảnh đại diện của người dùng
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.file - File ảnh upload (từ multer)
+ * @param {Object} res - Response object từ Express
+ *
+ * @returns {JSON} Trả về JSON với URL avatar mới
+ */
 exports.handleAvatarUpload = (req, res) => {
+    // Sử dụng middleware uploadAvatar để xử lý file
     uploadAvatar(req, res, async (err) => {
+        // Xử lý lỗi upload
         if (err) {
             console.error('Avatar upload error:', err);
-            return res.status(400).json({ 
-                success: false, 
-                message: err.message || 'Lỗi upload ảnh' 
+            return res.status(400).json({
+                success: false,
+                message: err.message || 'Lỗi upload ảnh'
             });
         }
 
+        // Kiểm tra có file được upload không
         if (!req.file) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Vui lòng chọn file ảnh' 
+            return res.status(400).json({
+                success: false,
+                message: 'Vui lòng chọn file ảnh'
             });
         }
 
         try {
+            // Tạo URL avatar
             const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+            // Cập nhật avatar trong database
             const updatedUser = await User.updateAvatar(req.user.id, avatarUrl);
 
             res.json({

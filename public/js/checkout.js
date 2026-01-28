@@ -57,49 +57,53 @@ async function saveNewAddress() {
 
 /**
  * Apply voucher/promo code
- * Requires window.checkoutData to be set with { subtotal, shippingFee, validVouchers }
+ * Calls API to validate voucher from database
  */
-function applyVoucher() {
-    const code = document.getElementById('voucherCode').value.toUpperCase().trim();
+async function applyVoucher() {
+    const code = document.getElementById('voucherCode').value.trim();
     const messageEl = document.getElementById('voucherMessage');
     const discountRowEl = document.getElementById('discountRow');
     const discountAmountEl = document.getElementById('discountAmount');
     const discountInput = document.getElementById('discountInput');
     const totalEl = document.getElementById('totalAmount');
-    
+
     const checkoutSubtotal = window.checkoutData?.subtotal || 0;
     const checkoutShippingFee = window.checkoutData?.shippingFee || 30000;
-    const validVouchers = window.checkoutData?.validVouchers || {};
-    
+
     let currentDiscount = 0;
-    
+
     if (!code) {
         messageEl.innerHTML = '<span style="color: #f44336;">Vui lòng nhập mã giảm giá</span>';
         return;
     }
-    
-    const voucher = validVouchers[code];
-    
-    if (!voucher) {
-        messageEl.innerHTML = '<span style="color: #f44336;">Mã giảm giá không hợp lệ</span>';
-        currentDiscount = 0;
-    } else if (checkoutSubtotal < voucher.minOrder) {
-        messageEl.innerHTML = '<span style="color: #f44336;">Đơn hàng tối thiểu ' + voucher.minOrder.toLocaleString('vi-VN') + 'đ để sử dụng mã này</span>';
-        currentDiscount = 0;
-    } else {
-        // Calculate discount
-        if (voucher.type === 'percent') {
-            currentDiscount = Math.floor(checkoutSubtotal * voucher.value / 100);
-            if (voucher.maxDiscount && currentDiscount > voucher.maxDiscount) {
-                currentDiscount = voucher.maxDiscount;
-            }
+
+    try {
+        // Call API to validate voucher
+        const response = await fetch('/orders/validate-voucher', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+                code: code,
+                order_amount: checkoutSubtotal
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            currentDiscount = data.discount_amount;
+            messageEl.innerHTML = '<span style="color: #2e7d32;">✅ ' + data.message + ' - Giảm ' + currentDiscount.toLocaleString('vi-VN') + 'đ</span>';
         } else {
-            currentDiscount = voucher.value;
+            messageEl.innerHTML = '<span style="color: #f44336;">' + data.message + '</span>';
+            currentDiscount = 0;
         }
-        
-        messageEl.innerHTML = '<span style="color: #2e7d32;">✅ Áp dụng thành công! Giảm ' + currentDiscount.toLocaleString('vi-VN') + 'đ</span>';
+    } catch (error) {
+        console.error('Voucher validation error:', error);
+        messageEl.innerHTML = '<span style="color: #f44336;">Có lỗi xảy ra khi kiểm tra voucher</span>';
+        currentDiscount = 0;
     }
-    
+
     // Update UI
     if (currentDiscount > 0) {
         discountRowEl.style.display = 'flex';
@@ -107,10 +111,10 @@ function applyVoucher() {
     } else {
         discountRowEl.style.display = 'none';
     }
-    
+
     // Update hidden input
     discountInput.value = currentDiscount;
-    
+
     // Update total
     const total = checkoutSubtotal + checkoutShippingFee - currentDiscount;
     totalEl.textContent = total.toLocaleString('vi-VN') + 'đ';

@@ -7,6 +7,9 @@ const { verifyToken, optionalAuth } = require('../middleware/auth');
 router.get('/checkout', verifyToken, orderController.showCheckout);
 router.post('/create', verifyToken, orderController.createOrder);
 
+// Voucher validation
+router.post('/validate-voucher', optionalAuth, orderController.validateVoucher);
+
 // Buy now - single product checkout (requires login)
 router.get('/buy-now/:productId', verifyToken, orderController.showBuyNow);
 router.post('/buy-now/create', verifyToken, orderController.createBuyNowOrder);

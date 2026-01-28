@@ -1,34 +1,68 @@
+/**
+ * =============================================================================
+ * ADMIN CONTROLLER - Điều khiển trang quản trị
+ * =============================================================================
+ * File này chứa các hàm xử lý logic cho trang Admin:
+ * - Dashboard: Thống kê tổng quan
+ * - Quản lý sản phẩm: CRUD sản phẩm, quản lý ảnh
+ * - Quản lý đơn hàng: Xem, cập nhật trạng thái
+ * - Quản lý người dùng: Xem, khóa/mở khóa tài khoản
+ * - Quản lý banner: CRUD banner quảng cáo
+ * - Quản lý khuyến mãi: CRUD chương trình sale
+ * - Email marketing: Gửi email hàng loạt
+ * =============================================================================
+ */
+
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 const User = require('../models/User');
 const Category = require('../models/Category');
 const Banner = require('../models/Banner');
 const Sale = require('../models/Sale');
+const Voucher = require('../models/Voucher');
 const emailService = require('../services/emailService');
 const upload = require('../middleware/upload');
 
-// Dashboard
+// =============================================================================
+// DASHBOARD - Trang tổng quan
+// =============================================================================
+
+/**
+ * Hiển thị trang Dashboard (Tổng quan)
+ *
+ * @description Lấy các thống kê tổng quan về đơn hàng, doanh thu
+ *              và danh sách đơn hàng gần đây để hiển thị trên dashboard
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} res - Response object từ Express
+ *
+ * @returns {void} Render trang admin/dashboard với dữ liệu thống kê
+ */
 exports.getDashboard = async (req, res) => {
     try {
+        // Khởi tạo object thống kê với giá trị mặc định
         let stats = {
-            total_orders: 0,
-            pending_orders: 0,
-            delivered_orders: 0,
-            cancelled_orders: 0,
-            total_revenue: 0,
-            today_revenue: 0,
-            month_revenue: 0
+            total_orders: 0,        // Tổng số đơn hàng
+            pending_orders: 0,      // Đơn hàng chờ xử lý
+            delivered_orders: 0,    // Đơn hàng đã giao
+            cancelled_orders: 0,    // Đơn hàng đã hủy
+            total_revenue: 0,       // Tổng doanh thu
+            today_revenue: 0,       // Doanh thu hôm nay
+            month_revenue: 0        // Doanh thu tháng này
         };
-        let recentOrders = [];
-        
+        let recentOrders = [];      // Danh sách đơn hàng gần đây
+
         try {
+            // Lấy thống kê từ database
             stats = await Order.getStatistics() || stats;
+            // Lấy 10 đơn hàng gần nhất
             recentOrders = await Order.findAll({ limit: 10, offset: 0 }) || [];
         } catch (err) {
             console.error('Dashboard data error:', err);
-            // Use default empty values
+            // Sử dụng giá trị mặc định nếu lỗi
         }
 
+        // Render trang dashboard với dữ liệu
         res.render('admin/dashboard', {
             stats,
             recentOrders,
@@ -41,18 +75,36 @@ exports.getDashboard = async (req, res) => {
     }
 };
 
-// Products Management
+// =============================================================================
+// QUẢN LÝ SẢN PHẨM - Products Management
+// =============================================================================
+
+/**
+ * Hiển thị danh sách sản phẩm
+ *
+ * @description Lấy danh sách tất cả sản phẩm và danh mục
+ *              để hiển thị trên trang quản lý sản phẩm
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} res - Response object từ Express
+ *
+ * @returns {void} Render trang admin/products với danh sách sản phẩm
+ */
 exports.getProducts = async (req, res) => {
     try {
-        let products = [];
-        let categories = [];
+        let products = [];   // Danh sách sản phẩm
+        let categories = []; // Danh sách danh mục (cho dropdown)
+
         try {
+            // Lấy 50 sản phẩm đầu tiên
             products = await Product.findAll({ limit: 50, offset: 0 });
+            // Lấy tất cả danh mục
             categories = await Category.findAll();
         } catch (err) {
             console.error('Products data error:', err);
         }
 
+        // Render trang quản lý sản phẩm
         res.render('admin/products', {
             products,
             categories,
@@ -64,26 +116,48 @@ exports.getProducts = async (req, res) => {
     }
 };
 
+/**
+ * Tạo sản phẩm mới
+ *
+ * @description Nhận dữ liệu từ form tạo sản phẩm, tự động tạo slug nếu không có,
+ *              lưu sản phẩm vào database và xử lý upload ảnh
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.body - Dữ liệu sản phẩm từ form
+ * @param {number} req.body.category_id - ID danh mục
+ * @param {string} req.body.name - Tên sản phẩm
+ * @param {string} [req.body.slug] - Slug URL (tự động tạo nếu không có)
+ * @param {string} req.body.description - Mô tả sản phẩm
+ * @param {number} req.body.price - Giá sản phẩm
+ * @param {number} req.body.stock_quantity - Số lượng tồn kho
+ * @param {string} req.body.sku - Mã SKU
+ * @param {number} [req.body.sale_id] - ID chương trình khuyến mãi
+ * @param {string} [req.body.is_featured] - Sản phẩm nổi bật ('on' = true)
+ * @param {Array} [req.files] - Danh sách file ảnh upload
+ * @param {Object} res - Response object từ Express
+ *
+ * @returns {Redirect} Redirect về trang danh sách sản phẩm
+ */
 exports.createProduct = async (req, res) => {
     try {
+        // Lấy dữ liệu từ request body
         const { category_id, name, description, price, stock_quantity, sku, sale_id, is_featured } = req.body;
         let { slug } = req.body;
 
-        // Auto-generate slug if not provided
+        // Tự động tạo slug nếu không được cung cấp
         if (!slug || slug.trim() === '') {
             slug = name
                 .toLowerCase()
                 .normalize('NFD')
-                .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
-                .replace(/đ/g, 'd')
-                .replace(/Đ/g, 'D')
-                .replace(/[^a-z0-9]+/g, '-')
-                .replace(/(^-|-$)/g, '')
-                + '-' + Date.now();
+                .replace(/[\u0300-\u036f]/g, '') // Xóa dấu tiếng Việt
+                .replace(/đ/g, 'd')              // Chuyển đ -> d
+                .replace(/Đ/g, 'D')              // Chuyển Đ -> D
+                .replace(/[^a-z0-9]+/g, '-')     // Thay ký tự đặc biệt bằng -
+                .replace(/(^-|-$)/g, '')         // Xóa - ở đầu và cuối
+                + '-' + Date.now();              // Thêm timestamp để unique
         }
 
-        console.log('Creating product:', { name, slug, category_id, price });
-
+        // Tạo sản phẩm trong database
         const product = await Product.create({
             category_id: parseInt(category_id),
             name,
@@ -96,20 +170,19 @@ exports.createProduct = async (req, res) => {
             is_featured: is_featured === 'on'
         });
 
-        console.log('Product created:', product);
-
-        // Handle image uploads
+        // Xử lý upload ảnh sản phẩm
         if (req.files && req.files.length > 0) {
+            // Lưu từng ảnh được upload
             for (let i = 0; i < req.files.length; i++) {
                 await Product.addImage(
                     product.id,
                     `/uploads/${req.files[i].filename}`,
-                    i === 0, // First image is primary
-                    i
+                    i === 0, // Ảnh đầu tiên là ảnh chính
+                    i        // Thứ tự hiển thị
                 );
             }
         } else {
-            // Add default image
+            // Thêm ảnh mặc định nếu không upload ảnh
             await Product.addImage(
                 product.id,
                 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600',
@@ -118,6 +191,7 @@ exports.createProduct = async (req, res) => {
             );
         }
 
+        // Redirect về trang danh sách sản phẩm
         res.redirect('/admin/products');
     } catch (error) {
         console.error('Create product error:', error);
@@ -125,11 +199,27 @@ exports.createProduct = async (req, res) => {
     }
 };
 
+/**
+ * Cập nhật thông tin sản phẩm
+ *
+ * @description Nhận dữ liệu cập nhật từ form và lưu vào database
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.params - Tham số URL
+ * @param {number} req.params.id - ID sản phẩm cần cập nhật
+ * @param {Object} req.body - Dữ liệu cập nhật
+ * @param {Object} res - Response object từ Express
+ *
+ * @returns {Redirect} Redirect về trang danh sách sản phẩm
+ */
 exports.updateProduct = async (req, res) => {
     try {
+        // Lấy ID sản phẩm từ URL params
         const { id } = req.params;
+        // Lấy dữ liệu cập nhật từ body
         const { category_id, name, slug, description, price, stock_quantity, sku, sale_id, is_featured } = req.body;
 
+        // Cập nhật sản phẩm trong database
         await Product.update(id, {
             category_id,
             name,
@@ -142,15 +232,29 @@ exports.updateProduct = async (req, res) => {
             is_featured: is_featured === 'on'
         });
 
+        // Redirect về trang danh sách
         res.redirect('/admin/products');
     } catch (error) {
         res.status(400).json({ message: error.message });
     }
 };
 
+/**
+ * Xóa sản phẩm
+ *
+ * @description Xóa sản phẩm khỏi database dựa trên ID
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.params - Tham số URL
+ * @param {number} req.params.id - ID sản phẩm cần xóa
+ * @param {Object} res - Response object từ Express
+ *
+ * @returns {JSON} Trả về JSON với thông báo thành công/thất bại
+ */
 exports.deleteProduct = async (req, res) => {
     try {
         const { id } = req.params;
+        // Xóa sản phẩm (sẽ cascade xóa cả ảnh liên quan)
         await Product.delete(id);
         res.json({ message: 'Product deleted successfully' });
     } catch (error) {
@@ -158,16 +262,31 @@ exports.deleteProduct = async (req, res) => {
     }
 };
 
-// Orders Management
+// =============================================================================
+// QUẢN LÝ ĐƠN HÀNG - Orders Management
+// =============================================================================
+
+/**
+ * Hiển thị danh sách đơn hàng
+ *
+ * @description Lấy danh sách tất cả đơn hàng để hiển thị trên trang quản lý
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} res - Response object từ Express
+ *
+ * @returns {void} Render trang admin/orders với danh sách đơn hàng
+ */
 exports.getOrders = async (req, res) => {
     try {
         let orders = [];
         try {
+            // Lấy 50 đơn hàng gần nhất
             orders = await Order.findAll({ limit: 50, offset: 0 });
         } catch (err) {
             console.error('Orders data error:', err);
         }
 
+        // Render trang quản lý đơn hàng
         res.render('admin/orders', {
             orders,
             user: req.user,
@@ -178,11 +297,24 @@ exports.getOrders = async (req, res) => {
     }
 };
 
+/**
+ * Cập nhật trạng thái đơn hàng
+ *
+ * @description Thay đổi trạng thái đơn hàng (pending, confirmed, shipping, delivered, cancelled)
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.params.id - ID đơn hàng
+ * @param {Object} req.body.status - Trạng thái mới
+ * @param {Object} res - Response object từ Express
+ *
+ * @returns {JSON} Trả về JSON với thông báo thành công/thất bại
+ */
 exports.updateOrderStatus = async (req, res) => {
     try {
         const { id } = req.params;
         const { status } = req.body;
 
+        // Cập nhật trạng thái trong database
         await Order.updateStatus(id, status);
         res.json({ message: 'Order status updated successfully' });
     } catch (error) {
@@ -190,16 +322,31 @@ exports.updateOrderStatus = async (req, res) => {
     }
 };
 
-// Users Management
+// =============================================================================
+// QUẢN LÝ NGƯỜI DÙNG - Users Management
+// =============================================================================
+
+/**
+ * Hiển thị danh sách người dùng
+ *
+ * @description Lấy danh sách tất cả người dùng đã đăng ký
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} res - Response object từ Express
+ *
+ * @returns {void} Render trang admin/users với danh sách người dùng
+ */
 exports.getUsers = async (req, res) => {
     try {
         let users = [];
         try {
+            // Lấy 50 người dùng
             users = await User.findAll({ limit: 50, offset: 0 });
         } catch (err) {
             console.error('Users data error:', err);
         }
 
+        // Render trang quản lý người dùng
         res.render('admin/users', {
             users,
             user: req.user,
@@ -210,11 +357,24 @@ exports.getUsers = async (req, res) => {
     }
 };
 
+/**
+ * Cập nhật trạng thái người dùng (Khóa/Mở khóa)
+ *
+ * @description Khóa hoặc mở khóa tài khoản người dùng
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.params.id - ID người dùng
+ * @param {Object} req.body.is_active - Trạng thái mới ('true' hoặc 'false')
+ * @param {Object} res - Response object từ Express
+ *
+ * @returns {JSON} Trả về JSON với thông báo thành công/thất bại
+ */
 exports.updateUserStatus = async (req, res) => {
     try {
         const { id } = req.params;
         const { is_active } = req.body;
 
+        // Cập nhật trạng thái (chuyển string 'true'/'false' thành boolean)
         await User.updateStatus(id, is_active === 'true');
         res.json({ message: 'User status updated successfully' });
     } catch (error) {
@@ -222,7 +382,20 @@ exports.updateUserStatus = async (req, res) => {
     }
 };
 
-// Banners Management
+// =============================================================================
+// QUẢN LÝ BANNER - Banners Management
+// =============================================================================
+
+/**
+ * Hiển thị danh sách banner
+ *
+ * @description Lấy danh sách tất cả banner quảng cáo
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} res - Response object từ Express
+ *
+ * @returns {void} Render trang admin/banners với danh sách banner
+ */
 exports.getBanners = async (req, res) => {
     try {
         let banners = [];
@@ -232,6 +405,7 @@ exports.getBanners = async (req, res) => {
             console.error('Banners data error:', err);
         }
 
+        // Render trang quản lý banner
         res.render('admin/banners', {
             banners,
             user: req.user,
@@ -242,15 +416,38 @@ exports.getBanners = async (req, res) => {
     }
 };
 
+/**
+ * Tạo banner mới
+ *
+ * @description Tạo banner quảng cáo mới với ảnh upload hoặc URL
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.body - Dữ liệu banner
+ * @param {string} req.body.title - Tiêu đề banner
+ * @param {string} req.body.subtitle - Tiêu đề phụ
+ * @param {string} req.body.description - Mô tả
+ * @param {string} req.body.link_url - URL khi click vào banner
+ * @param {string} req.body.button_text - Text nút CTA
+ * @param {number} req.body.display_order - Thứ tự hiển thị
+ * @param {string} [req.body.start_date] - Ngày bắt đầu hiển thị
+ * @param {string} [req.body.end_date] - Ngày kết thúc hiển thị
+ * @param {Object} [req.file] - File ảnh upload
+ * @param {Object} res - Response object từ Express
+ *
+ * @returns {Redirect} Redirect về trang danh sách banner
+ */
 exports.createBanner = async (req, res) => {
     try {
+        // Lấy dữ liệu từ form
         const { title, subtitle, description, link_url, button_text, display_order, start_date, end_date } = req.body;
-        
+
+        // Xử lý ảnh upload
         let image_url = '';
         if (req.file) {
             image_url = `/uploads/${req.file.filename}`;
         }
 
+        // Tạo banner trong database
         await Banner.create({
             title,
             subtitle,
@@ -263,15 +460,28 @@ exports.createBanner = async (req, res) => {
             end_date: end_date || null
         });
 
+        // Redirect về trang danh sách
         res.redirect('/admin/banners');
     } catch (error) {
         res.status(400).json({ message: error.message });
     }
 };
 
+/**
+ * Xóa banner
+ *
+ * @description Xóa banner khỏi database
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.params.id - ID banner cần xóa
+ * @param {Object} res - Response object từ Express
+ *
+ * @returns {JSON} Trả về JSON với thông báo thành công/thất bại
+ */
 exports.deleteBanner = async (req, res) => {
     try {
         const pool = require('../config/database');
+        // Xóa banner từ database
         await pool.execute('DELETE FROM banners WHERE id = ?', [req.params.id]);
         res.json({ success: true, message: 'Banner deleted' });
     } catch (error) {
@@ -279,7 +489,20 @@ exports.deleteBanner = async (req, res) => {
     }
 };
 
-// Sales Management
+// =============================================================================
+// QUẢN LÝ KHUYẾN MÃI - Sales Management
+// =============================================================================
+
+/**
+ * Hiển thị danh sách khuyến mãi
+ *
+ * @description Lấy danh sách tất cả chương trình khuyến mãi
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} res - Response object từ Express
+ *
+ * @returns {void} Render trang admin/sales với danh sách khuyến mãi
+ */
 exports.getSales = async (req, res) => {
     try {
         let sales = [];
@@ -289,6 +512,7 @@ exports.getSales = async (req, res) => {
             console.error('Sales data error:', err);
         }
 
+        // Render trang quản lý khuyến mãi
         res.render('admin/sales', {
             sales,
             user: req.user,
@@ -299,10 +523,28 @@ exports.getSales = async (req, res) => {
     }
 };
 
+/**
+ * Tạo chương trình khuyến mãi mới
+ *
+ * @description Tạo khuyến mãi mới với loại giảm giá (% hoặc số tiền cố định)
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.body - Dữ liệu khuyến mãi
+ * @param {string} req.body.name - Tên chương trình
+ * @param {string} req.body.description - Mô tả
+ * @param {string} req.body.type - Loại giảm giá ('percentage' hoặc 'fixed')
+ * @param {number} req.body.value - Giá trị giảm (% hoặc số tiền)
+ * @param {string} req.body.start_date - Ngày bắt đầu
+ * @param {string} req.body.end_date - Ngày kết thúc
+ * @param {Object} res - Response object từ Express
+ *
+ * @returns {Redirect} Redirect về trang danh sách khuyến mãi
+ */
 exports.createSale = async (req, res) => {
     try {
         const { name, description, type, value, start_date, end_date } = req.body;
 
+        // Tạo khuyến mãi trong database
         await Sale.create({
             name,
             description,
@@ -312,24 +554,44 @@ exports.createSale = async (req, res) => {
             end_date
         });
 
+        // Redirect về trang danh sách
         res.redirect('/admin/sales');
     } catch (error) {
         res.status(400).json({ message: error.message });
     }
 };
 
-// Email Marketing
+// =============================================================================
+// EMAIL MARKETING
+// =============================================================================
+
+/**
+ * Gửi email marketing hàng loạt
+ *
+ * @description Gửi email quảng cáo đến tất cả người dùng đã đồng ý nhận marketing
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.body - Nội dung email
+ * @param {string} req.body.subject - Tiêu đề email
+ * @param {string} req.body.content - Nội dung email (HTML)
+ * @param {Object} res - Response object từ Express
+ *
+ * @returns {JSON} Trả về JSON với số lượng email đã gửi thành công
+ */
 exports.sendMarketingEmail = async (req, res) => {
     try {
         const { subject, content } = req.body;
 
+        // Lấy danh sách người dùng đã đồng ý nhận email marketing
         const users = await User.getMarketingList();
 
+        // Gửi email hàng loạt
         const result = await emailService.sendMarketingEmail(users, {
             subject,
             content
         });
 
+        // Trả về kết quả
         res.json({
             message: `Email sent to ${result.success}/${result.total} users`
         });
@@ -338,10 +600,25 @@ exports.sendMarketingEmail = async (req, res) => {
     }
 };
 
-// Product Images Management
+// =============================================================================
+// QUẢN LÝ ẢNH SẢN PHẨM - Product Images Management
+// =============================================================================
+
+/**
+ * Lấy danh sách ảnh của sản phẩm
+ *
+ * @description Lấy tất cả ảnh của một sản phẩm, sắp xếp ảnh chính lên đầu
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.params.id - ID sản phẩm
+ * @param {Object} res - Response object từ Express
+ *
+ * @returns {JSON} Trả về JSON với danh sách ảnh: { images: [...] }
+ */
 exports.getProductImages = async (req, res) => {
     try {
         const pool = require('../config/database');
+        // Query lấy ảnh, ưu tiên ảnh chính (is_primary) lên đầu
         const [images] = await pool.execute(
             'SELECT * FROM product_images WHERE product_id = ? ORDER BY is_primary DESC, id ASC',
             [req.params.id]
@@ -352,20 +629,34 @@ exports.getProductImages = async (req, res) => {
     }
 };
 
+/**
+ * Thêm ảnh sản phẩm bằng URL
+ *
+ * @description Thêm ảnh mới cho sản phẩm bằng cách nhập URL ảnh
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.params.id - ID sản phẩm
+ * @param {Object} req.body.image_url - URL của ảnh
+ * @param {boolean} [req.body.is_primary] - Đặt làm ảnh chính
+ * @param {Object} res - Response object từ Express
+ *
+ * @returns {JSON} Trả về JSON với thông báo thành công/thất bại
+ */
 exports.addProductImageUrl = async (req, res) => {
     try {
         const pool = require('../config/database');
         const { image_url, is_primary } = req.body;
         const productId = req.params.id;
 
+        // Nếu đặt làm ảnh chính, bỏ flag is_primary của các ảnh khác
         if (is_primary) {
-            // Remove primary from other images
             await pool.execute(
                 'UPDATE product_images SET is_primary = FALSE WHERE product_id = ?',
                 [productId]
             );
         }
 
+        // Thêm ảnh mới vào database
         await pool.execute(
             'INSERT INTO product_images (product_id, image_url, is_primary) VALUES (?, ?, ?)',
             [productId, image_url, is_primary || false]
@@ -377,18 +668,34 @@ exports.addProductImageUrl = async (req, res) => {
     }
 };
 
+/**
+ * Upload ảnh sản phẩm
+ *
+ * @description Upload file ảnh từ máy tính và lưu vào server
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.params.id - ID sản phẩm
+ * @param {Object} req.file - File ảnh upload (từ multer)
+ * @param {string} req.body.is_primary - Đặt làm ảnh chính ('true'/'false')
+ * @param {Object} res - Response object từ Express
+ *
+ * @returns {JSON} Trả về JSON với thông báo thành công/thất bại
+ */
 exports.uploadProductImage = async (req, res) => {
     try {
         const pool = require('../config/database');
         const productId = req.params.id;
         const is_primary = req.body.is_primary === 'true';
 
+        // Kiểm tra file đã được upload chưa
         if (!req.file) {
             return res.status(400).json({ message: 'No file uploaded' });
         }
 
+        // Tạo đường dẫn lưu ảnh
         const image_url = '/uploads/' + req.file.filename;
 
+        // Nếu đặt làm ảnh chính, bỏ flag của các ảnh khác
         if (is_primary) {
             await pool.execute(
                 'UPDATE product_images SET is_primary = FALSE WHERE product_id = ?',
@@ -396,6 +703,7 @@ exports.uploadProductImage = async (req, res) => {
             );
         }
 
+        // Lưu thông tin ảnh vào database
         await pool.execute(
             'INSERT INTO product_images (product_id, image_url, is_primary) VALUES (?, ?, ?)',
             [productId, image_url, is_primary]
@@ -407,9 +715,21 @@ exports.uploadProductImage = async (req, res) => {
     }
 };
 
+/**
+ * Xóa ảnh sản phẩm
+ *
+ * @description Xóa một ảnh khỏi sản phẩm
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.params.imageId - ID của ảnh cần xóa
+ * @param {Object} res - Response object từ Express
+ *
+ * @returns {JSON} Trả về JSON với thông báo thành công/thất bại
+ */
 exports.deleteProductImage = async (req, res) => {
     try {
         const pool = require('../config/database');
+        // Xóa ảnh từ database
         await pool.execute('DELETE FROM product_images WHERE id = ?', [req.params.imageId]);
         res.json({ success: true, message: 'Image deleted' });
     } catch (error) {
@@ -417,30 +737,43 @@ exports.deleteProductImage = async (req, res) => {
     }
 };
 
+/**
+ * Đặt ảnh làm ảnh chính
+ *
+ * @description Đặt một ảnh làm ảnh chính (primary) của sản phẩm.
+ *              Bỏ flag is_primary của các ảnh khác cùng sản phẩm
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.params.imageId - ID của ảnh cần đặt làm chính
+ * @param {Object} res - Response object từ Express
+ *
+ * @returns {JSON} Trả về JSON với thông báo thành công/thất bại
+ */
 exports.setPrimaryImage = async (req, res) => {
     try {
         const pool = require('../config/database');
         const imageId = req.params.imageId;
 
-        // Get product_id for this image
+        // Lấy product_id từ ảnh này
         const [image] = await pool.execute(
             'SELECT product_id FROM product_images WHERE id = ?',
             [imageId]
         );
 
+        // Kiểm tra ảnh có tồn tại không
         if (image.length === 0) {
             return res.status(404).json({ message: 'Image not found' });
         }
 
         const productId = image[0].product_id;
 
-        // Remove primary from all images of this product
+        // Bỏ flag is_primary của tất cả ảnh cùng sản phẩm
         await pool.execute(
             'UPDATE product_images SET is_primary = FALSE WHERE product_id = ?',
             [productId]
         );
 
-        // Set this image as primary
+        // Đặt ảnh này làm ảnh chính
         await pool.execute(
             'UPDATE product_images SET is_primary = TRUE WHERE id = ?',
             [imageId]
@@ -449,5 +782,124 @@ exports.setPrimaryImage = async (req, res) => {
         res.json({ success: true, message: 'Primary image set' });
     } catch (error) {
         res.status(400).json({ message: error.message });
+    }
+};
+
+// =============================================================================
+// QUẢN LÝ VOUCHER - Vouchers Management
+// =============================================================================
+
+/**
+ * Hiển thị danh sách voucher
+ */
+exports.getVouchers = async (req, res) => {
+    try {
+        let vouchers = [];
+        try {
+            vouchers = await Voucher.findAll();
+        } catch (err) {
+            console.error('Vouchers data error:', err);
+        }
+
+        res.render('admin/vouchers', {
+            vouchers,
+            user: req.user,
+            currentPage: 'vouchers'
+        });
+    } catch (error) {
+        res.status(500).render('error', { message: 'Lỗi tải vouchers: ' + error.message, user: req.user });
+    }
+};
+
+/**
+ * Tạo voucher mới
+ */
+exports.createVoucher = async (req, res) => {
+    try {
+        const {
+            code, name, description, type, value,
+            min_order_amount, max_discount_amount, usage_limit,
+            user_limit, start_date, end_date, is_active
+        } = req.body;
+
+        await Voucher.create({
+            code,
+            name,
+            description,
+            type,
+            value: parseFloat(value),
+            min_order_amount: parseFloat(min_order_amount) || 0,
+            max_discount_amount: max_discount_amount ? parseFloat(max_discount_amount) : null,
+            usage_limit: usage_limit ? parseInt(usage_limit) : null,
+            user_limit: parseInt(user_limit) || 1,
+            start_date,
+            end_date,
+            is_active: is_active === 'on'
+        });
+
+        res.redirect('/admin/vouchers');
+    } catch (error) {
+        console.error('Create voucher error:', error);
+        res.redirect('/admin/vouchers?error=' + encodeURIComponent(error.message));
+    }
+};
+
+/**
+ * Cập nhật voucher
+ */
+exports.updateVoucher = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const {
+            code, name, description, type, value,
+            min_order_amount, max_discount_amount, usage_limit,
+            user_limit, start_date, end_date, is_active
+        } = req.body;
+
+        await Voucher.update(id, {
+            code,
+            name,
+            description,
+            type,
+            value: parseFloat(value),
+            min_order_amount: parseFloat(min_order_amount) || 0,
+            max_discount_amount: max_discount_amount ? parseFloat(max_discount_amount) : null,
+            usage_limit: usage_limit ? parseInt(usage_limit) : null,
+            user_limit: parseInt(user_limit) || 1,
+            start_date,
+            end_date,
+            is_active: is_active === 'on' || is_active === true
+        });
+
+        res.json({ success: true, message: 'Voucher updated successfully' });
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+};
+
+/**
+ * Xóa voucher
+ */
+exports.deleteVoucher = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await Voucher.delete(id);
+        res.json({ success: true, message: 'Voucher deleted successfully' });
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+};
+
+/**
+ * Cập nhật trạng thái voucher
+ */
+exports.updateVoucherStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { is_active } = req.body;
+        await Voucher.updateStatus(id, is_active === 'true' || is_active === true);
+        res.json({ success: true, message: 'Voucher status updated' });
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
     }
 };

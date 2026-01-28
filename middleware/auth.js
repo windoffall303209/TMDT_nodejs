@@ -6,7 +6,7 @@ const verifyToken = async (req, res, next) => {
     try {
         // Get token from cookie or Authorization header
         let token = req.cookies?.token;
-        
+
         if (!token) {
             const authHeader = req.headers['authorization'];
             if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -15,6 +15,10 @@ const verifyToken = async (req, res, next) => {
         }
 
         if (!token) {
+            // Redirect to login for HTML requests
+            if (req.accepts('html')) {
+                return res.redirect('/auth/login');
+            }
             return res.status(401).json({ message: 'Access denied. No token provided.' });
         }
 
@@ -23,6 +27,14 @@ const verifyToken = async (req, res, next) => {
         req.user = decoded;
         next();
     } catch (error) {
+        // Clear invalid token cookie
+        res.clearCookie('token');
+
+        // Redirect to login for HTML requests
+        if (req.accepts('html')) {
+            return res.redirect('/auth/login');
+        }
+
         if (error.name === 'TokenExpiredError') {
             return res.status(401).json({ message: 'Token expired' });
         }

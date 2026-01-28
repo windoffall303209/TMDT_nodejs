@@ -1,31 +1,58 @@
+/**
+ * =============================================================================
+ * PRODUCT CONTROLLER - Điều khiển sản phẩm (Frontend)
+ * =============================================================================
+ * File này chứa các hàm xử lý logic hiển thị sản phẩm cho khách hàng:
+ * - Trang chủ (Homepage)
+ * - Danh sách sản phẩm (Product listing)
+ * - Chi tiết sản phẩm (Product detail)
+ * - Tìm kiếm sản phẩm (Search)
+ * - Sản phẩm theo danh mục (Category products)
+ * =============================================================================
+ */
+
 const Product = require('../models/Product');
 const Category = require('../models/Category');
 const Banner = require('../models/Banner');
 
-// Show homepage
+// =============================================================================
+// TRANG CHỦ - HOMEPAGE
+// =============================================================================
+
+/**
+ * Hiển thị trang chủ
+ *
+ * @description Lấy dữ liệu banners, danh mục, sản phẩm mới và bán chạy
+ *              để hiển thị trên trang chủ
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} res - Response object từ Express
+ *
+ * @returns {Render} Render trang home/index với dữ liệu
+ */
 exports.getHomePage = async (req, res) => {
     try {
-        // Get active banners for carousel
+        // Lấy danh sách banner đang hoạt động (cho carousel)
         const banners = await Banner.getActiveBanners().catch(err => {
             console.error('Banner error:', err);
-            return [];
+            return []; // Trả về mảng rỗng nếu lỗi
         });
-        
-        // Get top categories
+
+        // Lấy 3 danh mục hàng đầu
         const categories = await Category.getTopCategories(3).catch(err => {
             console.error('Category error:', err);
-            // Mock data fallback
+            // Dữ liệu mẫu fallback nếu lỗi database
             return [
                 { id: 1, name: 'Thời Trang Nam', slug: 'nam', product_count: 5 },
                 { id: 2, name: 'Thời Trang Nữ', slug: 'nu', product_count: 5 },
                 { id: 3, name: 'Thời Trang Trẻ Em', slug: 'tre-em', product_count: 4 }
             ];
         });
-        
-        // Get new products
+
+        // Lấy 8 sản phẩm mới nhất
         const newProducts = await Product.getNewProducts(8).catch(err => {
             console.error('New products error:', err);
-            // Mock data fallback
+            // Dữ liệu mẫu fallback
             return [
                 { id: 1, name: 'Áo Polo Classic Nam', slug: 'ao-polo-classic', price: 450000, final_price: 225000, primary_image: 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600' },
                 { id: 2, name: 'Đầm Maxi Hoa', slug: 'dam-maxi-hoa', price: 750000, final_price: 592500, primary_image: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=600' },
@@ -33,11 +60,11 @@ exports.getHomePage = async (req, res) => {
                 { id: 4, name: 'Váy Công Sở', slug: 'vay-cong-so', price: 420000, final_price: 420000, primary_image: 'https://images.unsplash.com/photo-1594633313593-bab3825d0caf?w=600' }
             ];
         });
-        
-        // Get best sellers
+
+        // Lấy 8 sản phẩm bán chạy nhất
         const bestSellers = await Product.getBestSellers(8).catch(err => {
             console.error('Best sellers error:', err);
-            // Mock data fallback
+            // Dữ liệu mẫu fallback
             return [
                 { id: 5, name: 'Quần Jeans Slim Fit', slug: 'quan-jeans', price: 680000, final_price: 680000, primary_image: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=600' },
                 { id: 6, name: 'Áo Sơ Mi Lụa', slug: 'ao-so-mi-lua', price: 520000, final_price: 520000, primary_image: 'https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?w=600' },
@@ -46,6 +73,7 @@ exports.getHomePage = async (req, res) => {
             ];
         });
 
+        // Render trang chủ với dữ liệu
         res.render('home/index', {
             banners,
             categories,
@@ -59,48 +87,80 @@ exports.getHomePage = async (req, res) => {
     }
 };
 
-// Show product listing page
+// =============================================================================
+// DANH SÁCH SẢN PHẨM - PRODUCT LISTING
+// =============================================================================
+
+/**
+ * Hiển thị danh sách sản phẩm với bộ lọc
+ *
+ * @description Lấy danh sách sản phẩm theo các tiêu chí lọc:
+ *              danh mục, từ khóa, khoảng giá, sắp xếp
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.query - Tham số lọc từ URL
+ * @param {string} [req.query.category] - Slug danh mục
+ * @param {string} [req.query.search] - Từ khóa tìm kiếm
+ * @param {number} [req.query.min_price] - Giá tối thiểu
+ * @param {number} [req.query.max_price] - Giá tối đa
+ * @param {string} [req.query.sort_by] - Trường sắp xếp (price, created_at, name)
+ * @param {string} [req.query.sort_order] - Thứ tự (ASC, DESC)
+ * @param {number} [req.query.page=1] - Số trang
+ * @param {Object} res - Response object từ Express
+ *
+ * @returns {Render} Render trang products/list với danh sách sản phẩm
+ */
 exports.getProducts = async (req, res) => {
     try {
+        // Lấy các tham số lọc từ query string
         const {
-            category,
-            search,
-            min_price,
-            max_price,
-            sort_by,
-            sort_order,
-            page = 1
+            category,       // Slug danh mục
+            search,         // Từ khóa tìm kiếm
+            min_price,      // Giá tối thiểu
+            max_price,      // Giá tối đa
+            sort_by,        // Sắp xếp theo trường nào
+            sort_order,     // Thứ tự sắp xếp (ASC/DESC)
+            page = 1,       // Số trang (mặc định: 1)
+            sale            // Lọc sản phẩm đang khuyến mãi
         } = req.query;
 
-        const limit = 12;
-        const offset = (page - 1) * limit;
+        // Cấu hình phân trang
+        const limit = 12;                    // 12 sản phẩm mỗi trang
+        const offset = (page - 1) * limit;   // Bỏ qua bao nhiêu sản phẩm
 
-        // Build filters
+        // Xây dựng object filter
         const filters = {
             limit,
             offset,
-            sort_by: sort_by || 'created_at',
-            sort_order: sort_order || 'DESC'
+            sort_by: sort_by || 'created_at',    // Mặc định sắp xếp theo ngày tạo
+            sort_order: sort_order || 'DESC'     // Mặc định mới nhất trước
         };
 
+        // Lọc theo danh mục nếu có
         if (category) {
             const cat = await Category.findBySlug(category).catch(() => null);
             if (cat) filters.category_id = cat.id;
         }
 
+        // Lọc theo từ khóa tìm kiếm
         if (search) filters.search = search;
+
+        // Lọc theo khoảng giá
         if (min_price) filters.min_price = parseFloat(min_price);
         if (max_price) filters.max_price = parseFloat(max_price);
 
-        // Get products with error handling
+        // Lọc sản phẩm đang khuyến mãi
+        if (sale === 'true') filters.on_sale = true;
+
+        // Lấy danh sách sản phẩm với error handling
         let products = [];
         let categories = [];
-        
+
         try {
             products = await Product.findAll(filters);
         } catch (err) {
             console.error('Product findAll error:', err);
-            // Mock data fallback
+            // Dữ liệu mẫu fallback
             products = [
                 { id: 1, name: 'Áo Polo Classic Nam', slug: 'ao-polo-classic', price: 450000, final_price: 225000, primary_image: 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600' },
                 { id: 2, name: 'Đầm Maxi Hoa', slug: 'dam-maxi-hoa', price: 750000, final_price: 592500, primary_image: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=600' },
@@ -108,7 +168,8 @@ exports.getProducts = async (req, res) => {
                 { id: 4, name: 'Váy Công Sở', slug: 'vay-cong-so', price: 420000, final_price: 420000, primary_image: 'https://images.unsplash.com/photo-1594633313593-bab3825d0caf?w=600' }
             ];
         }
-        
+
+        // Lấy danh sách danh mục cho sidebar
         try {
             categories = await Category.findAll();
         } catch (err) {
@@ -120,12 +181,15 @@ exports.getProducts = async (req, res) => {
             ];
         }
 
+        // Render trang danh sách sản phẩm
         res.render('products/list', {
             products,
             categories,
-            filters: req.query,
+            category: null,                  // Không có category cụ thể
+            filters: req.query,              // Giữ lại filter để hiển thị
             currentPage: parseInt(page),
-            user: req.user || null
+            user: req.user || null,
+            isSalePage: sale === 'true'      // Đánh dấu đây là trang sale
         });
     } catch (error) {
         console.error('Product listing error:', error);
@@ -133,26 +197,42 @@ exports.getProducts = async (req, res) => {
     }
 };
 
-// Show product detail page
+// =============================================================================
+// CHI TIẾT SẢN PHẨM - PRODUCT DETAIL
+// =============================================================================
+
+/**
+ * Hiển thị chi tiết sản phẩm
+ *
+ * @description Lấy thông tin đầy đủ của sản phẩm và sản phẩm liên quan
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.params.slug - Slug của sản phẩm
+ * @param {Object} res - Response object từ Express
+ *
+ * @returns {Render} Render trang products/detail với thông tin sản phẩm
+ */
 exports.getProductDetail = async (req, res) => {
     try {
         const { slug } = req.params;
-        
+
+        // Tìm sản phẩm theo slug
         let product = null;
         try {
             product = await Product.findBySlug(slug);
         } catch (err) {
             console.error('Product findBySlug error:', err);
         }
-        
+
+        // Trả về 404 nếu không tìm thấy
         if (!product) {
-            return res.status(404).render('error', { 
+            return res.status(404).render('error', {
                 message: 'Không tìm thấy sản phẩm: ' + slug,
-                user: req.user || null 
+                user: req.user || null
             });
         }
 
-        // Get related products from same category
+        // Lấy sản phẩm liên quan (cùng danh mục)
         let relatedProducts = [];
         try {
             relatedProducts = await Product.findAll({
@@ -160,11 +240,13 @@ exports.getProductDetail = async (req, res) => {
                 limit: 4,
                 offset: 0
             });
+            // Loại bỏ sản phẩm hiện tại khỏi danh sách liên quan
             relatedProducts = relatedProducts.filter(p => p.id !== product.id);
         } catch (err) {
             console.error('Related products error:', err);
         }
 
+        // Render trang chi tiết
         res.render('products/detail', {
             product,
             relatedProducts,
@@ -176,17 +258,34 @@ exports.getProductDetail = async (req, res) => {
     }
 };
 
-// Search products
+// =============================================================================
+// TÌM KIẾM SẢN PHẨM - SEARCH
+// =============================================================================
+
+/**
+ * Tìm kiếm sản phẩm
+ *
+ * @description Tìm kiếm sản phẩm theo từ khóa trong tên và mô tả
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.query.q - Từ khóa tìm kiếm
+ * @param {Object} res - Response object từ Express
+ *
+ * @returns {Render|Redirect} Render trang kết quả tìm kiếm hoặc redirect
+ */
 exports.searchProducts = async (req, res) => {
     try {
         const { q } = req.query;
-        
+
+        // Redirect về trang danh sách nếu không có từ khóa
         if (!q) {
             return res.redirect('/products');
         }
 
+        // Tìm kiếm sản phẩm (tối đa 20 kết quả)
         const products = await Product.search(q, 20);
 
+        // Render trang kết quả
         res.render('products/search-results', {
             products,
             query: q,
@@ -198,14 +297,29 @@ exports.searchProducts = async (req, res) => {
     }
 };
 
-// Get products by category
+// =============================================================================
+// SẢN PHẨM THEO DANH MỤC - CATEGORY PRODUCTS
+// =============================================================================
+
+/**
+ * Hiển thị sản phẩm theo danh mục
+ *
+ * @description Lấy danh sách sản phẩm thuộc một danh mục cụ thể
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.params.slug - Slug của danh mục
+ * @param {Object} res - Response object từ Express
+ *
+ * @returns {Render} Render trang products/category với sản phẩm theo danh mục
+ */
 exports.getProductsByCategory = async (req, res) => {
     try {
         const { slug } = req.params;
-        
+
+        // Tìm danh mục theo slug
         let category = await Category.findBySlug(slug);
-        
-        // Mock category data if not found in database (for demo/testing)
+
+        // Fallback sang dữ liệu mẫu nếu không tìm thấy trong database
         if (!category) {
             const categoryMap = {
                 'nam': { id: 1, name: 'Thời Trang Nam', slug: 'nam', description: 'Quần áo và phụ kiện nam' },
@@ -214,14 +328,16 @@ exports.getProductsByCategory = async (req, res) => {
             };
             category = categoryMap[slug] || null;
         }
-        
+
+        // Trả về 404 nếu không tìm thấy danh mục
         if (!category) {
-            return res.status(404).render('error', { 
+            return res.status(404).render('error', {
                 message: 'Không tìm thấy danh mục: ' + slug,
-                user: req.user || null 
+                user: req.user || null
             });
         }
 
+        // Lấy sản phẩm thuộc danh mục
         let products = [];
         try {
             products = await Product.findAll({
@@ -231,10 +347,10 @@ exports.getProductsByCategory = async (req, res) => {
             });
         } catch (err) {
             console.error('Product findAll error:', err);
-            // Return empty products array on error
-            products = [];
+            products = []; // Trả về mảng rỗng nếu lỗi
         }
 
+        // Render trang danh mục
         res.render('products/category', {
             category,
             products,
@@ -242,9 +358,9 @@ exports.getProductsByCategory = async (req, res) => {
         });
     } catch (error) {
         console.error('Category products error:', error);
-        res.status(500).render('error', { 
+        res.status(500).render('error', {
             message: 'Lỗi tải sản phẩm theo danh mục: ' + error.message,
-            user: req.user || null 
+            user: req.user || null
         });
     }
 };

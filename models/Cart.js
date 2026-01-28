@@ -1,96 +1,164 @@
+/**
+ * =============================================================================
+ * CART MODEL - Mô hình giỏ hàng
+ * =============================================================================
+ * File này chứa các phương thức xử lý giỏ hàng:
+ * - Tạo/lấy giỏ hàng cho user hoặc khách
+ * - Gộp giỏ hàng khách khi đăng nhập
+ * - Thêm/sửa/xóa sản phẩm trong giỏ
+ * - Tính tổng tiền giỏ hàng
+ * =============================================================================
+ */
+
 const pool = require('../config/database');
 
 class Cart {
-    // Get or create cart for user (persistent cart like Shopee)
+    // =========================================================================
+    // LẤY HOẶC TẠO GIỎ HÀNG
+    // =========================================================================
+
+    /**
+     * Lấy hoặc tạo giỏ hàng cho người dùng/khách
+     *
+     * @description Tìm giỏ hàng hiện có theo userId hoặc sessionId.
+     *              Nếu chưa có, tạo giỏ hàng mới (giống cơ chế của Shopee)
+     *
+     * @param {number|null} userId - ID người dùng (null nếu là khách)
+     * @param {string|null} sessionId - ID phiên làm việc (cho khách chưa đăng nhập)
+     *
+     * @returns {Object} Giỏ hàng: { id, user_id, session_id }
+     * @throws {Error} Nếu không có userId hoặc sessionId
+     */
     static async getOrCreate(userId, sessionId = null) {
-        // Try to find existing cart
+        // Xây dựng query tìm giỏ hàng
         let query = 'SELECT * FROM cart WHERE ';
         let params = [];
 
         if (userId) {
+            // Tìm theo userId nếu đã đăng nhập
             query += 'user_id = ?';
             params = [userId];
         } else if (sessionId) {
+            // Tìm theo sessionId nếu là khách
             query += 'session_id = ?';
             params = [sessionId];
         } else {
             throw new Error('Either userId or sessionId must be provided');
         }
 
+        // Thực hiện tìm kiếm
         const [carts] = await pool.execute(query, params);
 
+        // Trả về giỏ hàng nếu đã tồn tại
         if (carts.length > 0) {
             return carts[0];
         }
 
-        // Create new cart
+        // Tạo giỏ hàng mới nếu chưa có
         const insertQuery = 'INSERT INTO cart (user_id, session_id) VALUES (?, ?)';
         const [result] = await pool.execute(insertQuery, [userId || null, sessionId || null]);
-        
+
         return { id: result.insertId, user_id: userId, session_id: sessionId };
     }
 
-    // Merge guest cart with user cart on login
+    /**
+     * Gộp giỏ hàng khách vào giỏ hàng user khi đăng nhập
+     *
+     * @description Khi khách đăng nhập, các sản phẩm trong giỏ hàng khách (session)
+     *              sẽ được chuyển vào giỏ hàng của tài khoản, sau đó xóa giỏ khách
+     *
+     * @param {number} userId - ID người dùng đã đăng nhập
+     * @param {string} sessionId - ID phiên của khách
+     *
+     * @returns {void}
+     */
     static async mergeGuestCart(userId, sessionId) {
-        // Get guest cart
+        // Tìm giỏ hàng của khách (chưa có user_id)
         const [guestCarts] = await pool.execute(
             'SELECT id FROM cart WHERE session_id = ? AND user_id IS NULL',
             [sessionId]
         );
 
+        // Không có giỏ hàng khách thì thoát
         if (guestCarts.length === 0) return;
 
         const guestCartId = guestCarts[0].id;
 
-        // Get or create user cart
+        // Lấy hoặc tạo giỏ hàng cho user
         const userCart = await this.getOrCreate(userId);
 
-        // Get guest cart items
+        // Lấy tất cả sản phẩm trong giỏ khách
         const [guestItems] = await pool.execute(
             'SELECT * FROM cart_items WHERE cart_id = ?',
             [guestCartId]
         );
 
-        // Merge items to user cart
+        // Chuyển từng sản phẩm vào giỏ user
         for (const item of guestItems) {
             await this.addItem(userCart.id, item.product_id, item.quantity, item.variant_id);
         }
 
-        // Delete guest cart
+        // Xóa giỏ hàng khách
         await pool.execute('DELETE FROM cart WHERE id = ?', [guestCartId]);
     }
 
-    // Add item to cart
+    // =========================================================================
+    // QUẢN LÝ SẢN PHẨM TRONG GIỎ
+    // =========================================================================
+
+    /**
+     * Thêm sản phẩm vào giỏ hàng
+     *
+     * @description Thêm sản phẩm mới hoặc tăng số lượng nếu đã có trong giỏ
+     *
+     * @param {number} cartId - ID giỏ hàng
+     * @param {number} productId - ID sản phẩm
+     * @param {number} quantity - Số lượng thêm vào (mặc định: 1)
+     * @param {number|null} variantId - ID biến thể (size, màu...) nếu có
+     *
+     * @returns {Object} { id: cart_item_id, updated: true/false }
+     *                   updated = true nếu cập nhật số lượng, false nếu thêm mới
+     */
     static async addItem(cartId, productId, quantity = 1, variantId = null) {
-        // Check if item already exists in cart
+        // Kiểm tra sản phẩm đã có trong giỏ chưa
         const checkQuery = `
-            SELECT * FROM cart_items 
+            SELECT * FROM cart_items
             WHERE cart_id = ? AND product_id = ? AND (variant_id = ? OR (variant_id IS NULL AND ? IS NULL))
         `;
         const [existing] = await pool.execute(checkQuery, [cartId, productId, variantId, variantId]);
 
         if (existing.length > 0) {
-            // Update quantity
+            // Đã có: cập nhật số lượng (cộng thêm)
             const updateQuery = 'UPDATE cart_items SET quantity = quantity + ? WHERE id = ?';
             await pool.execute(updateQuery, [quantity, existing[0].id]);
             return { id: existing[0].id, updated: true };
         } else {
-            // Insert new item
+            // Chưa có: thêm mới
             const insertQuery = `
                 INSERT INTO cart_items (cart_id, product_id, variant_id, quantity)
                 VALUES (?, ?, ?, ?)
             `;
             const [result] = await pool.execute(insertQuery, [cartId, productId, variantId || null, quantity]);
-            
-            // Update cart timestamp
+
+            // Cập nhật thời gian giỏ hàng
             await pool.execute('UPDATE cart SET updated_at = NOW() WHERE id = ?', [cartId]);
-            
+
             return { id: result.insertId, updated: false };
         }
     }
 
-    // Get cart items with product details
+    /**
+     * Lấy danh sách sản phẩm trong giỏ hàng
+     *
+     * @description Lấy tất cả sản phẩm trong giỏ kèm thông tin chi tiết:
+     *              tên, giá, ảnh, khuyến mãi, biến thể
+     *
+     * @param {number} cartId - ID giỏ hàng
+     *
+     * @returns {Array} Danh sách sản phẩm với đầy đủ thông tin và giá sau sale
+     */
     static async getItems(cartId) {
+        // Query lấy sản phẩm kèm thông tin liên quan
         const query = `
             SELECT ci.*,
                    p.name as product_name,
@@ -105,16 +173,16 @@ class Cart {
                    pv.additional_price
             FROM cart_items ci
             JOIN products p ON ci.product_id = p.id
-            LEFT JOIN sales s ON p.sale_id = s.id AND s.is_active = TRUE 
+            LEFT JOIN sales s ON p.sale_id = s.id AND s.is_active = TRUE
                 AND NOW() BETWEEN s.start_date AND s.end_date
             LEFT JOIN product_variants pv ON ci.variant_id = pv.id
             WHERE ci.cart_id = ? AND p.is_active = TRUE
             ORDER BY ci.added_at DESC
         `;
-        
+
         const [items] = await pool.execute(query, [cartId]);
 
-        // Calculate final price for each item
+        // Tính giá cuối cùng cho từng sản phẩm (sau khi áp dụng sale)
         const Product = require('./Product');
         items.forEach(item => {
             let basePrice = item.product_price + (item.additional_price || 0);
@@ -125,49 +193,127 @@ class Cart {
         return items;
     }
 
-    // Update cart item quantity
+    /**
+     * Cập nhật số lượng sản phẩm trong giỏ
+     *
+     * @description Thay đổi số lượng của một item. Nếu quantity <= 0, item sẽ bị xóa
+     *
+     * @param {number} cartItemId - ID của item trong giỏ hàng
+     * @param {number} quantity - Số lượng mới
+     *
+     * @returns {void}
+     */
     static async updateQuantity(cartItemId, quantity) {
+        // Xóa nếu số lượng <= 0
         if (quantity <= 0) {
             return await this.removeItem(cartItemId);
         }
 
+        // Cập nhật số lượng
         const query = 'UPDATE cart_items SET quantity = ? WHERE id = ?';
         await pool.execute(query, [quantity, cartItemId]);
-        
-        // Update cart timestamp
+
+        // Cập nhật thời gian giỏ hàng
         const [item] = await pool.execute('SELECT cart_id FROM cart_items WHERE id = ?', [cartItemId]);
         if (item.length > 0) {
             await pool.execute('UPDATE cart SET updated_at = NOW() WHERE id = ?', [item[0].cart_id]);
         }
     }
 
-    // Remove item from cart
+    /**
+     * Lấy thông tin một item trong giỏ hàng theo ID
+     *
+     * @param {number} cartItemId - ID của item
+     * @returns {Object} Thông tin item với giá đã tính
+     */
+    static async getItemById(cartItemId) {
+        const query = `
+            SELECT ci.*,
+                   p.name as product_name,
+                   p.price as product_price,
+                   p.slug as product_slug,
+                   s.type as sale_type,
+                   s.value as sale_value,
+                   pv.additional_price
+            FROM cart_items ci
+            JOIN products p ON ci.product_id = p.id
+            LEFT JOIN sales s ON p.sale_id = s.id AND s.is_active = TRUE
+                AND NOW() BETWEEN s.start_date AND s.end_date
+            LEFT JOIN product_variants pv ON ci.variant_id = pv.id
+            WHERE ci.id = ?
+        `;
+        const [items] = await pool.execute(query, [cartItemId]);
+
+        if (items.length === 0) return null;
+
+        const item = items[0];
+        const Product = require('./Product');
+        let basePrice = item.product_price + (item.additional_price || 0);
+        item.unit_price = Product.calculateFinalPrice(basePrice, item.sale_type, item.sale_value);
+        item.subtotal = item.unit_price * item.quantity;
+
+        return item;
+    }
+
+    /**
+     * Xóa sản phẩm khỏi giỏ hàng
+     *
+     * @description Xóa hoàn toàn một item khỏi giỏ hàng
+     *
+     * @param {number} cartItemId - ID của item cần xóa
+     *
+     * @returns {void}
+     */
     static async removeItem(cartItemId) {
-        // Get cart_id first
+        // Lấy cart_id trước khi xóa (để cập nhật timestamp)
         const [item] = await pool.execute('SELECT cart_id FROM cart_items WHERE id = ?', [cartItemId]);
-        
+
+        // Xóa item
         const query = 'DELETE FROM cart_items WHERE id = ?';
         await pool.execute(query, [cartItemId]);
-        
-        // Update cart timestamp
+
+        // Cập nhật thời gian giỏ hàng
         if (item.length > 0) {
             await pool.execute('UPDATE cart SET updated_at = NOW() WHERE id = ?', [item[0].cart_id]);
         }
     }
 
-    // Clear cart
+    /**
+     * Xóa toàn bộ giỏ hàng
+     *
+     * @description Xóa tất cả sản phẩm trong giỏ (thường dùng sau khi đặt hàng)
+     *
+     * @param {number} cartId - ID giỏ hàng cần xóa
+     *
+     * @returns {void}
+     */
     static async clear(cartId) {
         const query = 'DELETE FROM cart_items WHERE cart_id = ?';
         await pool.execute(query, [cartId]);
-        
+
         await pool.execute('UPDATE cart SET updated_at = NOW() WHERE id = ?', [cartId]);
     }
 
-    // Calculate cart total
+    // =========================================================================
+    // TÍNH TOÁN
+    // =========================================================================
+
+    /**
+     * Tính tổng tiền giỏ hàng
+     *
+     * @description Tính tổng giá trị và số lượng sản phẩm trong giỏ
+     *
+     * @param {number} cartId - ID giỏ hàng
+     *
+     * @returns {Object} { subtotal: tổng tiền, itemCount: tổng số lượng, items: danh sách }
+     */
     static async calculateTotal(cartId) {
+        // Lấy danh sách sản phẩm (đã tính giá)
         const items = await this.getItems(cartId);
-        
+
+        // Tính tổng tiền
         const subtotal = items.reduce((sum, item) => sum + item.subtotal, 0);
+        // Tính tổng số lượng
         const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
         return {
@@ -177,10 +323,18 @@ class Cart {
         };
     }
 
-    // Get cart count for user (only count items with active products)
+    /**
+     * Đếm số lượng sản phẩm trong giỏ (cho icon header)
+     *
+     * @description Đếm tổng số lượng sản phẩm (chỉ đếm sản phẩm còn active)
+     *
+     * @param {number} cartId - ID giỏ hàng
+     *
+     * @returns {number} Tổng số lượng sản phẩm
+     */
     static async getCartCount(cartId) {
         const query = `
-            SELECT COALESCE(SUM(ci.quantity), 0) as count 
+            SELECT COALESCE(SUM(ci.quantity), 0) as count
             FROM cart_items ci
             JOIN products p ON ci.product_id = p.id
             WHERE ci.cart_id = ? AND p.is_active = TRUE

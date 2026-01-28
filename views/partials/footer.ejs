@@ -1,63 +1,95 @@
 </main>
 
 <footer class="footer">
+    <!-- Newsletter Section -->
     <div class="footer-newsletter">
         <div class="container">
-            <h3>Đăng ký nhận tin</h3>
-            <p>Nhận thông tin khuyến mãi và sản phẩm mới</p>
+            <div class="newsletter-content">
+                <h3>Đăng ký nhận tin</h3>
+                <p>Nhận thông tin khuyến mãi và sản phẩm mới nhất</p>
+            </div>
             <form action="/newsletter/subscribe" method="POST" class="newsletter-form">
-                <input type="email" name="email" placeholder="Email của bạn" required>
+                <input type="email" name="email" placeholder="Nhập email của bạn" required>
                 <button type="submit">Đăng ký</button>
             </form>
         </div>
     </div>
-    
+
+    <!-- Footer Main -->
     <div class="footer-main">
         <div class="container">
             <div class="footer-grid">
+                <!-- Brand Column -->
                 <div class="footer-col">
-                    <h3>WIND OF FALL</h3>
-                    <p>Cửa hàng thời trang hàng đầu với các bộ sưu tập mới nhất cho nam, nữ và trẻ em.</p>
+                    <div class="footer-brand">WIND OF FALL</div>
+                    <p class="footer-brand-desc">Thương hiệu thời trang cao cấp với phong cách tối giản, hiện đại. Chúng tôi mang đến những sản phẩm chất lượng với thiết kế tinh tế.</p>
+                    <div class="social-links">
+                        <a href="#" title="Facebook">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
+                            </svg>
+                        </a>
+                        <a href="#" title="Instagram">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+                                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+                                <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+                            </svg>
+                        </a>
+                        <a href="#" title="Youtube">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/>
+                                <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" fill="#212121"/>
+                            </svg>
+                        </a>
+                    </div>
                 </div>
-                
+
+                <!-- Quick Links -->
                 <div class="footer-col">
-                    <h4>Liên kết nhanh</h4>
+                    <h4>Về chúng tôi</h4>
                     <ul>
                         <li><a href="/about">Giới thiệu</a></li>
-                        <li><a href="/contact">Liên hệ</a></li>
+                        <li><a href="/careers">Tuyển dụng</a></li>
+                        <li><a href="/news">Tin tức</a></li>
                         <li><a href="/stores">Hệ thống cửa hàng</a></li>
                     </ul>
                 </div>
-                
+
+                <!-- Policies -->
                 <div class="footer-col">
                     <h4>Chính sách</h4>
                     <ul>
-                        <li><a href="/policy/shipping">Chính sách vận chuyển</a></li>
-                        <li><a href="/policy/return">Chính sách đổi trả</a></li>
-                        <li><a href="/policy/payment">Chính sách thanh toán</a></li>
+                        <li><a href="/policy/return">Đổi trả & Hoàn tiền</a></li>
+                        <li><a href="/policy/shipping">Vận chuyển</a></li>
+                        <li><a href="/policy/payment">Thanh toán</a></li>
+                        <li><a href="/policy/privacy">Bảo mật thông tin</a></li>
                     </ul>
                 </div>
-                
+
+                <!-- Contact -->
                 <div class="footer-col">
                     <h4>Liên hệ</h4>
-                    <ul class="contact-info">
-                        <li>📍 123 Nguyễn Huệ, Quận 1, TP. HCM</li>
-                        <li>📞 1900 123 456</li>
-                        <li>✉️ info@fashionstore.vn</li>
+                    <ul>
+                        <li><a href="#">123 Nguyễn Huệ, Q.1, TP.HCM</a></li>
+                        <li><a href="tel:1900123456">Hotline: 1900 123 456</a></li>
+                        <li><a href="mailto:info@windoffall.vn">info@windoffall.vn</a></li>
+                        <li><a href="#">8:00 - 22:00 (T2 - CN)</a></li>
                     </ul>
                 </div>
             </div>
         </div>
     </div>
-    
+
+    <!-- Footer Bottom -->
     <div class="footer-bottom">
         <div class="container">
-            <p>© 2024 WIND OF FALL. Tất cả quyền được bảo lưu.</p>
+            <p>&copy; 2024 WIND OF FALL. All rights reserved.</p>
             <div class="payment-methods">
-                <span>Thanh toán:</span>
-                <span class="badge">COD</span>
-                <span class="badge">VNPay</span>
-                <span class="badge">MoMo</span>
+                <span class="payment-badge">COD</span>
+                <span class="payment-badge">VNPay</span>
+                <span class="payment-badge">MoMo</span>
+                <span class="payment-badge">Visa</span>
             </div>
         </div>
     </div>

@@ -1,23 +1,114 @@
 <%- include('../partials/header') %>
 
+<link rel="stylesheet" href="/css/product-list.css">
+
 <div class="products-page">
     <div class="container">
-        <h1>Sản Phẩm</h1>
-        
-        <div class="products-filters">
-            <!-- Filters sẽ được thêm sau -->
+        <!-- Page Header -->
+        <div class="products-page__header">
+            <% if (category) { %>
+                <h1 class="products-page__title"><%= category.name %></h1>
+                <p class="products-page__count"><%= products ? products.length : 0 %> sản phẩm</p>
+            <% } else if (typeof query !== 'undefined' && query) { %>
+                <h1 class="products-page__title">Kết quả tìm kiếm: "<%= query %>"</h1>
+                <p class="products-page__count"><%= products ? products.length : 0 %> sản phẩm</p>
+            <% } else { %>
+                <h1 class="products-page__title">Tất Cả Sản Phẩm</h1>
+                <p class="products-page__count"><%= products ? products.length : 0 %> sản phẩm</p>
+            <% } %>
         </div>
-        
-        <div class="product-grid">
+
+        <!-- Filters Bar -->
+        <div class="products-filters">
+            <div class="products-filters__left">
+                <button class="filter-btn active" data-filter="all">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7"/>
+                        <rect x="14" y="3" width="7" height="7"/>
+                        <rect x="14" y="14" width="7" height="7"/>
+                        <rect x="3" y="14" width="7" height="7"/>
+                    </svg>
+                    Tất cả
+                </button>
+                <button class="filter-btn" data-filter="new">Mới nhất</button>
+                <button class="filter-btn" data-filter="bestseller">Bán chạy</button>
+                <button class="filter-btn" data-filter="sale">Đang giảm giá</button>
+            </div>
+            <div class="products-filters__sort">
+                <select id="sortProducts" onchange="sortProducts(this.value)">
+                    <option value="newest">Mới nhất</option>
+                    <option value="price-asc">Giá: Thấp đến Cao</option>
+                    <option value="price-desc">Giá: Cao đến Thấp</option>
+                    <option value="name-asc">Tên: A-Z</option>
+                    <option value="name-desc">Tên: Z-A</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Products Grid -->
+        <div class="products-grid">
             <% if (products && products.length > 0) { %>
                 <% products.forEach(product => { %>
                     <%- include('../partials/product-card', { product }) %>
                 <% }) %>
             <% } else { %>
-                <p>Không tìm thấy sản phẩm nào.</p>
+                <div class="products-empty">
+                    <div class="products-empty__icon">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                            <circle cx="11" cy="11" r="8"/>
+                            <path d="M21 21l-4.35-4.35"/>
+                        </svg>
+                    </div>
+                    <h3 class="products-empty__title">Không tìm thấy sản phẩm</h3>
+                    <p class="products-empty__text">Vui lòng thử tìm kiếm với từ khóa khác hoặc xem các danh mục khác.</p>
+                    <a href="/products" class="products-empty__link">Xem tất cả sản phẩm →</a>
+                </div>
             <% } %>
         </div>
+
+        <!-- Pagination -->
+        <% if (products && products.length > 0 && typeof totalPages !== 'undefined' && totalPages > 1) { %>
+            <div class="pagination">
+                <% if (typeof currentPage !== 'undefined' && currentPage > 1) { %>
+                    <a href="?page=<%= currentPage - 1 %>" class="pagination__btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="15 18 9 12 15 6"/>
+                        </svg>
+                    </a>
+                <% } %>
+
+                <% for (let i = 1; i <= totalPages; i++) { %>
+                    <a href="?page=<%= i %>" class="pagination__btn <%= currentPage === i ? 'active' : '' %>"><%= i %></a>
+                <% } %>
+
+                <% if (typeof currentPage !== 'undefined' && currentPage < totalPages) { %>
+                    <a href="?page=<%= currentPage + 1 %>" class="pagination__btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="9 18 15 12 9 6"/>
+                        </svg>
+                    </a>
+                <% } %>
+            </div>
+        <% } %>
     </div>
 </div>
+
+<script>
+// Filter buttons
+document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        // TODO: Implement filter logic
+    });
+});
+
+// Sort products
+function sortProducts(value) {
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set('sort', value);
+    window.location.href = currentUrl.toString();
+}
+</script>
 
 <%- include('../partials/footer') %>

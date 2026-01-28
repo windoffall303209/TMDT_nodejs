@@ -2,66 +2,166 @@
 
 <div class="admin-page">
     <div class="container">
-        <h1 class="admin-page__title">🏷️ Quản Lý Khuyến Mãi</h1>
-        
+        <!-- Page Header -->
+        <div class="admin-page-header">
+            <div class="admin-page-header__left">
+                <h1>Quản Lý Khuyến Mãi</h1>
+                <p><%= sales ? sales.length : 0 %> chương trình khuyến mãi</p>
+            </div>
+            <div class="admin-page-header__actions">
+                <button class="admin-btn admin-btn--primary" onclick="openAddSaleModal()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"/>
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                    Thêm Khuyến Mãi
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+            <div class="stat-card stat-card--purple">
+                <h3 class="stat-card__label">Tổng khuyến mãi</h3>
+                <p class="stat-card__value"><%= sales ? sales.length : 0 %></p>
+            </div>
+            <div class="stat-card stat-card--green">
+                <h3 class="stat-card__label">Đang hoạt động</h3>
+                <p class="stat-card__value"><%= sales ? sales.filter(s => s.is_active).length : 0 %></p>
+            </div>
+            <div class="stat-card stat-card--pink">
+                <h3 class="stat-card__label">Hết hạn</h3>
+                <p class="stat-card__value"><%= sales ? sales.filter(s => !s.is_active).length : 0 %></p>
+            </div>
+            <div class="stat-card stat-card--blue">
+                <h3 class="stat-card__label">Giảm theo %</h3>
+                <p class="stat-card__value"><%= sales ? sales.filter(s => s.type === 'percentage').length : 0 %></p>
+            </div>
+        </div>
+
         <!-- Add Sale Form -->
         <div class="admin-section">
-            <h3 class="admin-section__title">➕ Thêm Khuyến Mãi</h3>
-            <form action="/admin/sales" method="POST">
-                <div class="admin-form__grid">
-                    <div>
-                        <label class="admin-form__label">Tên*</label>
-                        <input type="text" name="name" required class="admin-form__input">
+            <h3 class="admin-section__title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Thêm Khuyến Mãi Mới
+            </h3>
+            <form action="/admin/sales" method="POST" class="admin-form">
+                <div class="admin-form__row">
+                    <div class="admin-form__group">
+                        <label class="admin-form__label">Tên khuyến mãi <span>*</span></label>
+                        <input type="text" name="name" required class="admin-form__input" placeholder="VD: Giảm giá mùa hè">
                     </div>
-                    <div>
-                        <label class="admin-form__label">Loại</label>
+                    <div class="admin-form__group">
+                        <label class="admin-form__label">Loại giảm giá</label>
                         <select name="type" class="admin-form__select">
                             <option value="percentage">Phần trăm (%)</option>
-                            <option value="fixed">Số tiền (VNĐ)</option>
+                            <option value="fixed">Số tiền cố định (VNĐ)</option>
                         </select>
                     </div>
-                    <div>
-                        <label class="admin-form__label">Giá trị*</label>
-                        <input type="number" name="value" required step="0.01" class="admin-form__input">
+                </div>
+                <div class="admin-form__row">
+                    <div class="admin-form__group">
+                        <label class="admin-form__label">Giá trị <span>*</span></label>
+                        <input type="number" name="value" required step="0.01" class="admin-form__input" placeholder="VD: 20 (cho 20%)">
                     </div>
-                    <div>
+                    <div class="admin-form__group">
                         <label class="admin-form__label">Ngày bắt đầu</label>
                         <input type="datetime-local" name="start_date" class="admin-form__input">
                     </div>
-                    <div>
+                    <div class="admin-form__group">
                         <label class="admin-form__label">Ngày kết thúc</label>
                         <input type="datetime-local" name="end_date" class="admin-form__input">
                     </div>
                 </div>
-                <button type="submit" class="admin-form__submit">Thêm Khuyến Mãi</button>
+                <div class="admin-form__actions">
+                    <button type="submit" class="admin-btn admin-btn--primary">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                        Tạo Khuyến Mãi
+                    </button>
+                </div>
             </form>
         </div>
-        
+
+        <!-- Sales Table -->
         <% if (sales && sales.length > 0) { %>
             <div class="admin-table-wrapper">
                 <table class="admin-table">
                     <thead>
                         <tr>
                             <th>ID</th>
-                            <th>Tên</th>
+                            <th>Tên Khuyến Mãi</th>
                             <th class="text-center">Loại</th>
-                            <th class="text-center">Giá trị</th>
-                            <th class="text-center">Trạng thái</th>
+                            <th class="text-center">Giá Trị</th>
+                            <th class="text-center">Thời Gian</th>
+                            <th class="text-center">Trạng Thái</th>
+                            <th class="text-center">Thao Tác</th>
                         </tr>
                     </thead>
                     <tbody>
                         <% sales.forEach(sale => { %>
                             <tr>
                                 <td><%= sale.id %></td>
-                                <td><strong><%= sale.name %></strong></td>
-                                <td class="text-center"><%= sale.type === 'percentage' ? 'Phần trăm' : 'Cố định' %></td>
-                                <td class="text-center admin-table__price">
-                                    <%= sale.type === 'percentage' ? '-' + sale.value + '%' : '-' + (sale.value || 0).toLocaleString('vi-VN') + 'đ' %>
+                                <td>
+                                    <div class="sale-info">
+                                        <strong class="sale-info__name"><%= sale.name %></strong>
+                                        <% if (sale.description) { %>
+                                            <span class="sale-info__desc"><%= sale.description %></span>
+                                        <% } %>
+                                    </div>
                                 </td>
                                 <td class="text-center">
-                                    <span class="admin-table__badge" style="background: <%= sale.is_active ? '#e8f5e9' : '#ffebee' %>; color: <%= sale.is_active ? '#2e7d32' : '#c62828' %>;">
-                                        <%= sale.is_active ? 'Hoạt động' : 'Hết hạn' %>
+                                    <span class="admin-table__badge <%= sale.type === 'percentage' ? 'admin-table__badge--processing' : 'admin-table__badge--shipped' %>">
+                                        <%= sale.type === 'percentage' ? 'Phần trăm' : 'Cố định' %>
                                     </span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="sale-value">
+                                        <%= sale.type === 'percentage' ? '-' + sale.value + '%' : '-' + (sale.value || 0).toLocaleString('vi-VN') + 'đ' %>
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <div class="sale-dates">
+                                        <% if (sale.start_date) { %>
+                                            <span class="sale-dates__start"><%= new Date(sale.start_date).toLocaleDateString('vi-VN') %></span>
+                                        <% } %>
+                                        <% if (sale.start_date && sale.end_date) { %>
+                                            <span class="sale-dates__separator">→</span>
+                                        <% } %>
+                                        <% if (sale.end_date) { %>
+                                            <span class="sale-dates__end"><%= new Date(sale.end_date).toLocaleDateString('vi-VN') %></span>
+                                        <% } %>
+                                        <% if (!sale.start_date && !sale.end_date) { %>
+                                            <span class="sale-dates__none">Không giới hạn</span>
+                                        <% } %>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <% if (sale.is_active) { %>
+                                        <span class="admin-table__badge admin-table__badge--delivered">Hoạt động</span>
+                                    <% } else { %>
+                                        <span class="admin-table__badge admin-table__badge--cancelled">Hết hạn</span>
+                                    <% } %>
+                                </td>
+                                <td class="text-center">
+                                    <div class="admin-actions-group">
+                                        <button onclick="editSale(<%= sale.id %>)" class="admin-btn admin-btn--edit" title="Sửa">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                            </svg>
+                                        </button>
+                                        <button onclick="deleteSale(<%= sale.id %>)" class="admin-btn admin-btn--delete" title="Xóa">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <polyline points="3 6 5 6 21 6"/>
+                                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         <% }) %>
@@ -70,11 +170,235 @@
             </div>
         <% } else { %>
             <div class="admin-empty">
-                <span class="admin-empty__icon">🏷️</span>
-                <h3 class="admin-empty__title">Chưa có khuyến mãi</h3>
+                <div class="admin-empty__icon">
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+                        <line x1="7" y1="7" x2="7.01" y2="7"/>
+                    </svg>
+                </div>
+                <h3 class="admin-empty__title">Chưa có khuyến mãi nào</h3>
+                <p class="admin-empty__text">Tạo khuyến mãi đầu tiên để bắt đầu thu hút khách hàng.</p>
             </div>
         <% } %>
     </div>
 </div>
+
+<!-- Toast Container -->
+<div id="toastContainer"></div>
+
+<!-- Confirm Modal -->
+<div id="confirmModal">
+    <div class="confirm-modal__content">
+        <div class="confirm-modal__icon confirm-modal__icon--danger">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+        </div>
+        <div class="confirm-modal__text">
+            <h3 id="confirmTitle">Xác nhận xóa</h3>
+            <p id="confirmMessage">Bạn có chắc muốn xóa khuyến mãi này?</p>
+        </div>
+        <div class="confirm-modal__buttons">
+            <button id="confirmNo" class="admin-btn admin-btn--ghost">Hủy</button>
+            <button id="confirmYes" class="admin-btn admin-btn--danger">Xóa</button>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Page Header */
+.admin-page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32px;
+}
+
+.admin-page-header__left h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--admin-text-primary);
+    margin: 0 0 4px 0;
+}
+
+.admin-page-header__left p {
+    font-size: 14px;
+    color: var(--admin-text-secondary);
+    margin: 0;
+}
+
+/* Sale Info */
+.sale-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.sale-info__name {
+    color: var(--admin-text-primary);
+}
+
+.sale-info__desc {
+    font-size: 12px;
+    color: var(--admin-text-secondary);
+}
+
+/* Sale Value */
+.sale-value {
+    font-weight: 600;
+    color: var(--admin-danger);
+    font-size: 15px;
+}
+
+/* Sale Dates */
+.sale-dates {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--admin-text-secondary);
+}
+
+.sale-dates__separator {
+    color: var(--admin-text-muted);
+}
+
+.sale-dates__none {
+    font-style: italic;
+    color: var(--admin-text-muted);
+}
+
+/* Admin Form Row */
+.admin-form__row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.admin-form__group {
+    display: flex;
+    flex-direction: column;
+}
+
+.admin-form__actions {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--admin-border);
+}
+
+/* Confirm Modal Icon */
+.confirm-modal__icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+}
+
+.confirm-modal__icon--danger {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--admin-danger);
+}
+
+.confirm-modal__text {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.confirm-modal__text h3 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+    color: var(--admin-text-primary);
+}
+
+.confirm-modal__text p {
+    font-size: 14px;
+    color: var(--admin-text-secondary);
+    margin: 0;
+}
+
+/* Admin Button Ghost */
+.admin-btn--ghost {
+    background: transparent;
+    color: var(--admin-text-secondary);
+    border: 1px solid var(--admin-border);
+}
+
+.admin-btn--ghost:hover {
+    background: var(--admin-bg);
+    color: var(--admin-text-primary);
+}
+
+/* Admin Button Danger */
+.admin-btn--danger {
+    background: var(--admin-danger);
+    color: white;
+}
+
+.admin-btn--danger:hover {
+    background: #dc2626;
+    color: white;
+}
+
+/* Actions Group */
+.admin-actions-group {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+}
+</style>
+
+<script>
+// Delete sale
+function deleteSale(saleId) {
+    const modal = document.getElementById('confirmModal');
+    modal.style.display = 'flex';
+
+    document.getElementById('confirmYes').onclick = async function() {
+        try {
+            const response = await fetch('/admin/sales/' + saleId, {
+                method: 'DELETE'
+            });
+            if (response.ok) {
+                location.reload();
+            } else {
+                showToast('Không thể xóa khuyến mãi', 'error');
+            }
+        } catch (error) {
+            showToast('Có lỗi xảy ra', 'error');
+        }
+        modal.style.display = 'none';
+    };
+
+    document.getElementById('confirmNo').onclick = function() {
+        modal.style.display = 'none';
+    };
+}
+
+// Edit sale placeholder
+function editSale(saleId) {
+    showToast('Tính năng đang phát triển', 'info');
+}
+
+// Toast notification
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = 'toast toast--' + type;
+    toast.innerHTML = message;
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+</script>
 
 <%- include('../partials/admin-footer') %>
