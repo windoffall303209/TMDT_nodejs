@@ -2,16 +2,20 @@
 
 <footer class="footer">
     <!-- Newsletter Section -->
-    <div class="footer-newsletter">
+    <div class="footer-newsletter" id="newsletter-section">
         <div class="container">
             <div class="newsletter-content">
-                <h3>Đăng ký nhận tin</h3>
-                <p>Nhận thông tin khuyến mãi và sản phẩm mới nhất</p>
+                <h3>Đăng ký nhận tin khuyến mãi</h3>
+                <p>Nhận thông tin khuyến mãi và sản phẩm mới nhất qua email</p>
             </div>
-            <form action="/newsletter/subscribe" method="POST" class="newsletter-form">
-                <input type="email" name="email" placeholder="Nhập email của bạn" required>
-                <button type="submit">Đăng ký</button>
+            <form id="newsletter-form" class="newsletter-form">
+                <input type="email" name="email" id="newsletter-email" placeholder="Nhập email của bạn" required>
+                <button type="submit" id="newsletter-btn">Đăng ký</button>
             </form>
+            <div id="newsletter-success" class="newsletter-success" style="display: none;">
+                <span>✅</span> Bạn đã đăng ký nhận tin khuyến mãi!
+            </div>
+            <div id="newsletter-error" class="newsletter-error" style="display: none;"></div>
         </div>
     </div>
 

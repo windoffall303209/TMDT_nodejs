@@ -319,3 +319,41 @@
 .verify-btn:hover {
     transform: scale(1.05);
 }
+
+/* ===== Password Toggle ===== */
+.password-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-input-wrapper .profile-form__input {
+    padding-right: 45px;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 10px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.password-toggle:hover {
+    opacity: 1;
+}
+
+.password-toggle .eye-icon {
+    font-size: 18px;
+}
+
+.password-toggle.active {
+    opacity: 1;
+}
+

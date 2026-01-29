@@ -91,13 +91,13 @@
                                     <span class="verification-badge verification-badge--unverified">
                                         ⏳ Chưa xác thực
                                     </span>
-                                    <button type="button" class="verify-btn" onclick="showDevelopingAlert()">
+                                    <a href="/auth/verify-email" class="verify-btn">
                                         Xác thực ngay
-                                    </button>
+                                    </a>
                                 <% } %>
                             </div>
                         </div>
-                        
+
                         <div class="contact-info__item">
                             <div class="contact-info__left">
                                 <span class="contact-info__icon">📱</span>
@@ -138,19 +138,34 @@
                     <form id="passwordForm">
                         <div class="profile-form__field">
                             <label class="profile-form__label">Mật khẩu hiện tại</label>
-                            <input type="password" name="current_password" 
-                                   class="profile-form__input" required>
+                            <div class="password-input-wrapper">
+                                <input type="password" name="current_password"
+                                       class="profile-form__input" required>
+                                <button type="button" class="password-toggle" onclick="togglePassword(this)">
+                                    <span class="eye-icon">👁️</span>
+                                </button>
+                            </div>
                         </div>
                         <div class="profile-form__grid">
                             <div class="profile-form__field">
                                 <label class="profile-form__label">Mật khẩu mới</label>
-                                <input type="password" name="new_password" 
-                                       class="profile-form__input" required minlength="6">
+                                <div class="password-input-wrapper">
+                                    <input type="password" name="new_password"
+                                           class="profile-form__input" required minlength="6">
+                                    <button type="button" class="password-toggle" onclick="togglePassword(this)">
+                                        <span class="eye-icon">👁️</span>
+                                    </button>
+                                </div>
                             </div>
                             <div class="profile-form__field">
                                 <label class="profile-form__label">Xác nhận mật khẩu mới</label>
-                                <input type="password" name="confirm_password" 
-                                       class="profile-form__input" required>
+                                <div class="password-input-wrapper">
+                                    <input type="password" name="confirm_password"
+                                           class="profile-form__input" required>
+                                    <button type="button" class="password-toggle" onclick="togglePassword(this)">
+                                        <span class="eye-icon">👁️</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         <button type="submit" class="profile-form__submit">

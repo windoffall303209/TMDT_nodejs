@@ -103,6 +103,107 @@
     background: var(--gray-100);
 }
 
+/* -----------------------------------------------------------------------------
+   PRODUCT BADGES - Sale, New, Sold Out
+   ----------------------------------------------------------------------------- */
+
+/* Sale Badge - Corner Ribbon Style (góc trên bên trái) */
+.product-card__badge--sale {
+    position: absolute;
+    top: 12px;
+    left: -8px;
+    z-index: 10;
+    padding: 6px 16px 6px 12px;
+    font-size: 14px;
+    font-weight: 700;
+    color: white;
+    background: linear-gradient(135deg, #ff4757, #ff6b81);
+    box-shadow: 0 2px 8px rgba(255, 71, 87, 0.4);
+    border-radius: 0 4px 4px 0;
+    animation: saleShine 2s ease-in-out infinite;
+}
+
+/* Sale tag ribbon effect */
+.product-card__badge--sale::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -8px;
+    border-style: solid;
+    border-width: 4px 8px 4px 0;
+    border-color: transparent #c0392b transparent transparent;
+}
+
+/* Sale shine animation */
+@keyframes saleShine {
+    0%, 100% {
+        box-shadow: 0 2px 8px rgba(255, 71, 87, 0.4);
+    }
+    50% {
+        box-shadow: 0 4px 16px rgba(255, 71, 87, 0.7);
+    }
+}
+
+/* New Badge - Top center (phía trên sản phẩm) */
+.product-card__badge--new {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 10;
+    padding: 5px 12px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: white;
+    background: linear-gradient(135deg, #00b894, #00cec9);
+    border-radius: 20px;
+    animation: newPulse 2s ease-in-out infinite;
+}
+
+@keyframes newPulse {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 2px 8px rgba(0, 184, 148, 0.4);
+    }
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(0, 184, 148, 0.6);
+    }
+}
+
+/* Sold Out Badge - Center (ở giữa sản phẩm) */
+.product-card__badge--soldout {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    padding: 16px 32px;
+    font-size: 16px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: white;
+    background: rgba(0, 0, 0, 0.85);
+    border-radius: 4px;
+    backdrop-filter: blur(4px);
+}
+
+/* Dim the image when sold out */
+.product-card:has(.product-card__badge--soldout) .product-card__image img {
+    filter: grayscale(50%) brightness(0.7);
+}
+
+/* Hover effects */
+.product-card:hover .product-card__badge--sale {
+    animation: saleShine 1s ease-in-out infinite;
+}
+
+.product-card:hover .product-card__badge--new {
+    animation: newPulse 1s ease-in-out infinite;
+}
+
 .product-card__image img {
     width: 100%;
     height: 100%;

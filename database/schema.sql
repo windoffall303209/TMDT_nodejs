@@ -1,27 +1,52 @@
--- E-commerce Database Schema
+-- =============================================================================
+-- WIND OF FALL - E-commerce Database Schema
+-- =============================================================================
+-- Complete database schema including all tables and features
+-- Version: 2.0 (Consolidated)
+-- =============================================================================
+
 -- Drop database if exists and create fresh
 DROP DATABASE IF EXISTS tmdt_ecommerce;
 CREATE DATABASE tmdt_ecommerce CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE tmdt_ecommerce;
 
--- Users table
+-- =============================================================================
+-- USERS TABLE
+-- =============================================================================
 CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     full_name VARCHAR(255) NOT NULL,
     phone VARCHAR(20),
+    avatar_url VARCHAR(500) DEFAULT NULL,
+    birthday DATE DEFAULT NULL,
     role ENUM('customer', 'admin') DEFAULT 'customer',
+    -- Email verification
     email_verified BOOLEAN DEFAULT FALSE,
+    email_verified_at DATETIME DEFAULT NULL,
+    verification_code VARCHAR(6) DEFAULT NULL,
+    verification_expires DATETIME DEFAULT NULL,
+    -- Phone verification
+    phone_verified BOOLEAN DEFAULT FALSE,
+    -- Password reset
+    reset_code VARCHAR(6) DEFAULT NULL,
+    reset_code_expires DATETIME DEFAULT NULL,
+    -- Marketing
     marketing_consent BOOLEAN DEFAULT FALSE,
+    -- Status
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_email (email),
-    INDEX idx_role (role)
+    INDEX idx_role (role),
+    INDEX idx_verification_code (verification_code),
+    INDEX idx_reset_code (reset_code)
 ) ENGINE=InnoDB;
 
--- Categories table
+-- =============================================================================
+-- CATEGORIES TABLE
+-- =============================================================================
 CREATE TABLE categories (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -37,7 +62,9 @@ CREATE TABLE categories (
     INDEX idx_parent (parent_id)
 ) ENGINE=InnoDB;
 
--- Sales table
+-- =============================================================================
+-- SALES TABLE
+-- =============================================================================
 CREATE TABLE sales (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -52,7 +79,9 @@ CREATE TABLE sales (
     INDEX idx_active_dates (is_active, start_date, end_date)
 ) ENGINE=InnoDB;
 
--- Products table
+-- =============================================================================
+-- PRODUCTS TABLE
+-- =============================================================================
 CREATE TABLE products (
     id INT AUTO_INCREMENT PRIMARY KEY,
     category_id INT NOT NULL,
@@ -77,7 +106,9 @@ CREATE TABLE products (
     INDEX idx_featured (is_featured)
 ) ENGINE=InnoDB;
 
--- Product images table
+-- =============================================================================
+-- PRODUCT IMAGES TABLE
+-- =============================================================================
 CREATE TABLE product_images (
     id INT AUTO_INCREMENT PRIMARY KEY,
     product_id INT NOT NULL,
@@ -89,7 +120,9 @@ CREATE TABLE product_images (
     INDEX idx_product (product_id)
 ) ENGINE=InnoDB;
 
--- Product variants table (for sizes, colors)
+-- =============================================================================
+-- PRODUCT VARIANTS TABLE (sizes, colors)
+-- =============================================================================
 CREATE TABLE product_variants (
     id INT AUTO_INCREMENT PRIMARY KEY,
     product_id INT NOT NULL,
@@ -103,7 +136,33 @@ CREATE TABLE product_variants (
     INDEX idx_product (product_id)
 ) ENGINE=InnoDB;
 
--- Cart table (persistent shopping cart)
+-- =============================================================================
+-- VOUCHERS TABLE
+-- =============================================================================
+CREATE TABLE vouchers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(50) UNIQUE NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    type ENUM('percentage', 'fixed') NOT NULL DEFAULT 'percentage',
+    value DECIMAL(10, 2) NOT NULL,
+    min_order_amount DECIMAL(10, 2) DEFAULT 0,
+    max_discount_amount DECIMAL(10, 2) NULL,
+    usage_limit INT DEFAULT NULL,
+    used_count INT DEFAULT 0,
+    user_limit INT DEFAULT 1,
+    start_date DATETIME NOT NULL,
+    end_date DATETIME NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_code (code),
+    INDEX idx_active_dates (is_active, start_date, end_date)
+) ENGINE=InnoDB;
+
+-- =============================================================================
+-- CART TABLE (persistent shopping cart)
+-- =============================================================================
 CREATE TABLE cart (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NULL,
@@ -115,7 +174,9 @@ CREATE TABLE cart (
     INDEX idx_session (session_id)
 ) ENGINE=InnoDB;
 
--- Cart items table
+-- =============================================================================
+-- CART ITEMS TABLE
+-- =============================================================================
 CREATE TABLE cart_items (
     id INT AUTO_INCREMENT PRIMARY KEY,
     cart_id INT NOT NULL,
@@ -130,7 +191,9 @@ CREATE TABLE cart_items (
     INDEX idx_product (product_id)
 ) ENGINE=InnoDB;
 
--- Addresses table
+-- =============================================================================
+-- ADDRESSES TABLE
+-- =============================================================================
 CREATE TABLE addresses (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -147,11 +210,14 @@ CREATE TABLE addresses (
     INDEX idx_user (user_id)
 ) ENGINE=InnoDB;
 
--- Orders table
+-- =============================================================================
+-- ORDERS TABLE
+-- =============================================================================
 CREATE TABLE orders (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     address_id INT NOT NULL,
+    voucher_id INT NULL,
     order_code VARCHAR(50) UNIQUE NOT NULL,
     total_amount DECIMAL(10, 2) NOT NULL,
     discount_amount DECIMAL(10, 2) DEFAULT 0,
@@ -165,12 +231,15 @@ CREATE TABLE orders (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (address_id) REFERENCES addresses(id),
+    FOREIGN KEY (voucher_id) REFERENCES vouchers(id) ON DELETE SET NULL,
     INDEX idx_user (user_id),
     INDEX idx_order_code (order_code),
     INDEX idx_status (status)
 ) ENGINE=InnoDB;
 
--- Order items table
+-- =============================================================================
+-- ORDER ITEMS TABLE
+-- =============================================================================
 CREATE TABLE order_items (
     id INT AUTO_INCREMENT PRIMARY KEY,
     order_id INT NOT NULL,
@@ -189,7 +258,26 @@ CREATE TABLE order_items (
     INDEX idx_order (order_id)
 ) ENGINE=InnoDB;
 
--- Payments table
+-- =============================================================================
+-- VOUCHER USAGE TABLE
+-- =============================================================================
+CREATE TABLE voucher_usage (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    voucher_id INT NOT NULL,
+    user_id INT NOT NULL,
+    order_id INT NOT NULL,
+    discount_amount DECIMAL(10, 2) NOT NULL,
+    used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (voucher_id) REFERENCES vouchers(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+    INDEX idx_voucher (voucher_id),
+    INDEX idx_user (user_id)
+) ENGINE=InnoDB;
+
+-- =============================================================================
+-- PAYMENTS TABLE
+-- =============================================================================
 CREATE TABLE payments (
     id INT AUTO_INCREMENT PRIMARY KEY,
     order_id INT NOT NULL,
@@ -205,7 +293,9 @@ CREATE TABLE payments (
     INDEX idx_transaction (transaction_id)
 ) ENGINE=InnoDB;
 
--- Banners table
+-- =============================================================================
+-- BANNERS TABLE
+-- =============================================================================
 CREATE TABLE banners (
     id INT AUTO_INCREMENT PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
@@ -223,7 +313,9 @@ CREATE TABLE banners (
     INDEX idx_active (is_active, display_order)
 ) ENGINE=InnoDB;
 
--- Reviews table
+-- =============================================================================
+-- REVIEWS TABLE
+-- =============================================================================
 CREATE TABLE reviews (
     id INT AUTO_INCREMENT PRIMARY KEY,
     product_id INT NOT NULL,
@@ -242,7 +334,9 @@ CREATE TABLE reviews (
     INDEX idx_user (user_id)
 ) ENGINE=InnoDB;
 
--- Email campaigns table
+-- =============================================================================
+-- EMAIL CAMPAIGNS TABLE
+-- =============================================================================
 CREATE TABLE email_campaigns (
     id INT AUTO_INCREMENT PRIMARY KEY,
     subject VARCHAR(255) NOT NULL,
@@ -258,7 +352,9 @@ CREATE TABLE email_campaigns (
     INDEX idx_status (status)
 ) ENGINE=InnoDB;
 
--- Wishlist table
+-- =============================================================================
+-- WISHLIST TABLE
+-- =============================================================================
 CREATE TABLE wishlist (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -270,7 +366,25 @@ CREATE TABLE wishlist (
     INDEX idx_user (user_id)
 ) ENGINE=InnoDB;
 
--- Password reset tokens
+-- =============================================================================
+-- NEWSLETTER SUBSCRIBERS TABLE
+-- =============================================================================
+CREATE TABLE newsletter_subscribers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    user_id INT DEFAULT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    subscribed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    unsubscribed_at DATETIME DEFAULT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_email (email),
+    INDEX idx_user_id (user_id),
+    INDEX idx_is_active (is_active)
+) ENGINE=InnoDB;
+
+-- =============================================================================
+-- PASSWORD RESET TOKENS TABLE (Legacy - kept for compatibility)
+-- =============================================================================
 CREATE TABLE password_reset_tokens (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -283,7 +397,9 @@ CREATE TABLE password_reset_tokens (
     INDEX idx_user (user_id)
 ) ENGINE=InnoDB;
 
--- Email verification tokens
+-- =============================================================================
+-- EMAIL VERIFICATION TOKENS TABLE (Legacy - kept for compatibility)
+-- =============================================================================
 CREATE TABLE email_verification_tokens (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -294,3 +410,8 @@ CREATE TABLE email_verification_tokens (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     INDEX idx_token (token)
 ) ENGINE=InnoDB;
+
+-- =============================================================================
+-- END OF SCHEMA
+-- =============================================================================
+SELECT 'Database schema created successfully!' AS Status;

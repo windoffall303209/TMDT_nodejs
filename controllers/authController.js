@@ -568,3 +568,290 @@ exports.handleAvatarUpload = (req, res) => {
         }
     });
 };
+
+// =============================================================================
+// XÁC NHẬN EMAIL - EMAIL VERIFICATION
+// =============================================================================
+
+/**
+ * Hiển thị trang xác nhận email
+ *
+ * @description Render trang nhập mã xác nhận 6 số
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} res - Response object từ Express
+ */
+exports.showVerifyEmail = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+
+        if (!user) {
+            return res.redirect('/auth/login');
+        }
+
+        // Nếu email đã xác nhận, redirect về profile
+        if (user.email_verified) {
+            return res.redirect('/user/profile');
+        }
+
+        res.render('auth/verify-email', {
+            user,
+            error: null,
+            success: null
+        });
+    } catch (error) {
+        console.error('Show verify email error:', error);
+        res.redirect('/user/profile');
+    }
+};
+
+/**
+ * Gửi mã xác nhận email
+ *
+ * @description Tạo mã 6 số và gửi qua email
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} res - Response object từ Express
+ *
+ * @returns {JSON} Trả về JSON với thông báo thành công/thất bại
+ */
+exports.sendVerificationCode = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'Người dùng không tồn tại'
+            });
+        }
+
+        // Kiểm tra email đã xác nhận chưa
+        if (user.email_verified) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email đã được xác nhận trước đó'
+            });
+        }
+
+        // Tạo mã xác nhận 6 số
+        const verificationCode = await User.generateVerificationCode(req.user.id);
+
+        // Gửi email xác nhận
+        const emailSent = await emailService.sendVerificationEmail(user, verificationCode);
+
+        if (!emailSent) {
+            return res.status(500).json({
+                success: false,
+                message: 'Không thể gửi email. Vui lòng thử lại sau.'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Mã xác nhận đã được gửi đến email của bạn. Mã có hiệu lực trong 10 phút.'
+        });
+    } catch (error) {
+        console.error('Send verification code error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.'
+        });
+    }
+};
+
+/**
+ * Xác nhận mã email
+ *
+ * @description Kiểm tra mã 6 số và đánh dấu email đã xác nhận
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.body.code - Mã xác nhận 6 số
+ * @param {Object} res - Response object từ Express
+ *
+ * @returns {JSON} Trả về JSON với thông báo thành công/thất bại
+ */
+exports.verifyEmailCode = async (req, res) => {
+    try {
+        const { code } = req.body;
+
+        // Validate mã xác nhận
+        if (!code || code.length !== 6) {
+            return res.status(400).json({
+                success: false,
+                message: 'Vui lòng nhập mã xác nhận 6 số'
+            });
+        }
+
+        // Xác nhận mã
+        const result = await User.verifyEmailCode(req.user.id, code);
+
+        if (!result.success) {
+            return res.status(400).json({
+                success: false,
+                message: result.message
+            });
+        }
+
+        res.json({
+            success: true,
+            message: result.message
+        });
+    } catch (error) {
+        console.error('Verify email code error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.'
+        });
+    }
+};
+
+// =============================================================================
+// QUÊN MẬT KHẨU - FORGOT PASSWORD
+// =============================================================================
+
+/**
+ * Hiển thị trang quên mật khẩu
+ */
+exports.showForgotPassword = (req, res) => {
+    res.render('auth/forgot-password', {
+        error: null,
+        success: null,
+        email: ''
+    });
+};
+
+/**
+ * Gửi mã đặt lại mật khẩu
+ */
+exports.sendResetCode = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: 'Vui lòng nhập email'
+            });
+        }
+
+        // Tạo mã reset
+        const result = await User.generateResetCode(email);
+
+        if (!result.success) {
+            return res.status(400).json({
+                success: false,
+                message: result.message
+            });
+        }
+
+        // Gửi email
+        const emailSent = await emailService.sendPasswordResetCode(result.user, result.code);
+
+        if (!emailSent) {
+            return res.status(500).json({
+                success: false,
+                message: 'Không thể gửi email. Vui lòng thử lại sau.'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Mã đặt lại mật khẩu đã được gửi đến email của bạn. Mã có hiệu lực trong 10 phút.'
+        });
+    } catch (error) {
+        console.error('Send reset code error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.'
+        });
+    }
+};
+
+/**
+ * Xác nhận mã và hiển thị form đặt mật khẩu mới
+ */
+exports.verifyResetCode = async (req, res) => {
+    try {
+        const { email, code } = req.body;
+
+        if (!email || !code || code.length !== 6) {
+            return res.status(400).json({
+                success: false,
+                message: 'Vui lòng nhập đầy đủ email và mã 6 số'
+            });
+        }
+
+        const result = await User.verifyResetCode(email, code);
+
+        if (!result.success) {
+            return res.status(400).json({
+                success: false,
+                message: result.message
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Mã xác nhận hợp lệ'
+        });
+    } catch (error) {
+        console.error('Verify reset code error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.'
+        });
+    }
+};
+
+/**
+ * Đặt lại mật khẩu mới
+ */
+exports.resetPassword = async (req, res) => {
+    try {
+        const { email, code, new_password, confirm_password } = req.body;
+
+        // Validate
+        if (!email || !code || !new_password || !confirm_password) {
+            return res.status(400).json({
+                success: false,
+                message: 'Vui lòng điền đầy đủ thông tin'
+            });
+        }
+
+        if (new_password.length < 6) {
+            return res.status(400).json({
+                success: false,
+                message: 'Mật khẩu mới phải có ít nhất 6 ký tự'
+            });
+        }
+
+        if (new_password !== confirm_password) {
+            return res.status(400).json({
+                success: false,
+                message: 'Xác nhận mật khẩu không khớp'
+            });
+        }
+
+        // Đặt lại mật khẩu
+        const result = await User.resetPassword(email, code, new_password);
+
+        if (!result.success) {
+            return res.status(400).json({
+                success: false,
+                message: result.message
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Đặt lại mật khẩu thành công! Bạn có thể đăng nhập với mật khẩu mới.'
+        });
+    } catch (error) {
+        console.error('Reset password error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.'
+        });
+    }
+};

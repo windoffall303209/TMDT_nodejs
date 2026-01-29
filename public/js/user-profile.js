@@ -1,5 +1,22 @@
 // User Profile JavaScript
 
+// Toggle password visibility
+function togglePassword(button) {
+    const wrapper = button.parentElement;
+    const input = wrapper.querySelector('input');
+    const icon = button.querySelector('.eye-icon');
+
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.textContent = '🙈';
+        button.classList.add('active');
+    } else {
+        input.type = 'password';
+        icon.textContent = '👁️';
+        button.classList.remove('active');
+    }
+}
+
 // Show developing alert for verify buttons
 function showDevelopingAlert() {
     alert('🚧 Tính năng này đang được phát triển. Vui lòng quay lại sau!');

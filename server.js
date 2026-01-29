@@ -6,6 +6,7 @@ const session = require('express-session');
 const helmet = require('helmet');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const { optionalAuth } = require('./middleware/auth');
 
 // Initialize app
 const app = express();
@@ -36,13 +37,17 @@ app.use(bodyParser.json());
 // Cookie parser
 app.use(cookieParser());
 
-// Session
+// Session - shared across all tabs in same browser
 app.use(session({
     secret: process.env.SESSION_SECRET || 'your-secret-key',
     resave: false,
     saveUninitialized: true,
+    name: 'sessionId', // Explicit cookie name
     cookie: {
-        maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days for guest cart
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days for guest cart
+        httpOnly: true,
+        sameSite: 'lax', // Ensures cookie is sent with same-site requests
+        secure: process.env.NODE_ENV === 'production' // HTTPS only in production
     }
 }));
 
@@ -52,6 +57,9 @@ app.set('views', path.join(__dirname, 'views'));
 
 // Static files
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Global auth check - populate req.user from JWT token for all requests
+app.use(optionalAuth);
 
 // Make user available to all views
 app.use((req, res, next) => {

@@ -1,57 +1,98 @@
 <%- include('../partials/header') %>
 
-<div class="search-results-page" style="padding: 40px 0; min-height: 60vh;">
+<link rel="stylesheet" href="/css/product-list.css">
+
+<div class="products-page">
     <div class="container">
-        <div style="margin-bottom: 30px;">
-            <h1 style="margin: 0 0 10px 0; font-size: 28px; font-weight: 700; color: #333;">
-                Kết quả tìm kiếm
-            </h1>
-            <p style="margin: 0; color: #666; font-size: 16px;">
-                <% if (products && products.length > 0) { %>
-                    Tìm thấy <strong><%= products.length %></strong> sản phẩm cho "<strong><%= query %></strong>"
-                <% } else { %>
-                    Không tìm thấy sản phẩm nào cho "<strong><%= query %></strong>"
-                <% } %>
-            </p>
+        <!-- Page Header -->
+        <div class="products-page__header">
+            <h1 class="products-page__title">Kết quả tìm kiếm: "<%= query %>"</h1>
+            <p class="products-page__count"><%= products ? products.length : 0 %> sản phẩm</p>
         </div>
-        
+
         <% if (products && products.length > 0) { %>
-            <div class="product-grid">
+            <!-- Filters Bar -->
+            <div class="products-filters">
+                <div class="products-filters__left">
+                    <button class="filter-btn active" data-filter="all">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7"/>
+                            <rect x="14" y="3" width="7" height="7"/>
+                            <rect x="14" y="14" width="7" height="7"/>
+                            <rect x="3" y="14" width="7" height="7"/>
+                        </svg>
+                        Tất cả
+                    </button>
+                    <button class="filter-btn" data-filter="new">Mới nhất</button>
+                    <button class="filter-btn" data-filter="bestseller">Bán chạy</button>
+                    <button class="filter-btn" data-filter="sale">Đang giảm giá</button>
+                </div>
+                <div class="products-filters__sort">
+                    <select id="sortProducts" onchange="sortProducts(this.value)">
+                        <option value="newest">Mới nhất</option>
+                        <option value="price-asc">Giá: Thấp đến Cao</option>
+                        <option value="price-desc">Giá: Cao đến Thấp</option>
+                        <option value="name-asc">Tên: A-Z</option>
+                        <option value="name-desc">Tên: Z-A</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Products Grid -->
+            <div class="products-grid">
                 <% products.forEach(product => { %>
                     <%- include('../partials/product-card', { product }) %>
                 <% }) %>
             </div>
         <% } else { %>
-            <div style="text-align: center; padding: 80px 20px; background: #f9f9f9; border-radius: 16px;">
-                <span style="font-size: 80px; display: block; margin-bottom: 20px;">🔍</span>
-                <h2 style="margin: 0 0 15px 0; color: #333; font-weight: 600;">Không tìm thấy kết quả</h2>
-                <p style="margin: 0 0 30px 0; color: #666; max-width: 400px; margin-left: auto; margin-right: auto;">
-                    Rất tiếc, không tìm thấy sản phẩm nào phù hợp với "<%= query %>". 
-                    Vui lòng thử tìm kiếm với từ khóa khác.
-                </p>
-                <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
-                    <a href="/products" style="display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; transition: transform 0.2s;">
-                        Xem tất cả sản phẩm
-                    </a>
-                    <a href="/" style="display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px; background: #f0f0f0; color: #333; text-decoration: none; border-radius: 8px; font-weight: 600; transition: transform 0.2s;">
-                        Về trang chủ
-                    </a>
+            <!-- Empty State -->
+            <div class="products-empty">
+                <div class="products-empty__icon">
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path d="M21 21l-4.35-4.35"/>
+                    </svg>
                 </div>
-            </div>
-            
-            <div style="margin-top: 60px;">
-                <h3 style="margin: 0 0 25px 0; font-size: 22px; font-weight: 600; color: #333;">
-                    💡 Gợi ý tìm kiếm
-                </h3>
-                <ul style="color: #555; line-height: 2; padding-left: 20px;">
-                    <li>Kiểm tra lại chính tả từ khóa</li>
-                    <li>Sử dụng từ khóa chung chung hơn</li>
-                    <li>Thử tìm kiếm theo tên danh mục: <a href="/products/category/nam" style="color: #667eea;">Nam</a>, <a href="/products/category/nu" style="color: #667eea;">Nữ</a>, <a href="/products/category/tre-em" style="color: #667eea;">Trẻ Em</a></li>
-                </ul>
+                <h3 class="products-empty__title">Không tìm thấy sản phẩm</h3>
+                <p class="products-empty__text">
+                    Rất tiếc, không tìm thấy sản phẩm nào phù hợp với "<%= query %>".
+                    <br>Vui lòng thử tìm kiếm với từ khóa khác.
+                </p>
+                <a href="/products" class="products-empty__link">Xem tất cả sản phẩm →</a>
+
+                <div style="margin-top: 40px; text-align: left; max-width: 400px; margin-left: auto; margin-right: auto;">
+                    <h4 style="margin-bottom: 15px; color: var(--black);">Gợi ý tìm kiếm:</h4>
+                    <ul style="color: var(--gray-600); line-height: 2; padding-left: 20px;">
+                        <li>Kiểm tra lại chính tả từ khóa</li>
+                        <li>Sử dụng từ khóa chung chung hơn</li>
+                        <li>Thử tìm kiếm theo danh mục:
+                            <a href="/products/category/nam" style="color: var(--accent);">Nam</a>,
+                            <a href="/products/category/nu" style="color: var(--accent);">Nữ</a>,
+                            <a href="/products/category/tre-em" style="color: var(--accent);">Trẻ Em</a>
+                        </li>
+                    </ul>
+                </div>
             </div>
         <% } %>
     </div>
 </div>
+
+<script>
+// Filter buttons
+document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+    });
+});
+
+// Sort products
+function sortProducts(value) {
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set('sort', value);
+    window.location.href = currentUrl.toString();
+}
+</script>
 
 <script src="/js/main.js"></script>
 

@@ -96,4 +96,131 @@ function showNotification(message, type = 'info') {
 document.addEventListener('DOMContentLoaded', () => {
     // Update cart count on page load
     updateCartCount();
+
+    // Initialize newsletter form
+    initNewsletterForm();
 });
+
+// Newsletter form handling
+function initNewsletterForm() {
+    const form = document.getElementById('newsletter-form');
+    const successMsg = document.getElementById('newsletter-success');
+    const errorMsg = document.getElementById('newsletter-error');
+
+    if (!form) return;
+
+    // Check if user already subscribed
+    checkNewsletterStatus();
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const emailInput = document.getElementById('newsletter-email');
+        const submitBtn = document.getElementById('newsletter-btn');
+        const email = emailInput.value.trim();
+
+        if (!email) return;
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Đang xử lý...';
+
+        try {
+            const response = await fetch('/newsletter/subscribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                form.style.display = 'none';
+                successMsg.style.display = 'flex';
+                if (errorMsg) errorMsg.style.display = 'none';
+
+                // Save to localStorage
+                localStorage.setItem('newsletter_subscribed', 'true');
+                localStorage.setItem('newsletter_email', email);
+            } else {
+                if (errorMsg) {
+                    errorMsg.textContent = data.message;
+                    errorMsg.style.display = 'block';
+                }
+                showNotification(data.message, 'error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Đăng ký';
+            }
+        } catch (error) {
+            console.error('Newsletter error:', error);
+            showNotification('Đã xảy ra lỗi. Vui lòng thử lại.', 'error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Đăng ký';
+        }
+    });
+}
+
+// Check newsletter subscription status
+async function checkNewsletterStatus() {
+    const form = document.getElementById('newsletter-form');
+    const successMsg = document.getElementById('newsletter-success');
+    const newsletterSection = document.getElementById('newsletter-section');
+
+    if (!form || !successMsg || !newsletterSection) return;
+
+    // Check if already subscribed
+    if (localStorage.getItem('newsletter_subscribed') === 'true') {
+        form.style.display = 'none';
+        successMsg.style.display = 'flex';
+        return;
+    }
+
+    // Check if banner was dismissed and should still be hidden (12 hours = 43200000 ms)
+    const dismissedTime = localStorage.getItem('newsletter_dismissed_at');
+    if (dismissedTime) {
+        const timeSinceDismissed = Date.now() - parseInt(dismissedTime);
+        const twelveHours = 12 * 60 * 60 * 1000; // 12 hours in milliseconds
+
+        if (timeSinceDismissed < twelveHours) {
+            // Still within 12 hours, hide the banner
+            newsletterSection.style.display = 'none';
+            return;
+        } else {
+            // 12 hours passed, clear the dismissed flag and show banner
+            localStorage.removeItem('newsletter_dismissed_at');
+        }
+    }
+
+    // Check if this is first visit in this session (mark as seen)
+    const hasSeenBanner = sessionStorage.getItem('newsletter_banner_seen');
+    if (!hasSeenBanner) {
+        // First time seeing banner in this browser session
+        sessionStorage.setItem('newsletter_banner_seen', 'true');
+        // Mark the time banner was first shown (for 12-hour reset)
+        if (!localStorage.getItem('newsletter_first_shown')) {
+            localStorage.setItem('newsletter_first_shown', Date.now().toString());
+        }
+    }
+
+    // Check server for logged-in users
+    try {
+        const response = await fetch('/newsletter/status');
+        const data = await response.json();
+
+        if (data.subscribed) {
+            form.style.display = 'none';
+            successMsg.style.display = 'flex';
+            localStorage.setItem('newsletter_subscribed', 'true');
+        }
+    } catch (error) {
+        // Ignore - user might not be logged in
+    }
+}
+
+// Dismiss newsletter banner (hide for 12 hours)
+function dismissNewsletterBanner() {
+    const newsletterSection = document.getElementById('newsletter-section');
+    if (newsletterSection) {
+        newsletterSection.style.display = 'none';
+        localStorage.setItem('newsletter_dismissed_at', Date.now().toString());
+    }
+}

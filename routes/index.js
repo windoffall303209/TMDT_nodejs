@@ -9,6 +9,7 @@ const productRoutes = require('./productRoutes');
 const cartRoutes = require('./cartRoutes');
 const orderRoutes = require('./orderRoutes');
 const adminRoutes = require('./adminRoutes');
+const newsletterRoutes = require('./newsletterRoutes');
 
 // Homepage
 router.get('/', optionalAuth, productController.getHomePage);
@@ -19,5 +20,6 @@ router.use('/products', productRoutes);
 router.use('/cart', cartRoutes);
 router.use('/orders', orderRoutes);
 router.use('/admin', adminRoutes);
+router.use('/newsletter', newsletterRoutes);
 
 module.exports = router;

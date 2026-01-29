@@ -23,4 +23,15 @@ router.post('/change-password', verifyToken, authController.changePassword);
 // Address management
 router.post('/address', verifyToken, authController.createAddress);
 
+// Email verification
+router.get('/verify-email', verifyToken, authController.showVerifyEmail);
+router.post('/send-verification', verifyToken, authController.sendVerificationCode);
+router.post('/verify-email', verifyToken, authController.verifyEmailCode);
+
+// Forgot password (public routes - no login required)
+router.get('/forgot-password', authController.showForgotPassword);
+router.post('/forgot-password/send-code', authController.sendResetCode);
+router.post('/forgot-password/verify-code', authController.verifyResetCode);
+router.post('/forgot-password/reset', authController.resetPassword);
+
 module.exports = router;

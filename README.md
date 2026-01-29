@@ -1,51 +1,41 @@
-# Fashion Store - E-commerce Website
+# WIND OF FALL - Fashion E-commerce
 
-Một website bán hàng thời trang quần áo đầy đủ tính năng, được xây dựng với Node.js, Express, MySQL, và EJS.
+Website bán hàng thời trang đầy đủ tính năng, xây dựng với Node.js, Express, MySQL và EJS.
 
-## 🚀 Tính năng
+## Tính năng
 
 ### Khách hàng
-- ✅ Đăng ký/Đăng nhập với bảo mật JWT
-- ✅ Tìm kiếm sản phẩm (bảo vệ khỏi SQL injection)
-- ✅ Giỏ hàng lưu trữ vĩnh viễn (như Shopee - không mất data)
-- ✅ Nhiều phương thức thanh toán:
-  - COD (Thanh toán khi nhận hàng)
-  - VNPay
-  - MoMo with QR Code
-- ✅ Xem lịch sử đơn hàng
-- ✅ Quản lý địa chỉ giao hàng
+- Đăng ký / Đăng nhập với JWT
+- Xác thực email bằng mã 6 số
+- Quên mật khẩu với mã xác nhận qua email
+- Tìm kiếm sản phẩm (fuzzy search)
+- Giỏ hàng lưu trữ vĩnh viễn (không mất khi đóng trình duyệt)
+- Mã giảm giá (Voucher)
+- Thanh toán: COD, VNPay, MoMo
+- Quản lý đơn hàng và địa chỉ giao hàng
+- Đăng ký nhận thông báo khuyến mãi (Newsletter)
 
 ### Admin
-- ✅ Dashboard với thống kê
-- ✅ Quản lý sản phẩm (CRUD, upload ảnh)
-- ✅ Quản lý đơn hàng
-- ✅ Quản lý người dùng
-- ✅ Quản lý banner & sale
-- ✅ Gửi email marketing tự động
+- Dashboard thống kê
+- Quản lý sản phẩm, danh mục, khuyến mãi
+- Quản lý đơn hàng
+- Quản lý người dùng
+- Quản lý voucher
+- Quản lý banner
 
 ### Bảo mật
-- ✅ Mật khẩu hash với bcrypt
-- ✅ JWT authentication
-- ✅ Chống SQL injection với parameterized queries
-- ✅ Helmet.js cho security headers
+- Mật khẩu hash với bcrypt
+- JWT authentication
+- Helmet.js security headers
+- SQL injection protection
 
-## 🛠️ Công nghệ sử dụng
-
-- **Backend**: Node.js + Express.js (MVC pattern)
-- **Database**: MySQL with mysql2
-- **Template Engine**: EJS
-- **Authentication**: JWT + bcrypt
-- **Email**: Nodemailer + Gmail
-- **Payment**: VNPay, MoMo
-- **Upload**: Multer
-
-## 📋 Yêu cầu hệ thống
+## Yêu cầu
 
 - Node.js >= 14.x
 - MySQL >= 5.7
 - npm hoặc yarn
 
-## 🔧 Cài đặt
+## Cài đặt
 
 ### 1. Clone repository
 
@@ -60,29 +50,31 @@ cd TMDT_nodejs
 npm install
 ```
 
-### 3. Cấu hình database
-
-Tạo database MySQL:
-
-```bash
-mysql -u root -p
-```
-
-Sau đó chạy:
-
-```sql
-source database/schema.sql
-```
-
-Hoặc import trực tiếp:
+### 3. Tạo database
 
 ```bash
 mysql -u root -p < database/schema.sql
 ```
 
-### 4. Tạo file `.env`
+### 4. Import dữ liệu mẫu (tùy chọn)
 
-Copy `.env.example` thành `.env` và cập nhật thông tin:
+```bash
+mysql -u root -p tmdt_ecommerce < database/seed.sql
+```
+
+**Tài khoản admin mặc định:**
+- Email: `admin@fashionstore.vn`
+- Password: `admin123`
+
+### 5. Cấu hình môi trường
+
+Tạo file `.env` từ `.env.example`:
+
+```bash
+cp .env.example .env
+```
+
+Cập nhật các giá trị trong `.env`:
 
 ```env
 # Server
@@ -98,28 +90,19 @@ DB_NAME=tmdt_ecommerce
 # JWT
 JWT_SECRET=your_secret_key_here
 
-# Email (Gmail)
+# Session
+SESSION_SECRET=your_session_secret
+
+# Email (Gmail SMTP)
 EMAIL_USER=your_email@gmail.com
 EMAIL_PASSWORD=your_app_password
 
-# Payment (Optional - cần đăng ký tài khoản)
+# Payment (tùy chọn)
 VNPAY_TMN_CODE=your_vnpay_code
 VNPAY_HASH_SECRET=your_vnpay_secret
 MOMO_PARTNER_CODE=your_momo_code
 MOMO_SECRET_KEY=your_momo_secret
 ```
-
-**Lưu ý về Gmail**: Bạn cần tạo App Password trong cài đặt Google Account để sử dụng Gmail SMTP.
-
-### 5. Import dữ liệu mẫu (Optional)
-
-```bash
-mysql -u root -p tmdt_ecommerce < database/seed.sql
-```
-
-Tài khoản admin mặc định:
-- Email: `admin@fashionstore.vn`
-- Password: `admin123`
 
 ### 6. Tạo thư mục uploads
 
@@ -127,79 +110,108 @@ Tài khoản admin mặc định:
 mkdir -p public/uploads
 ```
 
-## 🚀 Chạy ứng dụng
+### 7. Chạy ứng dụng
 
-### Development
-
+**Development:**
 ```bash
 npm run dev
 ```
 
-### Production
-
+**Production:**
 ```bash
 npm start
 ```
 
-Ứng dụng sẽ chạy tại: `http://localhost:3000`
+Truy cập: http://localhost:3000
 
-## 📁 Cấu trúc thư mục
+## Cấu hình Email (Gmail)
+
+1. Bật xác minh 2 bước trong Google Account
+2. Tạo App Password: https://myaccount.google.com/apppasswords
+3. Sử dụng App Password trong `EMAIL_PASSWORD`
+
+## Cấu trúc thư mục
 
 ```
 TMDT_nodejs/
 ├── config/
-│   └── database.js          # Cấu hình database
-├── controllers/             # Controllers (MVC)
+│   └── database.js
+├── controllers/
 │   ├── authController.js
 │   ├── productController.js
 │   ├── cartController.js
 │   ├── orderController.js
 │   └── adminController.js
-├── models/                  # Models (OOP)
+├── models/
 │   ├── User.js
 │   ├── Product.js
 │   ├── Cart.js
-│   ├── Order.js
-│   └── ...
-├── routes/                  # Routes
+│   └── Order.js
+├── routes/
 │   ├── authRoutes.js
 │   ├── productRoutes.js
-│   ├── cartRoutes.js
-│   └── ...
-├── middleware/              # Middleware
-│   ├── auth.js              # JWT authentication
-│   └── upload.js            # File upload
-├── services/                # Business logic
-│   ├── emailService.js      # Email handling
-│   └── paymentService.js    # Payment processing
-├── views/                   # EJS templates
-│   ├── layouts/
+│   └── adminRoutes.js
+├── middleware/
+│   ├── auth.js
+│   └── upload.js
+├── services/
+│   ├── emailService.js
+│   └── paymentService.js
+├── views/
 │   ├── partials/
 │   ├── home/
 │   ├── products/
 │   ├── auth/
-│   └── ...
-├── public/                  # Static files
+│   └── admin/
+├── public/
 │   ├── css/
 │   ├── js/
-│   ├── images/
 │   └── uploads/
-├── database/                # Database files
+├── database/
 │   ├── schema.sql
 │   └── seed.sql
-├── .env                     # Environment variables
-├── .gitignore
+├── .env
 ├── package.json
-└── server.js                # Entry point
+└── server.js
 ```
 
-## 🎯 API Endpoints
+## Database Schema
+
+File `database/schema.sql` bao gồm các bảng:
+
+| Bảng | Mô tả |
+|------|-------|
+| users | Người dùng (bao gồm xác thực email, reset password) |
+| categories | Danh mục sản phẩm |
+| products | Sản phẩm |
+| product_images | Ảnh sản phẩm |
+| product_variants | Biến thể (size, màu) |
+| sales | Chương trình khuyến mãi |
+| vouchers | Mã giảm giá |
+| voucher_usage | Lịch sử sử dụng voucher |
+| cart | Giỏ hàng |
+| cart_items | Sản phẩm trong giỏ |
+| addresses | Địa chỉ giao hàng |
+| orders | Đơn hàng |
+| order_items | Chi tiết đơn hàng |
+| payments | Thanh toán |
+| reviews | Đánh giá sản phẩm |
+| wishlist | Sản phẩm yêu thích |
+| banners | Banner quảng cáo |
+| newsletter_subscribers | Đăng ký nhận tin |
+| email_campaigns | Chiến dịch email |
+
+## API Endpoints
 
 ### Authentication
 - `POST /auth/register` - Đăng ký
 - `POST /auth/login` - Đăng nhập
 - `POST /auth/logout` - Đăng xuất
-- `GET /auth/profile` - Xem profile (requires auth)
+- `GET /auth/profile` - Xem hồ sơ
+- `POST /auth/send-verification` - Gửi mã xác thực email
+- `POST /auth/verify-email` - Xác thực email
+- `POST /auth/forgot-password` - Quên mật khẩu
+- `POST /auth/reset-password` - Đặt lại mật khẩu
 
 ### Products
 - `GET /products` - Danh sách sản phẩm
@@ -217,83 +229,48 @@ TMDT_nodejs/
 - `POST /orders/create` - Tạo đơn hàng
 - `GET /orders/history` - Lịch sử đơn hàng
 
-### Admin (requires admin role)
+### Newsletter
+- `POST /newsletter/subscribe` - Đăng ký nhận tin
+- `GET /newsletter/status` - Kiểm tra trạng thái
+
+### Admin
 - `GET /admin/dashboard` - Dashboard
 - `GET /admin/products` - Quản lý sản phẩm
 - `GET /admin/orders` - Quản lý đơn hàng
 - `GET /admin/users` - Quản lý người dùng
+- `GET /admin/vouchers` - Quản lý voucher
 
-## 💳 Cấu hình thanh toán
-
-### VNPay
-1. Đăng ký tại [VNPay Sandbox](https://sandbox.vnpayment.vn/)
-2. Lấy TMN Code và Hash Secret
-3. Cập nhật vào `.env`
-
-### MoMo
-1. Đăng ký tại [MoMo Developer](https://developers.momo.vn/)
-2. Lấy Partner Code và Secret Key
-3. Cập nhật vào `.env`
-
-## 📧 Cấu hình Email
-
-1. Bật 2-Step Verification trong Google Account
-2. Tạo App Password: https://myaccount.google.com/apppasswords
-3. Sử dụng App Password trong `.env`
-
-## 🔒 Bảo mật
-
-- Tất cả mật khẩu được hash với bcrypt (10 salt rounds)
-- JWT tokens hết hạn sau 24h
-- SQL injection protection với parameterized queries
-- Helmet.js cho security headers
-- CORS configuration
-
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Lỗi kết nối database
-```bash
+```
 Error: ER_ACCESS_DENIED_ERROR
 ```
-**Giải pháp**: Kiểm tra lại `DB_USER` và `DB_PASSWORD` trong `.env`
+Kiểm tra `DB_USER` và `DB_PASSWORD` trong `.env`
 
 ### Lỗi gửi email
-```bash
+```
 Error: Invalid login
 ```
-**Giải pháp**: Đảm bảo sử dụng App Password, không phải mật khẩu Gmail thường
+Đảm bảo sử dụng App Password của Gmail, không phải mật khẩu thường
 
 ### Lỗi upload file
-```bash
+```
 Error: ENOENT: no such file or directory
 ```
-**Giải pháp**: Tạo thư mục `public/uploads`
+Tạo thư mục `public/uploads`
 
-## 📝 TODO
+## Công nghệ sử dụng
 
-- [ ] Thêm tính năng đánh giá sản phẩm
-- [ ] Thêm wishlist
-- [ ] Thêm chat support
-- [ ] Tối ưu hóa performance
-- [ ] Thêm unit tests
+- **Backend**: Node.js, Express.js (MVC)
+- **Database**: MySQL
+- **Template**: EJS
+- **Auth**: JWT, bcrypt
+- **Email**: Nodemailer + Gmail SMTP
+- **Payment**: VNPay, MoMo
+- **Upload**: Multer
+- **Security**: Helmet.js, CORS
 
-## 👨‍💻 Phát triển
-
-Để chạy ở chế độ development với auto-reload:
-
-```bash
-npm install -g nodemon
-npm run dev
-```
-
-## 📄 License
+## License
 
 ISC
-
-## 👤 Tác giả
-
-Fashion Store Team
-
-## 🙏 Đóng góp
-
-Mọi đóng góp đều được chào đón! Vui lòng tạo pull request hoặc mở issue.

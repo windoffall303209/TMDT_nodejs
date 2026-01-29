@@ -231,14 +231,13 @@ class Product {
     // =============================================================================
 
     /**
-     * Tìm kiếm sản phẩm theo từ khóa
+     * Tìm kiếm sản phẩm theo từ khóa (hỗ trợ fuzzy search)
      *
      * @description Tìm kiếm trong tên, mô tả và SKU sản phẩm.
-     *              Kết quả được sắp xếp theo độ liên quan:
-     *              1. Tên khớp chính xác từ đầu
-     *              2. Mô tả khớp từ đầu
-     *              3. Khớp ở bất kỳ vị trí nào
-     *              Sau đó sắp xếp theo số lượng bán
+     *              Hỗ trợ fuzzy search - tìm kiếm gần đúng khi:
+     *              - Người dùng nhập sai chính tả
+     *              - Không tìm thấy kết quả chính xác
+     *              Kết quả được sắp xếp theo độ liên quan.
      *
      * @param {string} searchQuery - Từ khóa tìm kiếm
      * @param {number} [limit=20] - Số kết quả tối đa
@@ -246,10 +245,11 @@ class Product {
      * @returns {Promise<Array>} Mảng sản phẩm khớp với từ khóa
      */
     static async search(searchQuery, limit = 20) {
-        const searchTerm = `%${searchQuery}%`;       // Khớp ở bất kỳ đâu
-        const exactSearchTerm = `${searchQuery}%`;   // Khớp từ đầu
+        const searchTerm = `%${searchQuery}%`;
+        const exactSearchTerm = `${searchQuery}%`;
         const limitNum = parseInt(limit) || 20;
 
+        // Query tìm kiếm chính xác
         const query = `
             SELECT p.*,
                    (SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = TRUE LIMIT 1) as primary_image,
@@ -268,15 +268,102 @@ class Product {
             LIMIT ${limitNum}
         `;
 
-        const [rows] = await pool.query(query, [
+        let [rows] = await pool.query(query, [
             searchTerm, searchTerm, searchTerm,
             exactSearchTerm, exactSearchTerm
         ]);
+
+        // Nếu không tìm thấy kết quả, thực hiện fuzzy search
+        if (rows.length === 0) {
+            rows = await this.fuzzySearch(searchQuery, limitNum);
+        }
 
         // Tính giá cuối cùng cho mỗi sản phẩm
         rows.forEach(product => {
             product.final_price = this.calculateFinalPrice(product.price, product.sale_type, product.sale_value);
         });
+
+        return rows;
+    }
+
+    /**
+     * Tìm kiếm mờ (Fuzzy Search) - tìm sản phẩm gần đúng
+     *
+     * @description Sử dụng SOUNDEX và tách từ để tìm sản phẩm
+     *              khi người dùng nhập sai chính tả hoặc từ khóa không chính xác.
+     *              Thuật toán:
+     *              1. Tìm theo SOUNDEX (phát âm tương tự)
+     *              2. Tìm theo từng từ trong query
+     *              3. Tìm sản phẩm phổ biến trong cùng danh mục
+     *
+     * @param {string} searchQuery - Từ khóa tìm kiếm
+     * @param {number} [limit=20] - Số kết quả tối đa
+     *
+     * @returns {Promise<Array>} Mảng sản phẩm gần đúng
+     */
+    static async fuzzySearch(searchQuery, limit = 20) {
+        const limitNum = parseInt(limit) || 20;
+
+        // Tách query thành các từ riêng lẻ
+        const words = searchQuery.trim().split(/\s+/).filter(w => w.length >= 2);
+
+        if (words.length === 0) {
+            // Nếu query quá ngắn, trả về sản phẩm bán chạy
+            return await this.getBestSellers(limitNum);
+        }
+
+        // Tạo điều kiện LIKE cho từng từ
+        const likeConditions = words.map(() => 'p.name LIKE ?').join(' OR ');
+        const likeParams = words.map(word => `%${word}%`);
+
+        // Query fuzzy: tìm sản phẩm có chứa ít nhất 1 từ trong query
+        const fuzzyQuery = `
+            SELECT p.*,
+                   (SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = TRUE LIMIT 1) as primary_image,
+                   s.type as sale_type,
+                   s.value as sale_value,
+                   (
+                       ${words.map(() => `(CASE WHEN p.name LIKE ? THEN 1 ELSE 0 END)`).join(' + ')}
+                   ) as match_score
+            FROM products p
+            LEFT JOIN sales s ON p.sale_id = s.id AND s.is_active = TRUE
+                AND NOW() BETWEEN s.start_date AND s.end_date
+            WHERE p.is_active = TRUE
+              AND (${likeConditions})
+            ORDER BY match_score DESC, p.sold_count DESC
+            LIMIT ${limitNum}
+        `;
+
+        // Params: lặp lại likeParams 2 lần (cho match_score và điều kiện WHERE)
+        const params = [...likeParams, ...likeParams];
+
+        let [rows] = await pool.query(fuzzyQuery, params);
+
+        // Nếu vẫn không có kết quả, tìm theo SOUNDEX (phát âm tương tự)
+        if (rows.length === 0) {
+            const soundexQuery = `
+                SELECT p.*,
+                       (SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = TRUE LIMIT 1) as primary_image,
+                       s.type as sale_type,
+                       s.value as sale_value
+                FROM products p
+                LEFT JOIN sales s ON p.sale_id = s.id AND s.is_active = TRUE
+                    AND NOW() BETWEEN s.start_date AND s.end_date
+                WHERE p.is_active = TRUE
+                  AND SOUNDEX(p.name) = SOUNDEX(?)
+                ORDER BY p.sold_count DESC
+                LIMIT ${limitNum}
+            `;
+
+            [rows] = await pool.query(soundexQuery, [searchQuery]);
+        }
+
+        // Nếu vẫn không có, trả về sản phẩm bán chạy làm gợi ý
+        if (rows.length === 0) {
+            rows = await this.getBestSellers(limitNum);
+            // Đánh dấu là kết quả gợi ý
+            rows.forEach(p => p.is_suggestion = true);
+        }
 
         return rows;
     }

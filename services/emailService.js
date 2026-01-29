@@ -5,13 +5,13 @@ class EmailService {
     constructor() {
         try {
             // Create transporter with Gmail
-            this.transporter = nodemailer.createTransporter({
-                host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-                port: parseInt(process.env.EMAIL_PORT) || 587,
-                secure: process.env.EMAIL_SECURE === 'true',
+            this.transporter = nodemailer.createTransport({
+                host: process.env.MAIL_HOST || 'smtp.gmail.com',
+                port: parseInt(process.env.MAIL_PORT) || 587,
+                secure: false,
                 auth: {
-                    user: process.env.EMAIL_USER,
-                    pass: process.env.EMAIL_PASSWORD
+                    user: process.env.MAIL_USER,
+                    pass: process.env.MAIL_PASS
                 }
             });
             console.log('✅ Email service initialized');
@@ -29,7 +29,7 @@ class EmailService {
         }
         
         const mailOptions = {
-            from: `"Fashion Store" <${process.env.EMAIL_USER}>`,
+            from: `"WIND OF FALL" <${process.env.MAIL_FROM || process.env.MAIL_USER}>`,
             to: user.email,
             subject: 'Chào mừng đến với Fashion Store!',
             html: `
@@ -81,7 +81,7 @@ class EmailService {
         `).join('');
 
         const mailOptions = {
-            from: `"Fashion Store" <${process.env.EMAIL_USER}>`,
+            from: `"WIND OF FALL" <${process.env.MAIL_FROM || process.env.MAIL_USER}>`,
             to: order.user_email,
             subject: `Xác nhận đơn hàng #${order.order_code}`,
             html: `
@@ -151,7 +151,7 @@ class EmailService {
     async sendMarketingEmail(users, campaign) {
         const promises = users.map(async user => {
             const mailOptions = {
-                from: `"Fashion Store" <${process.env.EMAIL_USER}>`,
+                from: `"WIND OF FALL" <${process.env.MAIL_FROM || process.env.MAIL_USER}>`,
                 to: user.email,
                 subject: campaign.subject,
                 html: campaign.content.replace('{{name}}', user.full_name)
@@ -178,7 +178,7 @@ class EmailService {
         const resetUrl = `${process.env.BASE_URL || 'http://localhost:3000'}/auth/reset-password?token=${resetToken}`;
 
         const mailOptions = {
-            from: `"Fashion Store" <${process.env.EMAIL_USER}>`,
+            from: `"WIND OF FALL" <${process.env.MAIL_FROM || process.env.MAIL_USER}>`,
             to: user.email,
             subject: 'Đặt lại mật khẩu - Fashion Store',
             html: `
@@ -213,6 +213,114 @@ class EmailService {
             'momo': 'MoMo'
         };
         return methods[method] || method;
+    }
+
+    // Send email verification code (6 digits)
+    async sendVerificationEmail(user, verificationCode) {
+        if (!this.transporter) {
+            console.warn('Email service not available, skipping verification email');
+            return false;
+        }
+
+        const mailOptions = {
+            from: `"WIND OF FALL" <${process.env.MAIL_FROM || process.env.MAIL_USER}>`,
+            to: user.email,
+            subject: 'Xác nhận email - WIND OF FALL',
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <div style="text-align: center; margin-bottom: 30px;">
+                        <h1 style="color: #000; margin: 0;">WIND OF FALL</h1>
+                        <p style="color: #666; margin: 5px 0;">Thời Trang Cao Cấp</p>
+                    </div>
+
+                    <h2 style="color: #333; text-align: center;">Xác nhận địa chỉ email</h2>
+
+                    <p>Xin chào <strong>${user.full_name}</strong>,</p>
+                    <p>Cảm ơn bạn đã đăng ký tài khoản tại WIND OF FALL. Vui lòng sử dụng mã xác nhận bên dưới để hoàn tất quá trình đăng ký:</p>
+
+                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; text-align: center; margin: 30px 0;">
+                        <p style="color: #fff; margin: 0 0 10px 0; font-size: 14px;">Mã xác nhận của bạn</p>
+                        <div style="background: #fff; display: inline-block; padding: 15px 40px; border-radius: 8px;">
+                            <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #333;">${verificationCode}</span>
+                        </div>
+                    </div>
+
+                    <p style="color: #e53935; font-weight: 500;">Mã này sẽ hết hạn sau 10 phút.</p>
+
+                    <p style="color: #666;">Nếu bạn không yêu cầu xác nhận email này, vui lòng bỏ qua email này.</p>
+
+                    <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+
+                    <p style="color: #999; font-size: 12px; text-align: center;">
+                        WIND OF FALL - Thời Trang Cao Cấp<br>
+                        Email này được gửi tự động, vui lòng không trả lời.
+                    </p>
+                </div>
+            `
+        };
+
+        try {
+            await this.transporter.sendMail(mailOptions);
+            console.log('✅ Verification email sent to:', user.email);
+            return true;
+        } catch (error) {
+            console.error('❌ Error sending verification email:', error);
+            return false;
+        }
+    }
+
+    // Send password reset code (6 digits)
+    async sendPasswordResetCode(user, resetCode) {
+        if (!this.transporter) {
+            console.warn('Email service not available, skipping password reset email');
+            return false;
+        }
+
+        const mailOptions = {
+            from: `"WIND OF FALL" <${process.env.MAIL_FROM || process.env.MAIL_USER}>`,
+            to: user.email,
+            subject: 'Đặt lại mật khẩu - WIND OF FALL',
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <div style="text-align: center; margin-bottom: 30px;">
+                        <h1 style="color: #000; margin: 0;">WIND OF FALL</h1>
+                        <p style="color: #666; margin: 5px 0;">Thời Trang Cao Cấp</p>
+                    </div>
+
+                    <h2 style="color: #333; text-align: center;">Đặt lại mật khẩu</h2>
+
+                    <p>Xin chào <strong>${user.full_name}</strong>,</p>
+                    <p>Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn. Vui lòng sử dụng mã xác nhận bên dưới:</p>
+
+                    <div style="background: linear-gradient(135deg, #e53935 0%, #ff5252 100%); padding: 30px; border-radius: 10px; text-align: center; margin: 30px 0;">
+                        <p style="color: #fff; margin: 0 0 10px 0; font-size: 14px;">Mã đặt lại mật khẩu</p>
+                        <div style="background: #fff; display: inline-block; padding: 15px 40px; border-radius: 8px;">
+                            <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #333;">${resetCode}</span>
+                        </div>
+                    </div>
+
+                    <p style="color: #e53935; font-weight: 500;">⚠️ Mã này sẽ hết hạn sau 10 phút.</p>
+
+                    <p style="color: #666;">Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này. Tài khoản của bạn vẫn an toàn.</p>
+
+                    <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+
+                    <p style="color: #999; font-size: 12px; text-align: center;">
+                        WIND OF FALL - Thời Trang Cao Cấp<br>
+                        Email này được gửi tự động, vui lòng không trả lời.
+                    </p>
+                </div>
+            `
+        };
+
+        try {
+            await this.transporter.sendMail(mailOptions);
+            console.log('✅ Password reset email sent to:', user.email);
+            return true;
+        } catch (error) {
+            console.error('❌ Error sending password reset email:', error);
+            return false;
+        }
     }
 }
 
