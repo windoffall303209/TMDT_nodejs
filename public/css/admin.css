@@ -168,10 +168,39 @@ body.admin-body {
     font-size: 13px;
     font-weight: 500;
     transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .admin-actions .btn-store:hover {
     background: var(--admin-accent-hover);
+    color: white;
+}
+
+.admin-actions .btn-store__icon,
+.admin-actions .btn-logout__icon {
+    display: none;
+}
+
+.admin-actions .btn-logout {
+    background: rgba(255,255,255,0.1);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.admin-actions .btn-logout:hover {
+    background: rgba(255,255,255,0.2);
     color: white;
 }
 
@@ -1194,8 +1223,29 @@ body.admin-menu-open {
         display: none;
     }
 
+    /* Mobile: Show icons, hide text for Store and Logout buttons */
     .admin-actions .btn-store {
+        padding: 8px;
+        background: var(--admin-accent);
+    }
+
+    .admin-actions .btn-store__icon,
+    .admin-actions .btn-logout__icon {
+        display: block;
+    }
+
+    .admin-actions .btn-store__text,
+    .admin-actions .btn-logout__text {
         display: none;
+    }
+
+    .admin-actions .btn-logout {
+        padding: 8px;
+        background: rgba(239, 68, 68, 0.2);
+    }
+
+    .admin-actions .btn-logout:hover {
+        background: rgba(239, 68, 68, 0.3);
     }
 
     /* Modal */

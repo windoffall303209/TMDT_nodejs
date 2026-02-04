@@ -8,7 +8,7 @@
                 <h1>Quản Lý Khuyến Mãi</h1>
                 <p><%= sales ? sales.length : 0 %> chương trình khuyến mãi</p>
             </div>
-            <div class="admin-page-header__actions">
+            <!-- <div class="admin-page-header__actions">
                 <button class="admin-btn admin-btn--primary" onclick="openAddSaleModal()">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="12" y1="5" x2="12" y2="19"/>
@@ -16,7 +16,7 @@
                     </svg>
                     Thêm Khuyến Mãi
                 </button>
-            </div>
+            </div> -->
         </div>
 
         <!-- Stats Cards -->
@@ -40,15 +40,18 @@
         </div>
 
         <!-- Add Sale Form -->
-        <div class="admin-section">
-            <h3 class="admin-section__title">
+        <div class="admin-section admin-section--collapsible">
+            <h3 class="admin-section__title admin-section__title--toggle" onclick="toggleSection(this)">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="12" y1="5" x2="12" y2="19"/>
                     <line x1="5" y1="12" x2="19" y2="12"/>
                 </svg>
                 Thêm Khuyến Mãi Mới
+                <svg class="admin-section__chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 12 15 18 9"/>
+                </svg>
             </h3>
-            <form action="/admin/sales" method="POST" class="admin-form">
+            <form action="/admin/sales" method="POST" class="admin-form admin-section__content">
                 <div class="admin-form__row">
                     <div class="admin-form__group">
                         <label class="admin-form__label">Tên khuyến mãi <span>*</span></label>
@@ -353,6 +356,44 @@
     gap: 8px;
     justify-content: center;
 }
+
+/* Collapsible Section */
+.admin-section--collapsible .admin-section__content {
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: max-height 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.admin-section--collapsible.is-open .admin-section__content {
+    max-height: 2000px;
+    opacity: 1;
+    padding-top: 20px;
+}
+
+.admin-section__title--toggle {
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: color 0.2s;
+}
+
+.admin-section__title--toggle:hover {
+    color: var(--admin-primary);
+}
+
+.admin-section__chevron {
+    margin-left: auto;
+    transition: transform 0.3s ease;
+}
+
+.admin-section--collapsible.is-open .admin-section__chevron {
+    transform: rotate(180deg);
+}
 </style>
 
 <script>
@@ -385,6 +426,12 @@ function deleteSale(saleId) {
 // Edit sale placeholder
 function editSale(saleId) {
     showToast('Tính năng đang phát triển', 'info');
+}
+
+// Toggle collapsible section
+function toggleSection(titleElement) {
+    const section = titleElement.closest('.admin-section--collapsible');
+    section.classList.toggle('is-open');
 }
 
 // Toast notification
