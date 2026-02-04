@@ -11,7 +11,7 @@ USE tmdt_ecommerce;
 -- ADMIN USER (password: admin123)
 -- =============================================================================
 INSERT INTO users (email, password_hash, full_name, phone, role, email_verified, is_active) VALUES
-('admin@fashionstore.vn', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Admin', '0123456789', 'admin', TRUE, TRUE);
+('admin@fashionstore.vn', '$2b$10$zWfYhRKxfkvhp.82oM2RR.Nax8x3LBVxY6vLKVPjNOuVY1REt5EcW', 'Admin', '0123456789', 'admin', TRUE, TRUE);
 
 -- =============================================================================
 -- CATEGORIES

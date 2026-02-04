@@ -99,7 +99,77 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize newsletter form
     initNewsletterForm();
+
+    // Initialize mobile menu
+    initMobileMenu();
 });
+
+// Mobile Menu functionality
+function initMobileMenu() {
+    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    const mobileNav = document.getElementById('mobileNav');
+    const mobileNavOverlay = document.getElementById('mobileNavOverlay');
+    const mobileNavClose = document.getElementById('mobileNavClose');
+
+    if (!mobileMenuBtn || !mobileNav || !mobileNavOverlay) return;
+
+    // Toggle mobile menu
+    function openMobileMenu() {
+        mobileMenuBtn.classList.add('active');
+        mobileNav.classList.add('active');
+        mobileNavOverlay.classList.add('active');
+        document.body.classList.add('mobile-menu-open');
+    }
+
+    function closeMobileMenu() {
+        mobileMenuBtn.classList.remove('active');
+        mobileNav.classList.remove('active');
+        mobileNavOverlay.classList.remove('active');
+        document.body.classList.remove('mobile-menu-open');
+    }
+
+    // Event listeners
+    mobileMenuBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (mobileNav.classList.contains('active')) {
+            closeMobileMenu();
+        } else {
+            openMobileMenu();
+        }
+    });
+
+    if (mobileNavClose) {
+        mobileNavClose.addEventListener('click', closeMobileMenu);
+    }
+
+    mobileNavOverlay.addEventListener('click', closeMobileMenu);
+
+    // Close menu on escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && mobileNav.classList.contains('active')) {
+            closeMobileMenu();
+        }
+    });
+
+    // Close menu when clicking on a link
+    const mobileNavLinks = mobileNav.querySelectorAll('a');
+    mobileNavLinks.forEach(link => {
+        link.addEventListener('click', () => {
+            closeMobileMenu();
+        });
+    });
+
+    // Handle window resize - close menu if resizing to desktop
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+            if (window.innerWidth > 768 && mobileNav.classList.contains('active')) {
+                closeMobileMenu();
+            }
+        }, 100);
+    });
+}
 
 // Newsletter form handling
 function initNewsletterForm() {
