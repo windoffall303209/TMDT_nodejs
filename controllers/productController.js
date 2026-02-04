@@ -118,11 +118,40 @@ exports.getProducts = async (req, res) => {
             search,         // Từ khóa tìm kiếm
             min_price,      // Giá tối thiểu
             max_price,      // Giá tối đa
-            sort_by,        // Sắp xếp theo trường nào
-            sort_order,     // Thứ tự sắp xếp (ASC/DESC)
+            sort,           // Sắp xếp (price-asc, price-desc, name-asc, name-desc, newest)
             page = 1,       // Số trang (mặc định: 1)
             sale            // Lọc sản phẩm đang khuyến mãi
         } = req.query;
+
+        // Xử lý sort parameter
+        let sort_by = 'created_at';
+        let sort_order = 'DESC';
+
+        if (sort) {
+            switch (sort) {
+                case 'price-asc':
+                    sort_by = 'price';
+                    sort_order = 'ASC';
+                    break;
+                case 'price-desc':
+                    sort_by = 'price';
+                    sort_order = 'DESC';
+                    break;
+                case 'name-asc':
+                    sort_by = 'name';
+                    sort_order = 'ASC';
+                    break;
+                case 'name-desc':
+                    sort_by = 'name';
+                    sort_order = 'DESC';
+                    break;
+                case 'newest':
+                default:
+                    sort_by = 'created_at';
+                    sort_order = 'DESC';
+                    break;
+            }
+        }
 
         // Cấu hình phân trang
         const limit = 12;                    // 12 sản phẩm mỗi trang
@@ -132,8 +161,8 @@ exports.getProducts = async (req, res) => {
         const filters = {
             limit,
             offset,
-            sort_by: sort_by || 'created_at',    // Mặc định sắp xếp theo ngày tạo
-            sort_order: sort_order || 'DESC'     // Mặc định mới nhất trước
+            sort_by,
+            sort_order
         };
 
         // Lọc theo danh mục nếu có
@@ -179,6 +208,15 @@ exports.getProducts = async (req, res) => {
                 { id: 2, name: 'Thời Trang Nữ', slug: 'nu', product_count: 5 },
                 { id: 3, name: 'Thời Trang Trẻ Em', slug: 'tre-em', product_count: 4 }
             ];
+        }
+
+        // Return JSON if requested (for AJAX)
+        if (req.headers.accept && req.headers.accept.includes('application/json')) {
+            return res.json({
+                products,
+                currentPage: parseInt(page),
+                totalPages: Math.ceil(products.length / limit) || 1
+            });
         }
 
         // Render trang danh sách sản phẩm

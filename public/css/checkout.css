@@ -209,6 +209,35 @@
     border-color: var(--black);
 }
 
+.address-form__select-wrapper {
+    position: relative;
+}
+
+.address-form__select {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--gray-300);
+    font-size: var(--font-size-base);
+    transition: border-color var(--transition-fast);
+    background: var(--white);
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+}
+
+.address-form__select:focus {
+    outline: none;
+    border-color: var(--black);
+}
+
+.address-form__select:disabled {
+    background-color: var(--gray-100);
+    cursor: not-allowed;
+    color: var(--gray-500);
+}
+
 .address-form__submit {
     margin-top: var(--spacing-lg);
     padding: 12px 24px;
@@ -218,6 +247,49 @@
     font-size: var(--font-size-sm);
     font-weight: 500;
     cursor: pointer;
+}
+
+/* Map Section */
+.address-form__map-section {
+    margin-top: var(--spacing-lg);
+    padding-top: var(--spacing-lg);
+    border-top: 1px solid var(--gray-200);
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+}
+
+.address-form__map {
+    width: 100%;
+    height: 250px;
+    border: 1px solid var(--gray-300);
+    margin-top: var(--spacing-sm);
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+    isolation: isolate;
+}
+
+/* Fix Leaflet controls z-index issue - ensure controls stay within map bounds */
+.address-form__map .leaflet-control-container {
+    position: absolute !important;
+    z-index: 400 !important;
+}
+
+.address-form__map .leaflet-top,
+.address-form__map .leaflet-bottom {
+    position: absolute !important;
+    z-index: 400 !important;
+}
+
+.address-form__map .leaflet-control {
+    position: relative !important;
+}
+
+.address-form__map-hint {
+    margin: var(--spacing-xs) 0 0 0;
+    font-size: var(--font-size-xs);
+    color: var(--gray-500);
 }
 
 /* -----------------------------------------------------------------------------
@@ -423,6 +495,97 @@
    ----------------------------------------------------------------------------- */
 .voucher-section {
     margin-bottom: var(--spacing-md);
+}
+
+.voucher-section__title {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    margin: 0 0 var(--spacing-sm) 0;
+    color: var(--gray-700);
+}
+
+.voucher-section__available {
+    margin-bottom: var(--spacing-md);
+}
+
+.voucher-section__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    max-height: 200px;
+    overflow-y: auto;
+    padding-right: var(--spacing-xs);
+}
+
+/* Voucher Card */
+.voucher-card {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: 2px dashed var(--gray-300);
+    background: var(--gray-50);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.voucher-card:hover {
+    border-color: var(--gray-500);
+    background: var(--white);
+}
+
+.voucher-card--selected {
+    border-color: var(--black);
+    border-style: solid;
+    background: var(--white);
+}
+
+.voucher-card__icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--black);
+    color: var(--white);
+    font-weight: 700;
+    font-size: var(--font-size-lg);
+    flex-shrink: 0;
+}
+
+.voucher-card__content {
+    flex: 1;
+    min-width: 0;
+}
+
+.voucher-card__name {
+    font-weight: 600;
+    font-size: var(--font-size-sm);
+    color: var(--black);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.voucher-card__desc {
+    font-size: var(--font-size-xs);
+    color: var(--success);
+    font-weight: 500;
+}
+
+.voucher-card__condition {
+    font-size: 11px;
+    color: var(--gray-500);
+    margin-top: 2px;
+}
+
+.voucher-card__code {
+    padding: 4px 8px;
+    background: var(--gray-200);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    font-family: monospace;
+    color: var(--gray-700);
 }
 
 .voucher-section__input-group {

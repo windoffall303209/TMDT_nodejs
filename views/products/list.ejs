@@ -93,22 +93,5 @@
     </div>
 </div>
 
-<script>
-// Filter buttons
-document.querySelectorAll('.filter-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-        this.classList.add('active');
-        // TODO: Implement filter logic
-    });
-});
-
-// Sort products
-function sortProducts(value) {
-    const currentUrl = new URL(window.location.href);
-    currentUrl.searchParams.set('sort', value);
-    window.location.href = currentUrl.toString();
-}
-</script>
-
+<script src="/js/product-list.js"></script>
 <%- include('../partials/footer') %>

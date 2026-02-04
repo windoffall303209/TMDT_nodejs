@@ -53,10 +53,33 @@ exports.showCheckout = async (req, res) => {
         // Lấy danh sách địa chỉ giao hàng của user
         const addresses = await Address.findByUser(req.user.id);
 
+        // Lấy danh sách vouchers khả dụng
+        const allVouchers = await Voucher.findAll({ is_active: true });
+        const now = new Date();
+
+        // Lọc vouchers còn hiệu lực, đủ điều kiện và chỉ lấy voucher giảm giá (không lấy freeship)
+        const availableVouchers = allVouchers.filter(v => {
+            const startDate = new Date(v.start_date);
+            const endDate = new Date(v.end_date);
+            const isValid = now >= startDate && now <= endDate &&
+                   (v.usage_limit === null || v.used_count < v.usage_limit);
+
+            // Loại bỏ voucher freeship (kiểm tra theo code hoặc name)
+            const isFreeship = v.code.toLowerCase().includes('freeship') ||
+                               v.code.toLowerCase().includes('ship') ||
+                               (v.name && v.name.toLowerCase().includes('freeship'));
+
+            return isValid && !isFreeship;
+        });
+
+        console.log('All vouchers:', allVouchers.length);
+        console.log('Available vouchers:', availableVouchers.length, availableVouchers.map(v => v.code));
+
         // Render trang checkout
         res.render('checkout/index', {
             cart: cartData,
             addresses,
+            vouchers: availableVouchers,
             user: req.user
         });
     } catch (error) {

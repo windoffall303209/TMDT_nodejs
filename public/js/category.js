@@ -1,0 +1,174 @@
+/**
+ * Category Page JavaScript
+ * Handles filtering and sorting products
+ */
+
+// Filter buttons
+document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+
+        const filter = this.dataset.filter;
+        filterProducts(filter);
+    });
+});
+
+// Filter products locally
+function filterProducts(filter) {
+    const cards = document.querySelectorAll('.product-card');
+    let visibleCount = 0;
+
+    cards.forEach(card => {
+        const hasSale = card.querySelector('.sale-badge') || card.querySelector('.product-card__badge--sale');
+        let show = true;
+
+        if (filter === 'sale' && !hasSale) {
+            show = false;
+        }
+
+        card.style.display = show ? '' : 'none';
+        if (show) visibleCount++;
+    });
+
+    document.getElementById('productCount').textContent = visibleCount + ' sản phẩm';
+}
+
+// Sort products with AJAX
+document.getElementById('sortProducts').addEventListener('change', function() {
+    const value = this.value;
+    const currentUrl = new URL(window.location.href);
+    const grid = document.getElementById('productsGrid');
+
+    // Show loading state
+    grid.style.opacity = '0.5';
+    grid.style.pointerEvents = 'none';
+
+    // Fetch sorted products
+    currentUrl.searchParams.set('sort', value);
+
+    fetch(currentUrl.toString(), {
+        headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Update URL without reload
+        window.history.pushState({}, '', currentUrl.toString());
+
+        // Render new products
+        renderProducts(data.products);
+
+        // Update count
+        document.getElementById('productCount').textContent = data.products.length + ' sản phẩm';
+    })
+    .catch(err => {
+        console.error('Sort error:', err);
+        // Fallback: reload page
+        window.location.href = currentUrl.toString();
+    })
+    .finally(() => {
+        grid.style.opacity = '1';
+        grid.style.pointerEvents = '';
+    });
+});
+
+// Render products dynamically
+function renderProducts(products) {
+    const grid = document.getElementById('productsGrid');
+
+    if (!products || products.length === 0) {
+        grid.innerHTML = `
+            <div class="products-empty">
+                <div class="products-empty__icon">
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path d="M21 21l-4.35-4.35"/>
+                    </svg>
+                </div>
+                <h3 class="products-empty__title">Chưa có sản phẩm</h3>
+                <p class="products-empty__text">Chưa có sản phẩm trong danh mục này.</p>
+                <a href="/" class="products-empty__link">Về trang chủ →</a>
+            </div>
+        `;
+        return;
+    }
+
+    grid.innerHTML = products.map(product => {
+        const slug = product.slug || product.id;
+        const hasSale = product.final_price && product.final_price < product.price;
+        const saleType = product.sale_type;
+        const saleValue = product.sale_value;
+
+        let saleBadge = '';
+        if (saleType) {
+            saleBadge = saleType === 'percentage'
+                ? `<span class="product-badge sale-badge">-${saleValue}%</span>`
+                : `<span class="product-badge sale-badge">SALE</span>`;
+        }
+
+        let imageHtml = '';
+        if (product.primary_image) {
+            imageHtml = `
+                <img class="img-primary" src="${product.primary_image}" alt="${product.name}">
+                <img class="img-secondary" src="${product.primary_image}" alt="${product.name}">
+            `;
+        } else {
+            imageHtml = `
+                <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--gray-100);color:var(--gray-400);">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                        <circle cx="8.5" cy="8.5" r="1.5"/>
+                        <polyline points="21,15 16,10 5,21"/>
+                    </svg>
+                </div>
+            `;
+        }
+
+        let priceHtml = '';
+        if (hasSale) {
+            priceHtml = `
+                <span class="price-original">${product.price.toLocaleString('vi-VN')}đ</span>
+                <span class="price-sale">${product.final_price.toLocaleString('vi-VN')}đ</span>
+            `;
+        } else {
+            priceHtml = `<span class="price-current">${product.price.toLocaleString('vi-VN')}đ</span>`;
+        }
+
+        return `
+            <div class="product-card">
+                <a href="/products/${slug}">
+                    <div class="product-image">
+                        ${saleBadge}
+                        ${imageHtml}
+                        <button class="quick-add-btn" onclick="event.preventDefault(); event.stopPropagation(); addToCart(${product.id})">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+                                <line x1="3" y1="6" x2="21" y2="6"/>
+                                <path d="M16 10a4 4 0 0 1-8 0"/>
+                            </svg>
+                            Thêm vào giỏ
+                        </button>
+                    </div>
+                    <div class="product-info">
+                        <h3 class="product-name">${product.name}</h3>
+                        <div class="product-price">
+                            ${priceHtml}
+                        </div>
+                    </div>
+                </a>
+            </div>
+        `;
+    }).join('');
+}
+
+// Set initial sort value from URL
+(function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sort = urlParams.get('sort');
+    if (sort) {
+        document.getElementById('sortProducts').value = sort;
+    }
+})();

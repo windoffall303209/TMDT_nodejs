@@ -2,6 +2,8 @@
 
 <!-- Load Checkout CSS -->
 <link rel="stylesheet" href="/css/checkout.css">
+<!-- Leaflet CSS for Map (local) -->
+<link rel="stylesheet" href="/css/leaflet.css" />
 
 <div class="checkout-page">
     <div class="container">
@@ -62,27 +64,51 @@
                                     <input type="tel" id="newPhone" placeholder="0901234567" class="address-form__input">
                                 </div>
                             </div>
-                            <div class="address-form__field">
-                                <label class="address-form__label">Địa chỉ chi tiết*</label>
-                                <input type="text" id="newAddressLine" placeholder="Số nhà, tên đường..." class="address-form__input">
-                            </div>
                             <div class="address-form__grid-3">
                                 <div>
-                                    <label class="address-form__label">Phường/Xã</label>
-                                    <input type="text" id="newWard" placeholder="Phường 1" class="address-form__input">
-                                </div>
-                                <div>
-                                    <label class="address-form__label">Quận/Huyện</label>
-                                    <input type="text" id="newDistrict" placeholder="Quận 1" class="address-form__input">
-                                </div>
-                                <div>
                                     <label class="address-form__label">Tỉnh/Thành phố*</label>
-                                    <input type="text" id="newCity" placeholder="TP. Hồ Chí Minh" class="address-form__input">
+                                    <div class="address-form__select-wrapper">
+                                        <select id="newCity" class="address-form__select" onchange="loadDistricts()">
+                                            <option value="">-- Chọn Tỉnh/TP --</option>
+                                        </select>
+                                        <input type="hidden" id="newCityName">
+                                    </div>
                                 </div>
+                                <div>
+                                    <label class="address-form__label">Quận/Huyện*</label>
+                                    <div class="address-form__select-wrapper">
+                                        <select id="newDistrict" class="address-form__select" onchange="loadWards()" disabled>
+                                            <option value="">-- Chọn Quận/Huyện --</option>
+                                        </select>
+                                        <input type="hidden" id="newDistrictName">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="address-form__label">Phường/Xã*</label>
+                                    <div class="address-form__select-wrapper">
+                                        <select id="newWard" class="address-form__select" disabled>
+                                            <option value="">-- Chọn Phường/Xã --</option>
+                                        </select>
+                                        <input type="hidden" id="newWardName">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="address-form__field">
+                                <label class="address-form__label">Địa chỉ chi tiết*</label>
+                                <input type="text" id="newAddressLine" placeholder="Số nhà, tên đường, tòa nhà..." class="address-form__input">
                             </div>
                             <button type="button" onclick="saveNewAddress()" class="address-form__submit">
                                 Lưu địa chỉ
                             </button>
+
+                            <!-- Map Container -->
+                            <div class="address-form__map-section">
+                                <label class="address-form__label">📍 Chọn vị trí trên bản đồ (tùy chọn)</label>
+                                <div id="addressMap" class="address-form__map"></div>
+                                <p class="address-form__map-hint">Click vào bản đồ để chọn vị trí giao hàng chính xác</p>
+                                <input type="hidden" id="newLatitude" name="latitude">
+                                <input type="hidden" id="newLongitude" name="longitude">
+                            </div>
                         </div>
                     </div>
                     
@@ -177,6 +203,49 @@
                             
                             <!-- Voucher Section -->
                             <div class="voucher-section">
+                                <% if (typeof vouchers !== 'undefined' && vouchers && vouchers.length > 0) { %>
+                                <div class="voucher-section__available">
+                                    <h4 class="voucher-section__title">🎫 Voucher khả dụng</h4>
+                                    <div class="voucher-section__list">
+                                        <% vouchers.forEach(voucher => { %>
+                                        <div class="voucher-card"
+                                             data-code="<%= voucher.code %>"
+                                             data-type="<%= voucher.type %>"
+                                             data-value="<%= voucher.value %>"
+                                             data-min-order="<%= voucher.min_order_amount || 0 %>"
+                                             data-max-discount="<%= voucher.max_discount_amount || 0 %>"
+                                             onclick="selectVoucher(this)">
+                                            <div class="voucher-card__icon">
+                                                <% if (voucher.type === 'percentage') { %>
+                                                    <span>%</span>
+                                                <% } else { %>
+                                                    <span>₫</span>
+                                                <% } %>
+                                            </div>
+                                            <div class="voucher-card__content">
+                                                <div class="voucher-card__name"><%= voucher.name %></div>
+                                                <div class="voucher-card__desc">
+                                                    <% if (voucher.type === 'percentage') { %>
+                                                        Giảm <%= voucher.value %>%
+                                                        <% if (voucher.max_discount_amount) { %>
+                                                            (tối đa <%= voucher.max_discount_amount.toLocaleString('vi-VN') %>đ)
+                                                        <% } %>
+                                                    <% } else { %>
+                                                        Giảm <%= voucher.value.toLocaleString('vi-VN') %>đ
+                                                    <% } %>
+                                                </div>
+                                                <% if (voucher.min_order_amount > 0) { %>
+                                                <div class="voucher-card__condition">
+                                                    Đơn tối thiểu <%= voucher.min_order_amount.toLocaleString('vi-VN') %>đ
+                                                </div>
+                                                <% } %>
+                                            </div>
+                                            <div class="voucher-card__code"><%= voucher.code %></div>
+                                        </div>
+                                        <% }) %>
+                                    </div>
+                                </div>
+                                <% } %>
                                 <div class="voucher-section__input-group">
                                     <input type="text" id="voucherCode" name="voucher_code" placeholder="Nhập mã giảm giá" class="voucher-section__input">
                                     <button type="button" onclick="applyVoucher()" class="voucher-section__btn">Áp dụng</button>
@@ -218,6 +287,7 @@
 </div>
 
 <script src="/js/main.js"></script>
+<script src="/js/leaflet.js"></script>
 <script>
 // Pass EJS data to external JS
 window.checkoutData = {
