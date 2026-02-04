@@ -5,55 +5,122 @@
 
 <div class="products-page">
     <div class="container">
-        <h1 class="products-page__title"><%= category ? category.name : 'Sản Phẩm' %></h1>
-        
+        <!-- Page Header -->
+        <div class="products-page__header">
+            <h1 class="products-page__title"><%= category ? category.name : 'Sản Phẩm' %></h1>
+            <p class="products-page__count"><%= products ? products.length : 0 %> sản phẩm</p>
+        </div>
+
+        <!-- Filters Bar -->
+        <div class="products-filters">
+            <div class="products-filters__left">
+                <button class="filter-btn active" data-filter="all">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7"/>
+                        <rect x="14" y="3" width="7" height="7"/>
+                        <rect x="14" y="14" width="7" height="7"/>
+                        <rect x="3" y="14" width="7" height="7"/>
+                    </svg>
+                    Tất cả
+                </button>
+                <button class="filter-btn" data-filter="new">Mới nhất</button>
+                <button class="filter-btn" data-filter="bestseller">Bán chạy</button>
+                <button class="filter-btn" data-filter="sale">Đang giảm giá</button>
+            </div>
+            <div class="products-filters__sort">
+                <select id="sortProducts" onchange="sortProducts(this.value)">
+                    <option value="newest">Mới nhất</option>
+                    <option value="price-asc">Giá: Thấp đến Cao</option>
+                    <option value="price-desc">Giá: Cao đến Thấp</option>
+                    <option value="name-asc">Tên: A-Z</option>
+                    <option value="name-desc">Tên: Z-A</option>
+                </select>
+            </div>
+        </div>
+
         <div class="products-grid">
             <% if (products && products.length > 0) { %>
                 <% products.forEach(product => { %>
                     <div class="product-card">
                         <a href="/products/<%= product.slug || product.id %>">
-                            <div class="product-card__image">
+                            <div class="product-image">
+                                <% if (product.sale_type) { %>
+                                    <span class="product-badge sale-badge">
+                                        <% if (product.sale_type === 'percentage') { %>
+                                            -<%= product.sale_value %>%
+                                        <% } else { %>
+                                            SALE
+                                        <% } %>
+                                    </span>
+                                <% } %>
                                 <% if (product.primary_image) { %>
-                                    <img src="<%= product.primary_image %>" 
-                                         alt="<%= product.name %>"
-                                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                    <div class="product-card__image-fallback">
-                                        <span class="product-card__image-icon">👕</span>
-                                    </div>
+                                    <img class="img-primary" src="<%= product.primary_image %>" alt="<%= product.name %>">
+                                    <img class="img-secondary" src="<%= product.primary_image %>" alt="<%= product.name %>">
                                 <% } else { %>
-                                    <div class="product-card__image-placeholder">
-                                        <span class="product-card__image-icon">👕</span>
+                                    <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--gray-100);color:var(--gray-400);">
+                                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                            <circle cx="8.5" cy="8.5" r="1.5"/>
+                                            <polyline points="21,15 16,10 5,21"/>
+                                        </svg>
                                     </div>
                                 <% } %>
+                                <button class="quick-add-btn" onclick="event.preventDefault(); event.stopPropagation(); addToCart(<%= product.id %>)">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+                                        <line x1="3" y1="6" x2="21" y2="6"/>
+                                        <path d="M16 10a4 4 0 0 1-8 0"/>
+                                    </svg>
+                                    Thêm vào giỏ
+                                </button>
                             </div>
-                            <div class="product-card__info">
-                                <h3 class="product-card__name"><%= product.name %></h3>
-                                <% if (product.price !== product.final_price && product.final_price) { %>
-                                    <p class="product-card__price-original">
-                                        <%= product.price.toLocaleString('vi-VN') %>đ
-                                    </p>
-                                <% } %>
-                                <p class="product-card__price">
-                                    <%= (product.final_price || product.price).toLocaleString('vi-VN') %>đ
-                                </p>
+                            <div class="product-info">
+                                <h3 class="product-name"><%= product.name %></h3>
+                                <div class="product-price">
+                                    <% if (product.final_price && product.final_price < product.price) { %>
+                                        <span class="price-original"><%= product.price.toLocaleString('vi-VN') %>đ</span>
+                                        <span class="price-sale"><%= product.final_price.toLocaleString('vi-VN') %>đ</span>
+                                    <% } else { %>
+                                        <span class="price-current"><%= product.price.toLocaleString('vi-VN') %>đ</span>
+                                    <% } %>
+                                </div>
                             </div>
                         </a>
-                        <div class="product-card__actions">
-                            <button onclick="addToCart(<%= product.id %>)" class="product-card__add-btn">
-                                🛒 Thêm vào giỏ hàng
-                            </button>
-                        </div>
                     </div>
                 <% }) %>
             <% } else { %>
                 <div class="products-empty">
-                    <p>Chưa có sản phẩm trong danh mục này.</p>
-                    <a href="/" class="btn btn-primary products-empty__link">Về trang chủ</a>
+                    <div class="products-empty__icon">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                            <circle cx="11" cy="11" r="8"/>
+                            <path d="M21 21l-4.35-4.35"/>
+                        </svg>
+                    </div>
+                    <h3 class="products-empty__title">Chưa có sản phẩm</h3>
+                    <p class="products-empty__text">Chưa có sản phẩm trong danh mục này.</p>
+                    <a href="/" class="products-empty__link">Về trang chủ →</a>
                 </div>
             <% } %>
         </div>
     </div>
 </div>
+
+<script>
+// Filter buttons
+document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+    });
+});
+
+// Sort products
+function sortProducts(value) {
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set('sort', value);
+    window.location.href = currentUrl.toString();
+}
+</script>
 
 <script src="/js/main.js"></script>
 
