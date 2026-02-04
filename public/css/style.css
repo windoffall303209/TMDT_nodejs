@@ -505,12 +505,13 @@ ul, ol {
     z-index: 2;
 }
 
-.product-card:hover .img-primary {
-    opacity: 0;
-}
-
+/* Only hide primary image when secondary exists */
 .product-card:hover .img-secondary {
     opacity: 1;
+}
+
+.product-image:has(.img-secondary):hover .img-primary {
+    opacity: 0;
 }
 
 /* Product Badges */

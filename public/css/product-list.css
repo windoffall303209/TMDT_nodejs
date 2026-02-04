@@ -103,6 +103,42 @@
     background: var(--gray-100);
 }
 
+/* Quick Add Button */
+.product-card__quick-add {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--black);
+    color: var(--white);
+    border: none;
+    padding: 12px 20px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    opacity: 0;
+    transition: opacity 0.3s, transform 0.3s, background 0.2s;
+    z-index: 10;
+    white-space: nowrap;
+}
+
+.product-card__quick-add:hover {
+    background: var(--gray-800);
+}
+
+.product-card:hover .product-card__quick-add {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.product-card__quick-add:disabled {
+    background: var(--gray-400);
+    cursor: not-allowed;
+}
+
 /* -----------------------------------------------------------------------------
    PRODUCT BADGES - Sale, New, Sold Out
    ----------------------------------------------------------------------------- */
@@ -224,12 +260,14 @@
     z-index: 2;
 }
 
-.product-card:hover .product-card__image .img-primary {
-    opacity: 0;
-}
-
+/* Only hide primary when secondary exists */
 .product-card:hover .product-card__image .img-secondary {
     opacity: 1;
+}
+
+/* Hide primary only if secondary is present and visible */
+.product-card__image:has(.img-secondary):hover .img-primary {
+    opacity: 0;
 }
 
 .product-card__image-placeholder {
