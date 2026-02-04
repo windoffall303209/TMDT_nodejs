@@ -38,8 +38,88 @@
             <% } %>
             <a href="/" class="btn-store">Xem Store</a>
             <a href="/auth/logout" class="btn-logout">Đăng xuất</a>
+
+            <!-- Admin Mobile Menu Button -->
+            <button class="admin-mobile-menu-btn" id="adminMobileMenuBtn" aria-label="Menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
         </div>
     </div>
 </header>
 
+<!-- Admin Mobile Navigation Overlay -->
+<div class="admin-mobile-overlay" id="adminMobileOverlay"></div>
+
+<!-- Admin Mobile Navigation -->
+<nav class="admin-mobile-nav" id="adminMobileNav">
+    <a href="/admin/dashboard" class="<%= currentPage === 'dashboard' ? 'active' : '' %>">
+        📊 Dashboard
+    </a>
+    <a href="/admin/products" class="<%= currentPage === 'products' ? 'active' : '' %>">
+        📦 Sản Phẩm
+    </a>
+    <a href="/admin/orders" class="<%= currentPage === 'orders' ? 'active' : '' %>">
+        🛒 Đơn Hàng
+    </a>
+    <a href="/admin/users" class="<%= currentPage === 'users' ? 'active' : '' %>">
+        👥 Người Dùng
+    </a>
+    <a href="/admin/banners" class="<%= currentPage === 'banners' ? 'active' : '' %>">
+        🖼️ Banners
+    </a>
+    <a href="/admin/sales" class="<%= currentPage === 'sales' ? 'active' : '' %>">
+        🏷️ Khuyến Mãi
+    </a>
+    <a href="/admin/vouchers" class="<%= currentPage === 'vouchers' ? 'active' : '' %>">
+        🎟️ Voucher
+    </a>
+    <div class="admin-mobile-nav__divider"></div>
+    <a href="/">
+        🏠 Xem Store
+    </a>
+    <a href="/auth/logout" style="color: #ef4444;">
+        🚪 Đăng xuất
+    </a>
+</nav>
+
 <main style="background: #f5f5f5; min-height: calc(100vh - 60px);">
+
+<script>
+// Admin Mobile Menu
+document.addEventListener('DOMContentLoaded', function() {
+    const adminMobileMenuBtn = document.getElementById('adminMobileMenuBtn');
+    const adminMobileNav = document.getElementById('adminMobileNav');
+    const adminMobileOverlay = document.getElementById('adminMobileOverlay');
+
+    if (!adminMobileMenuBtn || !adminMobileNav) return;
+
+    function toggleAdminMenu() {
+        adminMobileMenuBtn.classList.toggle('active');
+        adminMobileNav.classList.toggle('active');
+        adminMobileOverlay.classList.toggle('active');
+        document.body.classList.toggle('admin-menu-open');
+    }
+
+    function closeAdminMenu() {
+        adminMobileMenuBtn.classList.remove('active');
+        adminMobileNav.classList.remove('active');
+        adminMobileOverlay.classList.remove('active');
+        document.body.classList.remove('admin-menu-open');
+    }
+
+    adminMobileMenuBtn.addEventListener('click', toggleAdminMenu);
+    adminMobileOverlay.addEventListener('click', closeAdminMenu);
+
+    // Close on escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeAdminMenu();
+    });
+
+    // Close on window resize to desktop
+    window.addEventListener('resize', function() {
+        if (window.innerWidth > 1024) closeAdminMenu();
+    });
+});
+</script>

@@ -357,3 +357,263 @@
     opacity: 1;
 }
 
+/* =============================================================================
+   RESPONSIVE - Tablet
+   ============================================================================= */
+@media (max-width: 992px) {
+    .profile-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .user-profile-page {
+        padding: 24px 0;
+    }
+
+    .user-profile-page__title {
+        font-size: 24px;
+        margin-bottom: 20px;
+    }
+
+    .profile-sidebar {
+        padding: 24px;
+    }
+
+    .profile-avatar {
+        width: 120px;
+        height: 120px;
+    }
+
+    .profile-avatar__placeholder {
+        font-size: 48px;
+    }
+}
+
+/* =============================================================================
+   RESPONSIVE - Mobile
+   ============================================================================= */
+@media (max-width: 768px) {
+    .user-profile-page {
+        padding: 16px 0;
+    }
+
+    .user-profile-page__title {
+        font-size: 20px;
+        margin-bottom: 16px;
+    }
+
+    .profile-grid {
+        gap: 16px;
+    }
+
+    /* Sidebar Mobile */
+    .profile-sidebar {
+        padding: 20px 16px;
+        border-radius: 10px;
+    }
+
+    .profile-avatar {
+        width: 100px;
+        height: 100px;
+        margin-bottom: 16px;
+    }
+
+    .profile-avatar__placeholder {
+        font-size: 40px;
+    }
+
+    .profile-avatar__upload {
+        width: 32px;
+        height: 32px;
+        bottom: 2px;
+        right: 2px;
+    }
+
+    .profile-avatar__upload-icon {
+        font-size: 14px;
+    }
+
+    .profile-sidebar__name {
+        font-size: 18px;
+    }
+
+    .profile-sidebar__email {
+        font-size: 13px;
+        margin-bottom: 12px;
+    }
+
+    .profile-sidebar__joined {
+        font-size: 12px;
+    }
+
+    /* Content Mobile */
+    .profile-content {
+        gap: 16px;
+    }
+
+    .profile-section {
+        padding: 16px;
+        border-radius: 10px;
+    }
+
+    .profile-section__header {
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        gap: 10px;
+    }
+
+    .profile-section__icon {
+        font-size: 20px;
+    }
+
+    .profile-section__title {
+        font-size: 16px;
+    }
+
+    /* Form Mobile */
+    .profile-form__grid {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+
+    .profile-form__field {
+        margin-bottom: 16px;
+    }
+
+    .profile-form__label {
+        font-size: 14px;
+        margin-bottom: 6px;
+    }
+
+    .profile-form__input {
+        padding: 10px 12px;
+        font-size: 14px;
+        border-radius: 6px;
+    }
+
+    .profile-form__submit {
+        width: 100%;
+        padding: 12px 24px;
+        font-size: 14px;
+        border-radius: 6px;
+    }
+
+    /* Contact Info Mobile */
+    .contact-info {
+        gap: 10px;
+    }
+
+    .contact-info__item {
+        padding: 12px;
+        border-radius: 6px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .contact-info__left {
+        gap: 10px;
+    }
+
+    .contact-info__icon {
+        font-size: 18px;
+    }
+
+    .contact-info__label {
+        font-size: 12px;
+    }
+
+    .contact-info__value {
+        font-size: 14px;
+    }
+
+    .contact-info__right {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    /* Verification Badge Mobile */
+    .verification-badge {
+        padding: 3px 8px;
+        font-size: 11px;
+    }
+
+    /* Password Section Mobile */
+    .password-section__info {
+        padding: 12px;
+        font-size: 13px;
+        border-radius: 6px;
+    }
+
+    /* Verify Button Mobile */
+    .verify-btn {
+        padding: 6px 12px;
+        font-size: 11px;
+    }
+
+    /* Alert Mobile */
+    .profile-alert {
+        padding: 10px 14px;
+        font-size: 13px;
+        border-radius: 6px;
+        margin-bottom: 16px;
+    }
+}
+
+/* =============================================================================
+   RESPONSIVE - Small Mobile
+   ============================================================================= */
+@media (max-width: 480px) {
+    .user-profile-page__title {
+        font-size: 18px;
+    }
+
+    .profile-sidebar {
+        padding: 16px 12px;
+    }
+
+    .profile-avatar {
+        width: 80px;
+        height: 80px;
+    }
+
+    .profile-avatar__placeholder {
+        font-size: 32px;
+    }
+
+    .profile-avatar__upload {
+        width: 28px;
+        height: 28px;
+    }
+
+    .profile-sidebar__name {
+        font-size: 16px;
+    }
+
+    .profile-section {
+        padding: 14px 12px;
+    }
+
+    .profile-section__title {
+        font-size: 15px;
+    }
+
+    .profile-form__input {
+        padding: 10px;
+        font-size: 13px;
+    }
+
+    .profile-form__submit {
+        padding: 11px 20px;
+        font-size: 13px;
+    }
+
+    .contact-info__item {
+        padding: 10px;
+    }
+
+    .contact-info__value {
+        font-size: 13px;
+        word-break: break-all;
+    }
+}
+

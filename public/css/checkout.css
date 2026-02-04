@@ -525,7 +525,7 @@
 }
 
 /* -----------------------------------------------------------------------------
-   RESPONSIVE
+   RESPONSIVE - Tablet
    ----------------------------------------------------------------------------- */
 @media (max-width: 1024px) {
     .checkout-grid {
@@ -537,9 +537,174 @@
     }
 }
 
+/* -----------------------------------------------------------------------------
+   RESPONSIVE - Mobile
+   ----------------------------------------------------------------------------- */
 @media (max-width: 768px) {
+    .checkout-page {
+        padding: 20px 0;
+    }
+
+    .checkout-page__title {
+        font-size: 22px;
+        margin-bottom: 16px;
+    }
+
+    .checkout-section {
+        padding: 16px;
+        margin-bottom: 12px;
+    }
+
+    .checkout-section__title {
+        font-size: 16px;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+    }
+
+    /* Address Form */
     .address-form__grid,
     .address-form__grid-3 {
         grid-template-columns: 1fr;
+    }
+
+    .address-form {
+        padding: 12px;
+    }
+
+    .address-form__input {
+        padding: 10px 12px;
+        font-size: 14px;
+    }
+
+    .address-card {
+        padding: 12px;
+        gap: 10px;
+    }
+
+    .address-card__name {
+        font-size: 14px;
+    }
+
+    .address-card__detail {
+        font-size: 13px;
+    }
+
+    /* Payment Options */
+    .payment-option {
+        padding: 12px;
+        gap: 10px;
+    }
+
+    .payment-option__icon {
+        font-size: 20px;
+    }
+
+    .payment-option__name {
+        font-size: 14px;
+    }
+
+    .payment-option__desc {
+        font-size: 12px;
+    }
+
+    /* Notes */
+    .checkout-notes__textarea {
+        min-height: 80px;
+        font-size: 14px;
+    }
+
+    /* Order Summary */
+    .order-summary {
+        padding: 16px;
+    }
+
+    .order-summary__title {
+        font-size: 16px;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+    }
+
+    .order-summary__items {
+        max-height: 200px;
+    }
+
+    .order-summary__item {
+        padding: 10px 0;
+        gap: 10px;
+    }
+
+    .order-summary__item-image {
+        width: 50px;
+        height: 65px;
+    }
+
+    .order-summary__item-name {
+        font-size: 13px;
+    }
+
+    .order-summary__item-qty {
+        font-size: 12px;
+    }
+
+    .order-summary__item-amount {
+        font-size: 13px;
+    }
+
+    /* Voucher */
+    .voucher-section__input-group {
+        flex-direction: column;
+    }
+
+    .voucher-section__input {
+        font-size: 14px;
+    }
+
+    .voucher-section__btn {
+        width: 100%;
+    }
+
+    /* Total */
+    .order-summary__total-label {
+        font-size: 15px;
+    }
+
+    .order-summary__total-value {
+        font-size: 18px;
+    }
+
+    .order-summary__submit {
+        padding: 14px;
+        font-size: 14px;
+        margin-top: 16px;
+    }
+
+    .order-summary__terms {
+        font-size: 12px;
+    }
+}
+
+/* -----------------------------------------------------------------------------
+   RESPONSIVE - Small Mobile
+   ----------------------------------------------------------------------------- */
+@media (max-width: 480px) {
+    .checkout-section {
+        padding: 12px;
+    }
+
+    .checkout-section__title {
+        font-size: 15px;
+    }
+
+    .address-card__name {
+        font-size: 13px;
+    }
+
+    .order-summary__item-image {
+        width: 45px;
+        height: 55px;
+    }
+
+    .order-summary__total-value {
+        font-size: 16px;
     }
 }

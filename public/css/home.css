@@ -337,7 +337,7 @@
     }
 
     .hero-title {
-        font-size: 48px;
+        font-size: 42px;
     }
 
     .hero-image {
@@ -352,51 +352,216 @@
     .features-grid {
         grid-template-columns: repeat(2, 1fr);
     }
+
+    /* Popup banner tablet */
+    .popup-banner__content {
+        max-width: 500px;
+    }
+
+    .popup-banner__text {
+        padding: 40px 30px;
+        min-height: 300px;
+    }
+
+    .popup-banner__text h2 {
+        font-size: 32px;
+    }
+
+    .popup-banner__text p {
+        font-size: 18px;
+    }
 }
 
 /* -----------------------------------------------------------------------------
    RESPONSIVE - Mobile
    ----------------------------------------------------------------------------- */
 @media (max-width: 768px) {
+    /* Hero Section Mobile */
     .hero-content {
-        padding: var(--spacing-xl) var(--spacing-md);
+        padding: 24px 16px;
     }
 
     .hero-title {
-        font-size: 36px;
-        letter-spacing: -1px;
+        font-size: 28px;
+        letter-spacing: -0.5px;
+        margin-bottom: 16px;
     }
 
     .hero-subtitle {
-        font-size: var(--font-size-xs);
-        letter-spacing: 2px;
+        font-size: 11px;
+        letter-spacing: 1.5px;
+        margin-bottom: 12px;
     }
 
+    .hero-content .btn {
+        padding: 12px 24px;
+        font-size: 13px;
+    }
+
+    .hero-image {
+        aspect-ratio: 4/3;
+    }
+
+    /* Category Grid Mobile */
     .category-grid {
         grid-template-columns: 1fr;
-        gap: var(--spacing-md);
+        gap: 12px;
     }
 
     .category-card {
         aspect-ratio: 16/9;
+        border-radius: 8px;
     }
 
+    .category-info {
+        padding: 16px;
+    }
+
+    .category-info h3 {
+        font-size: 18px;
+        margin-bottom: 4px;
+    }
+
+    .category-info .btn-link {
+        font-size: 12px;
+    }
+
+    /* Features Grid Mobile */
     .features-grid {
-        grid-template-columns: 1fr 1fr;
-        gap: var(--spacing-md);
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
     }
 
     .feature-item {
-        padding: var(--spacing-md);
+        padding: 12px 8px;
     }
 
     .feature-icon {
-        width: 48px;
-        height: 48px;
+        width: 44px;
+        height: 44px;
+        margin-bottom: 10px;
     }
 
     .feature-icon svg {
-        width: 24px;
-        height: 24px;
+        width: 20px;
+        height: 20px;
+    }
+
+    .feature-item h4 {
+        font-size: 13px;
+        margin-bottom: 4px;
+    }
+
+    .feature-item p {
+        font-size: 11px;
+        line-height: 1.4;
+    }
+
+    /* Section Products */
+    .section-products {
+        padding: 28px 0;
+    }
+
+    .section-products .section-header {
+        margin-bottom: 16px;
+    }
+
+    /* Section Categories */
+    .section-categories {
+        padding: 28px 0;
+    }
+
+    /* Section Features */
+    .section-features {
+        padding: 24px 0;
+    }
+
+    /* Popup Banner Mobile */
+    .popup-banner {
+        padding: 16px;
+    }
+
+    .popup-banner__content {
+        max-width: 100%;
+        border-radius: 12px;
+    }
+
+    .popup-banner__close {
+        width: 32px;
+        height: 32px;
+        top: 8px;
+        right: 8px;
+    }
+
+    .popup-banner__text {
+        padding: 32px 20px;
+        min-height: auto;
+    }
+
+    .popup-banner__text h2 {
+        font-size: 24px;
+        margin-bottom: 12px;
+    }
+
+    .popup-banner__text p {
+        font-size: 14px;
+        margin-bottom: 20px;
+    }
+
+    .popup-banner__btn {
+        padding: 12px 28px;
+        font-size: 14px;
+    }
+
+    /* Empty State */
+    .empty-state {
+        padding: 32px 16px;
+    }
+}
+
+/* -----------------------------------------------------------------------------
+   RESPONSIVE - Small Mobile
+   ----------------------------------------------------------------------------- */
+@media (max-width: 480px) {
+    .hero-title {
+        font-size: 24px;
+    }
+
+    .hero-subtitle {
+        font-size: 10px;
+    }
+
+    .features-grid {
+        gap: 8px;
+    }
+
+    .feature-item {
+        padding: 10px 6px;
+    }
+
+    .feature-icon {
+        width: 36px;
+        height: 36px;
+    }
+
+    .feature-item h4 {
+        font-size: 11px;
+    }
+
+    .feature-item p {
+        font-size: 10px;
+        display: none; /* Hide description on very small screens */
+    }
+
+    .popup-banner__text h2 {
+        font-size: 20px;
+    }
+
+    .popup-banner__text p {
+        font-size: 13px;
+    }
+
+    .category-info h3 {
+        font-size: 16px;
     }
 }

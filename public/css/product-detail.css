@@ -352,6 +352,10 @@
    RESPONSIVE - Tablet
    ----------------------------------------------------------------------------- */
 @media (max-width: 1024px) {
+    .product-detail-page {
+        padding: var(--spacing-xl) 0;
+    }
+
     .product-detail-grid {
         gap: var(--spacing-2xl);
     }
@@ -359,26 +363,224 @@
     .product-gallery {
         position: static;
     }
+
+    .product-gallery__thumb {
+        width: 70px;
+        height: 88px;
+    }
 }
 
 /* -----------------------------------------------------------------------------
    RESPONSIVE - Mobile
    ----------------------------------------------------------------------------- */
 @media (max-width: 768px) {
+    .product-detail-page {
+        padding: 16px 0;
+    }
+
     .product-detail-grid {
         grid-template-columns: 1fr;
-        gap: var(--spacing-xl);
+        gap: 20px;
+    }
+
+    /* Gallery Mobile */
+    .product-gallery__main {
+        margin-bottom: 12px;
+    }
+
+    .product-gallery__nav-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 16px;
+    }
+
+    .product-gallery__nav-btn--prev {
+        left: 8px;
+    }
+
+    .product-gallery__nav-btn--next {
+        right: 8px;
+    }
+
+    .product-gallery__counter {
+        padding: 4px 12px;
+        font-size: 12px;
+    }
+
+    .product-gallery__thumbs {
+        gap: 6px;
+        padding: 4px 0;
+    }
+
+    .product-gallery__thumb {
+        width: 56px;
+        height: 70px;
+    }
+
+    /* Product Info Mobile */
+    .product-info {
+        padding-top: 0;
+    }
+
+    .product-info__category {
+        font-size: 11px;
+        letter-spacing: 0.5px;
+        margin-bottom: 6px;
     }
 
     .product-info__title {
-        font-size: var(--font-size-2xl);
+        font-size: 20px;
+        margin-bottom: 16px;
+    }
+
+    /* Price Box Mobile */
+    .product-info__price-box {
+        padding: 16px;
+        margin-bottom: 20px;
+    }
+
+    .product-info__price-original {
+        font-size: 14px;
     }
 
     .product-info__price-current {
-        font-size: var(--font-size-3xl);
+        font-size: 26px;
     }
 
+    .product-info__discount-badge {
+        padding: 4px 10px;
+        font-size: 12px;
+    }
+
+    /* Variants Mobile */
+    .product-info__variants {
+        margin-bottom: 20px;
+    }
+
+    .product-info__variant-group {
+        margin-bottom: 16px;
+    }
+
+    .product-info__variant-label {
+        font-size: 13px;
+        margin-bottom: 8px;
+    }
+
+    .variant-option {
+        padding: 8px 16px;
+        font-size: 13px;
+    }
+
+    /* Quantity Mobile */
+    .product-info__quantity {
+        margin-bottom: 20px;
+        gap: 12px;
+    }
+
+    .product-info__quantity-label {
+        font-size: 13px;
+    }
+
+    .quantity-selector button {
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+    }
+
+    .quantity-selector input {
+        width: 50px;
+        height: 40px;
+        font-size: 14px;
+    }
+
+    /* Actions Mobile */
     .product-info__actions {
         flex-direction: column;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .product-info__action-btn {
+        padding: 14px 20px;
+        font-size: 14px;
+    }
+
+    /* Description Mobile */
+    .product-info__description {
+        padding: 20px 0;
+    }
+
+    .product-info__description-title {
+        font-size: 16px;
+        margin-bottom: 12px;
+    }
+
+    .product-info__description-text {
+        font-size: 14px;
+        line-height: 1.7;
+    }
+
+    /* Benefits Mobile */
+    .product-info__benefits {
+        padding: 16px;
+    }
+
+    .product-info__benefit {
+        font-size: 13px;
+    }
+
+    .product-info__benefit svg {
+        width: 16px;
+        height: 16px;
+    }
+}
+
+/* -----------------------------------------------------------------------------
+   RESPONSIVE - Small Mobile
+   ----------------------------------------------------------------------------- */
+@media (max-width: 480px) {
+    .product-info__title {
+        font-size: 18px;
+    }
+
+    .product-info__price-current {
+        font-size: 22px;
+    }
+
+    .product-info__price-original {
+        font-size: 13px;
+    }
+
+    .product-gallery__thumb {
+        width: 48px;
+        height: 60px;
+    }
+
+    .variant-option {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+
+    .quantity-selector button {
+        width: 36px;
+        height: 36px;
+    }
+
+    .quantity-selector input {
+        width: 44px;
+        height: 36px;
+    }
+
+    .product-info__action-btn {
+        padding: 12px 16px;
+        font-size: 13px;
+    }
+
+    .product-info__benefits {
+        padding: 12px;
+    }
+
+    .product-info__benefit {
+        font-size: 12px;
     }
 }
