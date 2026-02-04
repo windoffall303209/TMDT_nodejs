@@ -1021,55 +1021,173 @@ body.admin-menu-open {
    ----------------------------------------------------------------------------- */
 @media (max-width: 768px) {
     :root {
-        --admin-header-height: 56px;
+        --admin-header-height: 50px;
     }
 
+    /* Header compact */
+    .admin-header .container {
+        padding: 0 10px;
+    }
+
+    .admin-header .logo a {
+        font-size: 13px;
+        gap: 5px;
+    }
+
+    .admin-header .logo span {
+        padding: 2px 6px;
+        font-size: 9px;
+    }
+
+    .admin-actions .btn-logout {
+        padding: 5px 10px;
+        font-size: 11px;
+    }
+
+    .admin-mobile-menu-btn {
+        width: 34px;
+        height: 34px;
+        padding: 6px;
+    }
+
+    .admin-mobile-menu-btn span {
+        width: 18px;
+        height: 2px;
+    }
+
+    /* Page layout */
+    .admin-page {
+        padding: 12px 10px;
+    }
+
+    .admin-page__title {
+        font-size: 16px;
+        margin-bottom: 14px;
+        gap: 8px;
+    }
+
+    /* Stats grid - 2 columns on mobile */
     .stats-grid {
-        grid-template-columns: 1fr;
-        gap: 16px;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
     }
 
     .stat-card {
-        padding: 16px;
+        padding: 10px;
+        border-radius: 8px;
+    }
+
+    .stat-card::before {
+        height: 3px;
     }
 
     .stat-card__label {
-        font-size: 11px;
-        margin-bottom: 8px;
+        font-size: 9px;
+        margin-bottom: 4px;
+        letter-spacing: 0.2px;
     }
 
     .stat-card__value {
-        font-size: 24px;
+        font-size: 16px;
     }
 
+    /* Section */
+    .admin-section {
+        padding: 12px;
+        margin-bottom: 10px;
+        border-radius: 8px;
+    }
+
+    .admin-section__title {
+        font-size: 13px;
+        margin-bottom: 10px;
+        gap: 6px;
+    }
+
+    .admin-section__title svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    /* Form */
     .admin-form__grid {
         grid-template-columns: 1fr;
+        gap: 12px;
     }
 
-    /* Improved table for mobile */
-    .admin-table {
+    .admin-form__field {
+        margin-top: 12px;
+    }
+
+    .admin-form__label {
         font-size: 12px;
-        min-width: 600px;
+        margin-bottom: 6px;
     }
 
-    .admin-table th,
+    .admin-form__input,
+    .admin-form__select,
+    .admin-form__textarea {
+        padding: 10px 12px;
+        font-size: 13px;
+        border-radius: 6px;
+    }
+
+    .admin-form__submit {
+        padding: 10px 20px;
+        font-size: 13px;
+        margin-top: 16px;
+    }
+
+    /* Table */
+    .admin-table {
+        font-size: 10px;
+        min-width: 450px;
+    }
+
+    .admin-table th {
+        padding: 8px 5px;
+        font-size: 9px;
+        letter-spacing: 0.3px;
+    }
+
     .admin-table td {
-        padding: 10px 8px;
+        padding: 8px 5px;
         white-space: nowrap;
     }
 
     .admin-table__badge {
-        padding: 4px 8px;
+        padding: 3px 6px;
+        font-size: 9px;
+        border-radius: 10px;
+    }
+
+    .admin-table__link {
         font-size: 10px;
     }
 
+    .admin-table__price {
+        font-size: 10px;
+    }
+
+    /* Buttons */
     .admin-btn {
-        padding: 6px 10px;
-        font-size: 11px;
+        padding: 5px 8px;
+        font-size: 10px;
+        gap: 3px;
+        border-radius: 4px;
+    }
+
+    .admin-btn svg {
+        width: 12px;
+        height: 12px;
+    }
+
+    .admin-btn--primary {
+        padding: 8px 14px;
     }
 
     .admin-actions {
-        gap: 8px;
+        gap: 6px;
     }
 
     .admin-actions .user-info {
@@ -1080,44 +1198,68 @@ body.admin-menu-open {
         display: none;
     }
 
+    /* Modal */
     .admin-modal__content {
-        margin: 12px;
-        padding: 16px;
-        border-radius: 12px;
+        margin: 8px;
+        padding: 14px;
+        border-radius: 10px;
     }
 
     .admin-modal__title {
-        font-size: 18px;
+        font-size: 15px;
+        margin-bottom: 14px;
     }
 
     .admin-modal__buttons {
         flex-direction: column;
+        gap: 8px;
+        margin-top: 16px;
     }
 
     .admin-modal__buttons .admin-btn {
         width: 100%;
         justify-content: center;
-        padding: 12px;
+        padding: 10px;
+        font-size: 12px;
     }
 
+    /* Image grid */
     .admin-image-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 8px;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
     }
 
-    .admin-section {
-        padding: 16px;
-        margin-bottom: 16px;
+    .admin-image-item {
+        border-radius: 6px;
     }
 
-    .admin-section__title {
-        font-size: 16px;
-        margin-bottom: 16px;
+    .admin-image-item__badge {
+        font-size: 8px;
+        padding: 2px 5px;
+        top: 4px;
+        left: 4px;
+    }
+
+    .admin-image-item__btn {
+        width: 22px;
+        height: 22px;
+        font-size: 10px;
     }
 
     /* Confirm modal */
     .confirm-modal__content {
-        padding: 24px 16px;
+        padding: 18px 14px;
+        border-radius: 10px;
+    }
+
+    .confirm-modal__title {
+        font-size: 15px;
+        margin-bottom: 10px;
+    }
+
+    .confirm-modal__message {
+        font-size: 12px;
+        margin-bottom: 18px;
     }
 
     .confirm-modal__buttons {
@@ -1127,18 +1269,113 @@ body.admin-menu-open {
 
     .confirm-modal__btn {
         width: 100%;
-        padding: 14px;
+        padding: 11px;
+        font-size: 13px;
     }
 
     /* Toast notifications */
     #toastContainer {
-        left: 16px;
-        right: 16px;
+        left: 10px;
+        right: 10px;
+        top: calc(var(--admin-header-height) + 8px);
     }
 
     .toast {
         min-width: auto;
         width: 100%;
+        padding: 10px 12px;
+        font-size: 12px;
+        border-radius: 8px;
+        gap: 8px;
+    }
+
+    /* Empty state */
+    .admin-empty {
+        padding: 30px 14px;
+        border-radius: 8px;
+    }
+
+    .admin-empty__icon {
+        font-size: 40px;
+        margin-bottom: 12px;
+    }
+
+    .admin-empty__title {
+        font-size: 14px;
+        margin-bottom: 6px;
+    }
+
+    .admin-empty__text {
+        font-size: 12px;
+    }
+
+    /* Table scroll indicator */
+    .admin-table-wrapper::after {
+        font-size: 10px;
+        padding: 5px;
+    }
+
+    /* Mobile nav */
+    .admin-mobile-nav a {
+        padding: 12px 16px;
+        font-size: 13px;
+    }
+
+    /* Hide icons on mobile to make text bigger */
+    .stat-card__icon {
+        display: none;
+    }
+
+    .admin-section__title svg {
+        display: none;
+    }
+
+    .admin-btn svg {
+        display: none;
+    }
+
+    .quick-action__icon {
+        display: none;
+    }
+
+    .quick-action {
+        flex-direction: row;
+        justify-content: center;
+    }
+
+    .quick-action span {
+        font-size: 12px;
+    }
+
+    /* Bigger text without icons */
+    .stat-card__label {
+        font-size: 10px;
+        margin-bottom: 6px;
+    }
+
+    .stat-card__value {
+        font-size: 18px;
+    }
+
+    .admin-section__title {
+        font-size: 14px;
+    }
+
+    .admin-table {
+        font-size: 11px;
+    }
+
+    .admin-table th {
+        font-size: 10px;
+    }
+
+    .admin-table__badge {
+        font-size: 10px;
+    }
+
+    .admin-btn {
+        font-size: 11px;
+        padding: 6px 10px;
     }
 }
 
@@ -1146,50 +1383,108 @@ body.admin-menu-open {
    RESPONSIVE - Small Mobile
    ----------------------------------------------------------------------------- */
 @media (max-width: 480px) {
+    :root {
+        --admin-header-height: 46px;
+    }
+
     .admin-header .logo a {
-        font-size: 14px;
-        gap: 6px;
+        font-size: 12px;
+        gap: 4px;
     }
 
     .admin-header .logo span {
         display: none;
     }
 
+    .admin-actions .btn-logout {
+        padding: 4px 8px;
+        font-size: 10px;
+    }
+
     .admin-page {
-        padding: 16px 12px;
+        padding: 10px 8px;
     }
 
     .admin-page__title {
-        font-size: 18px;
+        font-size: 15px;
         flex-wrap: wrap;
     }
 
+    /* Stats - even more compact */
+    .stats-grid {
+        gap: 6px;
+    }
+
+    .stat-card {
+        padding: 8px;
+    }
+
+    .stat-card__label {
+        font-size: 8px;
+    }
+
     .stat-card__value {
-        font-size: 20px;
+        font-size: 14px;
     }
 
+    /* Table */
     .admin-table {
-        font-size: 11px;
+        font-size: 9px;
+        min-width: 400px;
     }
 
-    .admin-table th,
+    .admin-table th {
+        padding: 6px 4px;
+        font-size: 8px;
+    }
+
     .admin-table td {
-        padding: 8px 6px;
+        padding: 6px 4px;
     }
 
+    .admin-table__badge {
+        padding: 2px 5px;
+        font-size: 8px;
+    }
+
+    .admin-btn {
+        padding: 4px 6px;
+        font-size: 9px;
+    }
+
+    .admin-btn svg {
+        width: 10px;
+        height: 10px;
+    }
+
+    /* Section */
+    .admin-section {
+        padding: 10px;
+    }
+
+    .admin-section__title {
+        font-size: 12px;
+    }
+
+    /* Image grid */
+    .admin-image-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    /* Empty */
     .admin-empty {
-        padding: 40px 16px;
+        padding: 24px 12px;
     }
 
     .admin-empty__icon {
-        font-size: 48px;
+        font-size: 32px;
     }
 
     .admin-empty__title {
-        font-size: 16px;
+        font-size: 13px;
     }
 
-    .admin-image-grid {
-        grid-template-columns: 1fr 1fr;
+    .admin-empty__text {
+        font-size: 11px;
     }
 }
