@@ -315,6 +315,7 @@ exports.searchProducts = async (req, res) => {
 exports.getProductsByCategory = async (req, res) => {
     try {
         const { slug } = req.params;
+        const { sort, page = 1 } = req.query;
 
         // Tìm danh mục theo slug
         let category = await Category.findBySlug(slug);
@@ -337,23 +338,61 @@ exports.getProductsByCategory = async (req, res) => {
             });
         }
 
+        // Xử lý sort parameter
+        let sort_by = 'created_at';
+        let sort_order = 'DESC';
+
+        if (sort) {
+            switch (sort) {
+                case 'price-asc':
+                    sort_by = 'price';
+                    sort_order = 'ASC';
+                    break;
+                case 'price-desc':
+                    sort_by = 'price';
+                    sort_order = 'DESC';
+                    break;
+                case 'name-asc':
+                    sort_by = 'name';
+                    sort_order = 'ASC';
+                    break;
+                case 'name-desc':
+                    sort_by = 'name';
+                    sort_order = 'DESC';
+                    break;
+                case 'newest':
+                default:
+                    sort_by = 'created_at';
+                    sort_order = 'DESC';
+                    break;
+            }
+        }
+
         // Lấy sản phẩm thuộc danh mục
         let products = [];
         try {
             products = await Product.findAll({
                 category_id: category.id,
-                limit: 12,
-                offset: 0
+                limit: 50,
+                offset: 0,
+                sort_by,
+                sort_order
             });
         } catch (err) {
             console.error('Product findAll error:', err);
             products = []; // Trả về mảng rỗng nếu lỗi
         }
 
+        // Nếu là AJAX request, trả về JSON
+        if (req.xhr || req.headers.accept?.includes('application/json')) {
+            return res.json({ products, category });
+        }
+
         // Render trang danh mục
         res.render('products/category', {
             category,
             products,
+            currentSort: sort || 'newest',
             user: req.user || null
         });
     } catch (error) {
