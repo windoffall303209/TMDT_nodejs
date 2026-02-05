@@ -41,7 +41,7 @@ class EmailService {
         if (this.useResend && this.resend) {
             try {
                 const result = await this.resend.emails.send({
-                    from: process.env.RESEND_FROM || 'WIND OF FALL <onboarding@resend.dev>',
+                    from: 'onboarding@resend.dev',
                     to: to,
                     subject: subject,
                     html: html
@@ -50,6 +50,12 @@ class EmailService {
                 if (result.data) {
                     console.log('✅ Email sent via Resend to:', to);
                     return true;
+                }
+
+                // Check for error in result
+                if (result.error) {
+                    console.error('❌ Resend error:', result.error.message);
+                    throw new Error(result.error.message);
                 }
             } catch (error) {
                 console.error('❌ Resend failed, trying Gmail fallback:', error.message);
