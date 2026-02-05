@@ -3,6 +3,7 @@ const router = express.Router();
 const adminController = require('../controllers/adminController');
 const { verifyToken, isAdmin } = require('../middleware/auth');
 const upload = require('../middleware/upload');
+const { uploadToCloud } = require('../middleware/upload');
 
 // All admin routes require authentication and admin role
 router.use(verifyToken, isAdmin);
@@ -13,14 +14,14 @@ router.get('/', (req, res) => res.redirect('/admin/dashboard'));
 
 // Products
 router.get('/products', adminController.getProducts);
-router.post('/products', upload.array('images', 5), adminController.createProduct);
+router.post('/products', upload.array('images', 5), uploadToCloud, adminController.createProduct);
 router.put('/products/:id', adminController.updateProduct);
 router.delete('/products/:id', adminController.deleteProduct);
 
 // Product Images
 router.get('/products/:id/images', adminController.getProductImages);
 router.post('/products/:id/images', adminController.addProductImageUrl);
-router.post('/products/:id/images/upload', upload.single('image'), adminController.uploadProductImage);
+router.post('/products/:id/images/upload', upload.single('image'), uploadToCloud, adminController.uploadProductImage);
 router.delete('/products/images/:imageId', adminController.deleteProductImage);
 router.put('/products/images/:imageId/primary', adminController.setPrimaryImage);
 
@@ -34,7 +35,7 @@ router.put('/users/:id/status', adminController.updateUserStatus);
 
 // Banners
 router.get('/banners', adminController.getBanners);
-router.post('/banners', upload.single('image'), adminController.createBanner);
+router.post('/banners', upload.single('image'), uploadToCloud, adminController.createBanner);
 router.delete('/banners/:id', adminController.deleteBanner);
 
 // Sales
