@@ -1,60 +1,9 @@
 // Buy Now page JavaScript
+// Address functions (loadProvinces, loadDistricts, loadWards, saveNewAddress, 
+// toggleAddressForm, initAddressMap) are loaded from checkout.js
 
 // Track discount state
 let currentDiscount = 0;
-
-/**
- * Toggle new address form visibility
- */
-function toggleAddressForm() {
-    const form = document.getElementById('newAddressForm');
-    form.style.display = form.style.display === 'none' ? 'block' : 'none';
-}
-
-/**
- * Save new shipping address
- */
-async function saveNewAddress() {
-    const fullName = document.getElementById('newFullName').value;
-    const phone = document.getElementById('newPhone').value;
-    const addressLine = document.getElementById('newAddressLine').value;
-    const ward = document.getElementById('newWard').value;
-    const district = document.getElementById('newDistrict').value;
-    const city = document.getElementById('newCity').value;
-    
-    if (!fullName || !phone || !addressLine || !city) {
-        alert('❌ Vui lòng điền đầy đủ thông tin bắt buộc');
-        return;
-    }
-    
-    try {
-        const response = await fetch('/auth/address', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'same-origin',
-            body: JSON.stringify({
-                full_name: fullName,
-                phone: phone,
-                address_line: addressLine,
-                ward: ward,
-                district: district,
-                city: city,
-                is_default: true
-            })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            alert('✅ Đã lưu địa chỉ!');
-            location.reload();
-        } else {
-            alert('❌ ' + (data.message || 'Có lỗi xảy ra'));
-        }
-    } catch (error) {
-        alert('❌ Có lỗi xảy ra');
-    }
-}
 
 /**
  * Apply voucher code

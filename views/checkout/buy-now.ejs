@@ -2,6 +2,8 @@
 
 <!-- Load Checkout CSS -->
 <link rel="stylesheet" href="/css/checkout.css">
+<!-- Leaflet CSS for Map (local) -->
+<link rel="stylesheet" href="/css/leaflet.css" />
 
 <div class="checkout-page">
     <div class="container">
@@ -79,27 +81,51 @@
                                     <input type="tel" id="newPhone" placeholder="0901234567" class="address-form__input">
                                 </div>
                             </div>
-                            <div class="address-form__field">
-                                <label class="address-form__label">Địa chỉ chi tiết*</label>
-                                <input type="text" id="newAddressLine" placeholder="Số nhà, tên đường..." class="address-form__input">
-                            </div>
                             <div class="address-form__grid-3">
                                 <div>
-                                    <label class="address-form__label">Phường/Xã</label>
-                                    <input type="text" id="newWard" placeholder="Phường 1" class="address-form__input">
-                                </div>
-                                <div>
-                                    <label class="address-form__label">Quận/Huyện</label>
-                                    <input type="text" id="newDistrict" placeholder="Quận 1" class="address-form__input">
-                                </div>
-                                <div>
                                     <label class="address-form__label">Tỉnh/Thành phố*</label>
-                                    <input type="text" id="newCity" placeholder="TP. Hồ Chí Minh" class="address-form__input">
+                                    <div class="address-form__select-wrapper">
+                                        <select id="newCity" class="address-form__select" onchange="loadDistricts()">
+                                            <option value="">-- Chọn Tỉnh/TP --</option>
+                                        </select>
+                                        <input type="hidden" id="newCityName">
+                                    </div>
                                 </div>
+                                <div>
+                                    <label class="address-form__label">Quận/Huyện*</label>
+                                    <div class="address-form__select-wrapper">
+                                        <select id="newDistrict" class="address-form__select" onchange="loadWards()" disabled>
+                                            <option value="">-- Chọn Quận/Huyện --</option>
+                                        </select>
+                                        <input type="hidden" id="newDistrictName">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="address-form__label">Phường/Xã*</label>
+                                    <div class="address-form__select-wrapper">
+                                        <select id="newWard" class="address-form__select" disabled>
+                                            <option value="">-- Chọn Phường/Xã --</option>
+                                        </select>
+                                        <input type="hidden" id="newWardName">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="address-form__field">
+                                <label class="address-form__label">Địa chỉ chi tiết*</label>
+                                <input type="text" id="newAddressLine" placeholder="Số nhà, tên đường, tòa nhà..." class="address-form__input">
                             </div>
                             <button type="button" onclick="saveNewAddress()" class="address-form__submit">
                                 Lưu địa chỉ
                             </button>
+
+                            <!-- Map Container -->
+                            <div class="address-form__map-section">
+                                <label class="address-form__label">📍 Chọn vị trí trên bản đồ (tùy chọn)</label>
+                                <div id="addressMap" class="address-form__map"></div>
+                                <p class="address-form__map-hint">Click vào bản đồ để chọn vị trí giao hàng chính xác</p>
+                                <input type="hidden" id="newLatitude" name="latitude">
+                                <input type="hidden" id="newLongitude" name="longitude">
+                            </div>
                         </div>
                     </div>
                     
@@ -215,6 +241,8 @@
 </div>
 
 <script src="/js/main.js"></script>
+<script src="/js/leaflet.js"></script>
+<script src="/js/checkout.js"></script>
 <script>
 // Pass product data to JS
 window.buyNowData = {
