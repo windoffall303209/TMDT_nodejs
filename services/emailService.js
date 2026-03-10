@@ -37,15 +37,22 @@ class EmailService {
 
     // Core send method - tries Resend first, falls back to Gmail
     async sendEmail(to, subject, html) {
+        console.log('📧 Sending email to:', to);
+        console.log('📧 USE_RESEND:', this.useResend);
+        console.log('📧 Resend initialized:', !!this.resend);
+
         // Try Resend first if enabled
         if (this.useResend && this.resend) {
             try {
+                console.log('📧 Attempting to send via Resend...');
                 const result = await this.resend.emails.send({
                     from: 'onboarding@resend.dev',
                     to: to,
                     subject: subject,
                     html: html
                 });
+
+                console.log('📧 Resend result:', JSON.stringify(result, null, 2));
 
                 if (result.data) {
                     console.log('✅ Email sent via Resend to:', to);
@@ -59,7 +66,10 @@ class EmailService {
                 }
             } catch (error) {
                 console.error('❌ Resend failed, trying Gmail fallback:', error.message);
+                console.error('❌ Full error:', error);
             }
+        } else {
+            console.log('📧 Skipping Resend - useResend:', this.useResend, ', resend:', !!this.resend);
         }
 
         // Fallback to Gmail/Nodemailer
