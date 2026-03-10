@@ -113,6 +113,10 @@ function initMobileMenu() {
 
     if (!mobileMenuBtn || !mobileNav || !mobileNavOverlay) return;
 
+    // Skip if already initialized (by header inline script or previous load)
+    if (mobileMenuBtn.dataset.initialized) return;
+    mobileMenuBtn.dataset.initialized = 'true';
+
     // Toggle mobile menu
     function openMobileMenu() {
         mobileMenuBtn.classList.add('active');

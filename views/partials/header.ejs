@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WIND OF FALL - Thời Trang Cao Cấp</title>
+    <link rel="icon" type="image/jpeg" href="https://res.cloudinary.com/drs7xrtxo/image/upload/v1773135637/z7606467693465_9fdaa8e775a54c925e4ce37b258ca07b_yo7jhg.jpg">
     <link rel="stylesheet" href="/css/style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -177,3 +178,74 @@
 </nav>
 
 <main>
+
+<script>
+// Mobile Menu - Inline initialization to work on ALL pages
+(function() {
+    function initMobileMenuInline() {
+        var mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        var mobileNav = document.getElementById('mobileNav');
+        var mobileNavOverlay = document.getElementById('mobileNavOverlay');
+        var mobileNavClose = document.getElementById('mobileNavClose');
+
+        if (!mobileMenuBtn || !mobileNav || !mobileNavOverlay) return;
+
+        // Prevent duplicate initialization
+        if (mobileMenuBtn.dataset.initialized) return;
+        mobileMenuBtn.dataset.initialized = 'true';
+
+        function openMobileMenu() {
+            mobileMenuBtn.classList.add('active');
+            mobileNav.classList.add('active');
+            mobileNavOverlay.classList.add('active');
+            document.body.classList.add('mobile-menu-open');
+        }
+
+        function closeMobileMenu() {
+            mobileMenuBtn.classList.remove('active');
+            mobileNav.classList.remove('active');
+            mobileNavOverlay.classList.remove('active');
+            document.body.classList.remove('mobile-menu-open');
+        }
+
+        mobileMenuBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (mobileNav.classList.contains('active')) {
+                closeMobileMenu();
+            } else {
+                openMobileMenu();
+            }
+        });
+
+        if (mobileNavClose) {
+            mobileNavClose.addEventListener('click', closeMobileMenu);
+        }
+
+        mobileNavOverlay.addEventListener('click', closeMobileMenu);
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && mobileNav.classList.contains('active')) {
+                closeMobileMenu();
+            }
+        });
+
+        var mobileNavLinks = mobileNav.querySelectorAll('a');
+        mobileNavLinks.forEach(function(link) {
+            link.addEventListener('click', closeMobileMenu);
+        });
+
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 768 && mobileNav.classList.contains('active')) {
+                closeMobileMenu();
+            }
+        });
+    }
+
+    // Run immediately since DOM elements above are already parsed
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initMobileMenuInline);
+    } else {
+        initMobileMenuInline();
+    }
+})();
+</script>

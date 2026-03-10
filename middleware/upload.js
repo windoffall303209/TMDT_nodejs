@@ -1,18 +1,19 @@
 const multer = require('multer');
 const path = require('path');
+const os = require('os');
 const fs = require('fs');
 const { uploadToCloudinary, deleteFromCloudinary } = require('../config/cloudinary');
 
-// Ensure upload directory exists
-const uploadDir = process.env.UPLOAD_PATH || 'public/uploads';
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
+// Use OS temp directory for temporary local storage before uploading to Cloudinary
+const tempDir = path.join(os.tmpdir(), 'tmdt_uploads');
+if (!fs.existsSync(tempDir)) {
+    fs.mkdirSync(tempDir, { recursive: true });
 }
 
-// Storage configuration - always save locally first
+// Storage configuration - save to temp directory before uploading to Cloudinary
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, uploadDir);
+        cb(null, tempDir);
     },
     filename: function (req, file, cb) {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -43,15 +44,10 @@ const upload = multer({
 });
 
 /**
- * Middleware to upload files to both local and Cloudinary
- * After multer saves locally, this uploads to Cloudinary
+ * Middleware to upload files to Cloudinary (cloud only)
+ * After multer saves to temp, this uploads to Cloudinary then deletes the temp file
  */
 const uploadToCloud = async (req, res, next) => {
-    // Skip if Cloudinary is disabled
-    if (process.env.USE_CLOUDINARY !== 'true') {
-        return next();
-    }
-
     try {
         // Handle single file
         if (req.file) {
@@ -63,10 +59,15 @@ const uploadToCloud = async (req, res, next) => {
             if (result.success) {
                 req.file.cloudinaryUrl = result.url;
                 req.file.cloudinaryPublicId = result.public_id;
+            } else {
+                console.error('❌ Cloudinary upload failed:', result.error);
             }
+
+            // Delete temp file after upload
+            cleanupTempFile(localPath);
         }
 
-        // Handle multiple files
+        // Handle multiple files (array)
         if (req.files && Array.isArray(req.files)) {
             for (const file of req.files) {
                 const localPath = file.path;
@@ -77,7 +78,12 @@ const uploadToCloud = async (req, res, next) => {
                 if (result.success) {
                     file.cloudinaryUrl = result.url;
                     file.cloudinaryPublicId = result.public_id;
+                } else {
+                    console.error('❌ Cloudinary upload failed:', result.error);
                 }
+
+                // Delete temp file after upload
+                cleanupTempFile(localPath);
             }
         }
 
@@ -93,42 +99,54 @@ const uploadToCloud = async (req, res, next) => {
                     if (result.success) {
                         file.cloudinaryUrl = result.url;
                         file.cloudinaryPublicId = result.public_id;
+                    } else {
+                        console.error('❌ Cloudinary upload failed:', result.error);
                     }
+
+                    // Delete temp file after upload
+                    cleanupTempFile(localPath);
                 }
             }
         }
 
         next();
     } catch (error) {
-        console.error('Cloud upload error:', error);
-        next(); // Continue even if cloud upload fails - local is still saved
+        console.error('❌ Cloud upload error:', error);
+        next(error);
     }
 };
 
 /**
- * Get the best available URL for an uploaded file
- * Prefers Cloudinary URL if available, falls back to local
+ * Get the Cloudinary URL for an uploaded file
  */
 const getFileUrl = (file) => {
     if (file.cloudinaryUrl) {
         return file.cloudinaryUrl;
     }
-    // Return local URL
-    return '/' + file.path.replace(/\\/g, '/').replace('public/', '');
+    console.warn('⚠️ No Cloudinary URL found for file, upload may have failed');
+    return null;
 };
 
 /**
- * Delete file from both local and Cloudinary
+ * Delete file from Cloudinary
  */
 const deleteFile = async (localPath, cloudinaryPublicId) => {
-    // Delete from local
-    if (localPath && fs.existsSync(localPath)) {
-        fs.unlinkSync(localPath);
-    }
-
     // Delete from Cloudinary
     if (cloudinaryPublicId) {
         await deleteFromCloudinary(cloudinaryPublicId);
+    }
+};
+
+/**
+ * Cleanup temporary local file
+ */
+const cleanupTempFile = (filePath) => {
+    try {
+        if (filePath && fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+        }
+    } catch (error) {
+        console.warn('⚠️ Could not delete temp file:', filePath, error.message);
     }
 };
 

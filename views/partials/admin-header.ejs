@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - WIND OF FALL</title>
+    <link rel="icon" type="image/jpeg" href="https://res.cloudinary.com/drs7xrtxo/image/upload/v1773135637/z7606467693465_9fdaa8e775a54c925e4ce37b258ca07b_yo7jhg.jpg">
     <link rel="stylesheet" href="/css/style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -100,39 +101,52 @@
 <main style="background: #f5f5f5; min-height: calc(100vh - 60px);">
 
 <script>
-// Admin Mobile Menu
-document.addEventListener('DOMContentLoaded', function() {
-    const adminMobileMenuBtn = document.getElementById('adminMobileMenuBtn');
-    const adminMobileNav = document.getElementById('adminMobileNav');
-    const adminMobileOverlay = document.getElementById('adminMobileOverlay');
+// Admin Mobile Menu - IIFE to work regardless of script loading order
+(function() {
+    function initAdminMobileMenu() {
+        var adminMobileMenuBtn = document.getElementById('adminMobileMenuBtn');
+        var adminMobileNav = document.getElementById('adminMobileNav');
+        var adminMobileOverlay = document.getElementById('adminMobileOverlay');
 
-    if (!adminMobileMenuBtn || !adminMobileNav) return;
+        if (!adminMobileMenuBtn || !adminMobileNav) return;
 
-    function toggleAdminMenu() {
-        adminMobileMenuBtn.classList.toggle('active');
-        adminMobileNav.classList.toggle('active');
-        adminMobileOverlay.classList.toggle('active');
-        document.body.classList.toggle('admin-menu-open');
+        // Prevent duplicate initialization
+        if (adminMobileMenuBtn.dataset.initialized) return;
+        adminMobileMenuBtn.dataset.initialized = 'true';
+
+        function toggleAdminMenu() {
+            adminMobileMenuBtn.classList.toggle('active');
+            adminMobileNav.classList.toggle('active');
+            if (adminMobileOverlay) adminMobileOverlay.classList.toggle('active');
+            document.body.classList.toggle('admin-menu-open');
+        }
+
+        function closeAdminMenu() {
+            adminMobileMenuBtn.classList.remove('active');
+            adminMobileNav.classList.remove('active');
+            if (adminMobileOverlay) adminMobileOverlay.classList.remove('active');
+            document.body.classList.remove('admin-menu-open');
+        }
+
+        adminMobileMenuBtn.addEventListener('click', toggleAdminMenu);
+        if (adminMobileOverlay) {
+            adminMobileOverlay.addEventListener('click', closeAdminMenu);
+        }
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeAdminMenu();
+        });
+
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 1024) closeAdminMenu();
+        });
     }
 
-    function closeAdminMenu() {
-        adminMobileMenuBtn.classList.remove('active');
-        adminMobileNav.classList.remove('active');
-        adminMobileOverlay.classList.remove('active');
-        document.body.classList.remove('admin-menu-open');
+    // Run immediately since DOM elements above are already parsed
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initAdminMobileMenu);
+    } else {
+        initAdminMobileMenu();
     }
-
-    adminMobileMenuBtn.addEventListener('click', toggleAdminMenu);
-    adminMobileOverlay.addEventListener('click', closeAdminMenu);
-
-    // Close on escape
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') closeAdminMenu();
-    });
-
-    // Close on window resize to desktop
-    window.addEventListener('resize', function() {
-        if (window.innerWidth > 1024) closeAdminMenu();
-    });
-});
+})();
 </script>

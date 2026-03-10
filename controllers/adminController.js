@@ -172,11 +172,12 @@ exports.createProduct = async (req, res) => {
 
         // Xử lý upload ảnh sản phẩm
         if (req.files && req.files.length > 0) {
-            // Lưu từng ảnh được upload
+            // Lưu từng ảnh được upload (ưu tiên URL Cloudinary)
             for (let i = 0; i < req.files.length; i++) {
+                const imageUrl = req.files[i].cloudinaryUrl || `/uploads/${req.files[i].filename}`;
                 await Product.addImage(
                     product.id,
-                    `/uploads/${req.files[i].filename}`,
+                    imageUrl,
                     i === 0, // Ảnh đầu tiên là ảnh chính
                     i        // Thứ tự hiển thị
                 );
@@ -441,10 +442,10 @@ exports.createBanner = async (req, res) => {
         // Lấy dữ liệu từ form
         const { title, subtitle, description, link_url, button_text, display_order, start_date, end_date } = req.body;
 
-        // Xử lý ảnh upload
+        // Xử lý ảnh upload (ưu tiên URL Cloudinary)
         let image_url = '';
         if (req.file) {
-            image_url = `/uploads/${req.file.filename}`;
+            image_url = req.file.cloudinaryUrl || `/uploads/${req.file.filename}`;
         }
 
         // Tạo banner trong database
@@ -692,8 +693,8 @@ exports.uploadProductImage = async (req, res) => {
             return res.status(400).json({ message: 'No file uploaded' });
         }
 
-        // Tạo đường dẫn lưu ảnh
-        const image_url = '/uploads/' + req.file.filename;
+        // Lấy URL ảnh (ưu tiên Cloudinary)
+        const image_url = req.file.cloudinaryUrl || '/uploads/' + req.file.filename;
 
         // Nếu đặt làm ảnh chính, bỏ flag của các ảnh khác
         if (is_primary) {

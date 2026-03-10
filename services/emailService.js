@@ -1,94 +1,54 @@
-const nodemailer = require('nodemailer');
 const { Resend } = require('resend');
 require('dotenv').config();
 
 class EmailService {
     constructor() {
         this.resend = null;
-        this.transporter = null;
-        this.useResend = process.env.USE_RESEND === 'true';
 
-        // Initialize Resend (primary for production)
+        // Initialize Resend
         if (process.env.RESEND_API_KEY) {
             try {
                 this.resend = new Resend(process.env.RESEND_API_KEY);
                 console.log('✅ Resend email service initialized');
             } catch (error) {
-                console.warn('⚠️ Resend service not available:', error.message);
+                console.error('❌ Resend initialization failed:', error.message);
             }
-        }
-
-        // Initialize Nodemailer (fallback)
-        try {
-            this.transporter = nodemailer.createTransport({
-                host: process.env.MAIL_HOST || 'smtp.gmail.com',
-                port: parseInt(process.env.MAIL_PORT) || 587,
-                secure: false,
-                auth: {
-                    user: process.env.MAIL_USER,
-                    pass: process.env.MAIL_PASS
-                }
-            });
-            console.log('✅ Gmail email service initialized (fallback)');
-        } catch (error) {
-            console.warn('⚠️ Gmail service not available:', error.message);
+        } else {
+            console.error('❌ RESEND_API_KEY is not configured in .env');
         }
     }
 
-    // Core send method - tries Resend first, falls back to Gmail
+    // Core send method - Resend only
     async sendEmail(to, subject, html) {
-        console.log('📧 Sending email to:', to);
-        console.log('📧 USE_RESEND:', this.useResend);
-        console.log('📧 Resend initialized:', !!this.resend);
-
-        // Try Resend first if enabled
-        if (this.useResend && this.resend) {
-            try {
-                console.log('📧 Attempting to send via Resend...');
-                const result = await this.resend.emails.send({
-                    from: 'onboarding@resend.dev',
-                    to: to,
-                    subject: subject,
-                    html: html
-                });
-
-                console.log('📧 Resend result:', JSON.stringify(result, null, 2));
-
-                if (result.data) {
-                    console.log('✅ Email sent via Resend to:', to);
-                    return true;
-                }
-
-                // Check for error in result
-                if (result.error) {
-                    console.error('❌ Resend error:', result.error.message);
-                    throw new Error(result.error.message);
-                }
-            } catch (error) {
-                console.error('❌ Resend failed, trying Gmail fallback:', error.message);
-                console.error('❌ Full error:', error);
-            }
-        } else {
-            console.log('📧 Skipping Resend - useResend:', this.useResend, ', resend:', !!this.resend);
+        if (!this.resend) {
+            console.error('❌ Resend service is not initialized. Cannot send email.');
+            return false;
         }
 
-        // Fallback to Gmail/Nodemailer
-        if (this.transporter) {
-            try {
-                await this.transporter.sendMail({
-                    from: `"WIND OF FALL" <${process.env.MAIL_FROM || process.env.MAIL_USER}>`,
-                    to: to,
-                    subject: subject,
-                    html: html
-                });
-                console.log('✅ Email sent via Gmail to:', to);
+        try {
+            console.log('📧 Sending email via Resend to:', to);
+            const fromAddress = process.env.RESEND_FROM || 'onboarding@resend.dev';
+
+            const result = await this.resend.emails.send({
+                from: fromAddress,
+                to: to,
+                subject: subject,
+                html: html
+            });
+
+            if (result.data) {
+                console.log('✅ Email sent successfully to:', to);
                 return true;
-            } catch (error) {
-                console.error('❌ Gmail also failed:', error.message);
             }
+
+            if (result.error) {
+                console.error('❌ Resend error:', result.error.message);
+                return false;
+            }
+        } catch (error) {
+            console.error('❌ Email sending failed:', error.message);
         }
 
-        console.error('❌ All email methods failed for:', to);
         return false;
     }
 
@@ -310,6 +270,58 @@ class EmailService {
         `;
 
         return await this.sendEmail(user.email, 'Đặt lại mật khẩu - WIND OF FALL', html);
+    }
+
+    // Send newsletter subscription confirmation email
+    async sendNewsletterWelcomeEmail(email) {
+        const html = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <h1 style="color: #000; margin: 0;">WIND OF FALL</h1>
+                    <p style="color: #666; margin: 5px 0;">Thời Trang Cao Cấp</p>
+                </div>
+
+                <div style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); padding: 30px; border-radius: 10px; text-align: center; margin: 20px 0;">
+                    <div style="font-size: 48px; margin-bottom: 10px;">🎉</div>
+                    <h2 style="color: #fff; margin: 0;">Đăng ký thành công!</h2>
+                </div>
+
+                <p style="font-size: 16px; color: #333;">Xin chào bạn,</p>
+                <p style="font-size: 15px; color: #555; line-height: 1.6;">
+                    Cảm ơn bạn đã đăng ký nhận tin khuyến mãi từ <strong>WIND OF FALL</strong>! 
+                    Từ giờ, bạn sẽ là người đầu tiên nhận được những thông tin về:
+                </p>
+
+                <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <ul style="list-style: none; padding: 0; margin: 0;">
+                        <li style="padding: 8px 0; font-size: 15px; color: #333;">🏷️ Chương trình <strong>giảm giá độc quyền</strong></li>
+                        <li style="padding: 8px 0; font-size: 15px; color: #333;">👗 Bộ sưu tập <strong>mới nhất</strong> mỗi mùa</li>
+                        <li style="padding: 8px 0; font-size: 15px; color: #333;">🎁 Ưu đãi đặc biệt dành riêng cho thành viên</li>
+                        <li style="padding: 8px 0; font-size: 15px; color: #333;">🔥 Flash sale và sự kiện <strong>hot</strong></li>
+                    </ul>
+                </div>
+
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="${process.env.BASE_URL || 'http://localhost:3000'}"
+                       style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #000 0%, #333 100%); color: #fff; text-decoration: none; border-radius: 8px; font-size: 15px; font-weight: 600;">
+                        Khám phá ngay
+                    </a>
+                </div>
+
+                <p style="font-size: 14px; color: #888; line-height: 1.5;">
+                    Nếu bạn muốn ngừng nhận tin, bạn có thể hủy đăng ký bất cứ lúc nào.
+                </p>
+
+                <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+
+                <p style="color: #999; font-size: 12px; text-align: center;">
+                    WIND OF FALL - Thời Trang Cao Cấp<br>
+                    Email này được gửi tự động, vui lòng không trả lời.
+                </p>
+            </div>
+        `;
+
+        return await this.sendEmail(email, 'Cảm ơn bạn đã đăng ký nhận tin - WIND OF FALL', html);
     }
 }
 

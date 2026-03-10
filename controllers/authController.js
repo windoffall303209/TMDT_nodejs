@@ -17,7 +17,9 @@ const { generateToken } = require('../middleware/auth');
 const emailService = require('../services/emailService');
 const multer = require('multer');
 const path = require('path');
+const os = require('os');
 const fs = require('fs');
+const { uploadToCloudinary } = require('../config/cloudinary');
 
 // =============================================================================
 // CẤU HÌNH UPLOAD AVATAR
@@ -28,25 +30,16 @@ const fs = require('fs');
  *
  * @description Định nghĩa thư mục lưu và cách đặt tên file avatar
  */
+// Cấu hình lưu trữ tạm trước khi upload lên Cloudinary
+const avatarTempDir = path.join(os.tmpdir(), 'tmdt_avatars');
+if (!fs.existsSync(avatarTempDir)) {
+    fs.mkdirSync(avatarTempDir, { recursive: true });
+}
+
 const avatarStorage = multer.diskStorage({
-    /**
-     * Xác định thư mục lưu file
-     * @param {Object} req - Request object
-     * @param {Object} file - File upload
-     * @param {Function} cb - Callback function
-     */
     destination: (req, file, cb) => {
-        const uploadDir = 'public/uploads/avatars';
-        // Tạo thư mục nếu chưa tồn tại
-        if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
-        }
-        cb(null, uploadDir);
+        cb(null, avatarTempDir);
     },
-    /**
-     * Đặt tên file upload
-     * @description Tên file = avatar_[userId]_[timestamp].[extension]
-     */
     filename: (req, file, cb) => {
         const uniqueName = `avatar_${req.user.id}_${Date.now()}${path.extname(file.originalname)}`;
         cb(null, uniqueName);
@@ -57,14 +50,11 @@ const avatarStorage = multer.diskStorage({
  * Middleware upload avatar với các ràng buộc
  * - Giới hạn dung lượng: 5MB
  * - Chỉ chấp nhận file ảnh: jpeg, jpg, png, gif, webp
+ * - Upload lên Cloudinary, xóa file tạm sau khi upload
  */
 const uploadAvatar = multer({
     storage: avatarStorage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // Giới hạn 5MB
-    /**
-     * Lọc file hợp lệ
-     * @description Chỉ cho phép upload file ảnh
-     */
+    limits: { fileSize: 5 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
         const allowedTypes = /jpeg|jpg|png|gif|webp/;
         const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
@@ -74,7 +64,7 @@ const uploadAvatar = multer({
         }
         cb(new Error('Chỉ chấp nhận file ảnh (jpeg, jpg, png, gif, webp)'));
     }
-}).single('avatar'); // Chỉ cho phép upload 1 file với field name 'avatar'
+}).single('avatar');
 
 // =============================================================================
 // ĐĂNG KÝ / ĐĂNG NHẬP / ĐĂNG XUẤT
@@ -551,9 +541,25 @@ exports.handleAvatarUpload = (req, res) => {
         }
 
         try {
-            // Tạo URL avatar
-            const avatarUrl = `/uploads/avatars/${req.file.filename}`;
-            // Cập nhật avatar trong database
+            // Upload lên Cloudinary
+            const cloudResult = await uploadToCloudinary(req.file.path, {
+                folder: 'tmdt_ecommerce/avatars'
+            });
+
+            // Xóa file tạm
+            try {
+                if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+            } catch (e) { /* ignore */ }
+
+            if (!cloudResult.success) {
+                return res.status(500).json({
+                    success: false,
+                    message: 'Lỗi upload ảnh lên cloud: ' + cloudResult.error
+                });
+            }
+
+            // Lưu Cloudinary URL vào database
+            const avatarUrl = cloudResult.url;
             const updatedUser = await User.updateAvatar(req.user.id, avatarUrl);
 
             res.json({

@@ -5,6 +5,7 @@
  */
 
 const Newsletter = require('../models/Newsletter');
+const emailService = require('../services/emailService');
 
 /**
  * Đăng ký nhận tin khuyến mãi
@@ -36,6 +37,15 @@ exports.subscribe = async (req, res) => {
 
         if (!result.success) {
             return res.status(400).json(result);
+        }
+
+        // Gửi email xác nhận đăng ký nhận tin
+        try {
+            await emailService.sendNewsletterWelcomeEmail(email);
+            console.log('✅ Newsletter welcome email sent to:', email);
+        } catch (emailError) {
+            console.error('⚠️ Failed to send newsletter welcome email:', emailError.message);
+            // Không block response nếu gửi email thất bại
         }
 
         res.json(result);
