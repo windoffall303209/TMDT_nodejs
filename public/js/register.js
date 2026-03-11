@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('registerForm').addEventListener('submit', function(e) {
         if (password.value !== confirmPassword.value) {
             e.preventDefault();
-            alert('Mật khẩu xác nhận không khớp!');
+            showGlobalToast('Mật khẩu xác nhận không khớp!', 'error');
             confirmPassword.focus();
         }
     });

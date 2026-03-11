@@ -1,5 +1,4 @@
 // Admin Orders page JavaScript
-// Extracted from views/admin/orders.ejs
 
 /**
  * Update order status
@@ -14,12 +13,13 @@ async function updateOrderStatus(orderId, status) {
             body: JSON.stringify({ status })
         });
         if (response.ok) {
-            alert('Cập nhật trạng thái thành công!');
+            showGlobalToast('Cập nhật trạng thái thành công!', 'success');
+            setTimeout(() => location.reload(), 1500);
         } else {
-            alert('Lỗi cập nhật trạng thái');
+            showGlobalToast('Lỗi cập nhật trạng thái', 'error');
         }
     } catch (error) {
-        alert('Lỗi: ' + error.message);
+        showGlobalToast('Lỗi: ' + error.message, 'error');
     }
 }
 
@@ -28,5 +28,5 @@ async function updateOrderStatus(orderId, status) {
  * @param {number} orderId - Order ID
  */
 function viewOrderDetail(orderId) {
-    alert('Chi tiết đơn hàng #' + orderId + ' - Chức năng đang phát triển');
+    window.location.href = '/admin/orders/' + orderId;
 }

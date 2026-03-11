@@ -92,24 +92,33 @@ exports.getDashboard = async (req, res) => {
  */
 exports.getProducts = async (req, res) => {
     try {
-        let products = [];   // Danh sách sản phẩm
-        let categories = []; // Danh sách danh mục (cho dropdown)
+        let products = [];
+        let categories = [];
+        let totalItems = 0;
+
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const offset = (page - 1) * limit;
 
         try {
-            // Lấy 50 sản phẩm đầu tiên
-            products = await Product.findAll({ limit: 50, offset: 0 });
-            // Lấy tất cả danh mục
+            products = await Product.findAll({ limit, offset });
             categories = await Category.findAll();
+            // Đếm tổng sản phẩm
+            const pool = require('../config/database');
+            const [countResult] = await pool.execute('SELECT COUNT(*) as total FROM products WHERE is_active = TRUE');
+            totalItems = countResult[0].total;
         } catch (err) {
             console.error('Products data error:', err);
         }
 
-        // Render trang quản lý sản phẩm
+        const totalPages = Math.ceil(totalItems / limit);
+
         res.render('admin/products', {
             products,
             categories,
             user: req.user,
-            currentPage: 'products'
+            currentPage: 'products',
+            pagination: { totalItems, totalPages, currentPage: page, limit }
         });
     } catch (error) {
         res.status(500).render('error', { message: 'Lỗi tải sản phẩm: ' + error.message, user: req.user });
@@ -299,6 +308,27 @@ exports.getOrders = async (req, res) => {
 };
 
 /**
+ * Hiển thị chi tiết đơn hàng
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} res - Response object từ Express
+ */
+exports.getOrderDetail = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const order = await Order.findById(id);
+
+        res.render('admin/order-detail', {
+            order,
+            user: req.user,
+            currentPage: 'orders'
+        });
+    } catch (error) {
+        res.status(500).render('error', { message: 'Lỗi tải đơn hàng: ' + error.message, user: req.user });
+    }
+};
+
+/**
  * Cập nhật trạng thái đơn hàng
  *
  * @description Thay đổi trạng thái đơn hàng (pending, confirmed, shipping, delivered, cancelled)
@@ -340,21 +370,73 @@ exports.updateOrderStatus = async (req, res) => {
 exports.getUsers = async (req, res) => {
     try {
         let users = [];
+        let totalItems = 0;
+
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const offset = (page - 1) * limit;
+
         try {
-            // Lấy 50 người dùng
-            users = await User.findAll({ limit: 50, offset: 0 });
+            users = await User.findAll({ limit, offset });
+            // Đếm tổng người dùng
+            const pool = require('../config/database');
+            const [countResult] = await pool.execute('SELECT COUNT(*) as total FROM users');
+            totalItems = countResult[0].total;
         } catch (err) {
             console.error('Users data error:', err);
         }
 
-        // Render trang quản lý người dùng
+        const totalPages = Math.ceil(totalItems / limit);
+
         res.render('admin/users', {
             users,
             user: req.user,
-            currentPage: 'users'
+            currentPage: 'users',
+            pagination: { totalItems, totalPages, currentPage: page, limit }
         });
     } catch (error) {
         res.status(500).render('error', { message: 'Lỗi tải người dùng: ' + error.message, user: req.user });
+    }
+};
+
+/**
+ * Xem chi tiết người dùng (API JSON)
+ *
+ * @param {Object} req - Request object từ Express
+ * @param {Object} res - Response object từ Express
+ */
+exports.getUserDetail = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const pool = require('../config/database');
+
+        // Lấy user info (bao gồm cả bị khóa)
+        const [users] = await pool.execute(
+            'SELECT id, email, full_name, phone, avatar_url, birthday, role, email_verified, marketing_consent, is_active, created_at FROM users WHERE id = ?',
+            [id]
+        );
+        const userData = users[0];
+        if (!userData) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
+        }
+
+        // Lấy địa chỉ
+        const [addresses] = await pool.execute(
+            'SELECT * FROM addresses WHERE user_id = ? ORDER BY is_default DESC',
+            [id]
+        );
+        userData.addresses = addresses;
+
+        // Lấy 5 đơn hàng gần nhất
+        const [orders] = await pool.execute(
+            'SELECT id, order_code, total_amount, final_amount, status, payment_status, created_at FROM orders WHERE user_id = ? ORDER BY created_at DESC LIMIT 5',
+            [id]
+        );
+        userData.recent_orders = orders;
+
+        res.json({ success: true, user: userData });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 

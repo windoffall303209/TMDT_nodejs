@@ -436,15 +436,7 @@ function toggleSection(titleElement) {
 
 // Toast notification
 function showToast(message, type = 'success') {
-    const container = document.getElementById('toastContainer');
-    const toast = document.createElement('div');
-    toast.className = 'toast toast--' + type;
-    toast.innerHTML = message;
-    container.appendChild(toast);
-
-    setTimeout(() => {
-        toast.remove();
-    }, 3000);
+    if (typeof showGlobalToast === 'function') showGlobalToast(message, type);
 }
 </script>
 

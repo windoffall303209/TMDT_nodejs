@@ -221,7 +221,7 @@ function placeMarker(lat, lng) {
  */
 function locateUser() {
     if (!navigator.geolocation) {
-        alert('Trình duyệt không hỗ trợ định vị');
+        showGlobalToast('Trình duyệt không hỗ trợ định vị', 'warning');
         return;
     }
 
@@ -235,7 +235,7 @@ function locateUser() {
         },
         (error) => {
             console.error('Geolocation error:', error);
-            alert('Không thể lấy vị trí. Vui lòng cho phép truy cập vị trí.');
+            showGlobalToast('Không thể lấy vị trí. Vui lòng cho phép truy cập vị trí.', 'error');
         },
         { enableHighAccuracy: true, timeout: 10000 }
     );
@@ -308,7 +308,7 @@ async function saveNewAddress() {
                  document.getElementById('newCity').options[document.getElementById('newCity').selectedIndex]?.text || '';
 
     if (!fullName || !phone || !addressLine || !city || !district || !ward) {
-        alert('Vui lòng điền đầy đủ thông tin bắt buộc');
+        showGlobalToast('Vui lòng điền đầy đủ thông tin bắt buộc', 'warning');
         return;
     }
 
@@ -331,14 +331,14 @@ async function saveNewAddress() {
         const data = await response.json();
 
         if (data.success) {
-            alert('Đã lưu địa chỉ thành công!');
+            showGlobalToast('Đã lưu địa chỉ thành công!', 'success');
             location.reload();
         } else {
-            alert(data.message || 'Có lỗi xảy ra');
+            showGlobalToast(data.message || 'Có lỗi xảy ra', 'error');
         }
     } catch (error) {
         console.error('Save address error:', error);
-        alert('Có lỗi xảy ra khi lưu địa chỉ');
+        showGlobalToast('Có lỗi xảy ra khi lưu địa chỉ', 'error');
     }
 }
 
@@ -439,7 +439,7 @@ function initCheckout() {
         const addressSelected = document.querySelector('input[name="address_id"]:checked');
         if (!addressSelected) {
             e.preventDefault();
-            alert('Vui lòng chọn hoặc thêm địa chỉ giao hàng');
+            showGlobalToast('Vui lòng chọn hoặc thêm địa chỉ giao hàng', 'warning');
             return;
         }
 

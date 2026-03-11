@@ -102,7 +102,7 @@ function initBuyNow() {
         const addressSelected = document.querySelector('input[name="address_id"]:checked');
         if (!addressSelected) {
             e.preventDefault();
-            alert('❌ Vui lòng chọn địa chỉ giao hàng');
+            showGlobalToast('Vui lòng chọn địa chỉ giao hàng', 'warning');
             return;
         }
         

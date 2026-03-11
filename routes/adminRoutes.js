@@ -27,10 +27,12 @@ router.put('/products/images/:imageId/primary', adminController.setPrimaryImage)
 
 // Orders
 router.get('/orders', adminController.getOrders);
+router.get('/orders/:id', adminController.getOrderDetail);
 router.put('/orders/:id/status', adminController.updateOrderStatus);
 
 // Users
 router.get('/users', adminController.getUsers);
+router.get('/users/:id', adminController.getUserDetail);
 router.put('/users/:id/status', adminController.updateUserStatus);
 
 // Banners

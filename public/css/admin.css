@@ -47,6 +47,8 @@ body.admin-body {
     background: var(--admin-bg);
     min-height: 100vh;
     padding-top: var(--admin-header-height);
+    overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
 }
 
 /* -----------------------------------------------------------------------------
@@ -210,6 +212,9 @@ body.admin-body {
 .admin-page {
     padding: 32px;
     min-height: calc(100vh - var(--admin-header-height));
+    overflow-x: hidden;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .admin-page__title {
@@ -318,9 +323,13 @@ body.admin-body {
 .admin-table-wrapper {
     background: var(--admin-card-bg);
     border-radius: 12px;
-    overflow: hidden;
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
     box-shadow: var(--admin-shadow);
     border: 1px solid var(--admin-border);
+    /* Enable touch scrolling on mobile */
+    touch-action: pan-x pan-y;
 }
 
 .admin-table {
@@ -937,6 +946,108 @@ body.admin-body {
 /* Prevent body scroll when admin menu is open */
 body.admin-menu-open {
     overflow: hidden;
+    position: fixed;
+    width: 100%;
+    top: 0;
+    left: 0;
+}
+
+/* -----------------------------------------------------------------------------
+   ADMIN PAGINATION
+   ----------------------------------------------------------------------------- */
+.admin-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 0;
+    margin-top: 16px;
+    border-top: 1px solid var(--admin-border);
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.admin-pagination__info {
+    font-size: 13px;
+    color: var(--admin-text-secondary);
+}
+
+.admin-pagination__controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.admin-pagination__perpage {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--admin-text-secondary);
+}
+
+.admin-pagination__perpage select {
+    padding: 6px 10px;
+    border: 1px solid var(--admin-border);
+    border-radius: 6px;
+    font-size: 13px;
+    background: var(--admin-card-bg);
+    cursor: pointer;
+    color: var(--admin-text-primary);
+}
+
+.admin-pagination__nav {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.admin-pagination__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    height: 36px;
+    padding: 0 8px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--admin-text-secondary);
+    text-decoration: none;
+    background: var(--admin-card-bg);
+    border: 1px solid var(--admin-border);
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.admin-pagination__btn:hover {
+    background: var(--admin-accent);
+    color: white;
+    border-color: var(--admin-accent);
+}
+
+.admin-pagination__btn--active {
+    background: var(--admin-accent);
+    color: white;
+    border-color: var(--admin-accent);
+    font-weight: 600;
+}
+
+.admin-pagination__dots {
+    padding: 0 4px;
+    color: var(--admin-text-muted);
+    font-size: 14px;
+}
+
+@media (max-width: 768px) {
+    .admin-pagination {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .admin-pagination__controls {
+        width: 100%;
+        justify-content: space-between;
+    }
 }
 
 /* -----------------------------------------------------------------------------
@@ -1045,12 +1156,84 @@ body.admin-menu-open {
     }
 }
 
+/* Fix touch interaction on mobile - ensure all elements are scrollable */
+@media (max-width: 1024px) {
+    .admin-table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-x pan-y;
+        scroll-behavior: smooth;
+    }
+
+    .admin-section {
+        overflow: visible;
+    }
+
+    .admin-page .container {
+        padding: 0;
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    /* Ensure tables are scrollable with min-width */
+    .admin-table {
+        min-width: 600px;
+    }
+}
+
 /* -----------------------------------------------------------------------------
    RESPONSIVE - Mobile
    ----------------------------------------------------------------------------- */
 @media (max-width: 768px) {
     :root {
         --admin-header-height: 50px;
+    }
+
+    /* Fix overall page scrolling */
+    body.admin-body {
+        overflow-x: hidden;
+        width: 100%;
+        position: relative;
+    }
+
+    .admin-page {
+        padding: 12px 10px;
+        overflow-x: hidden;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .admin-page .container {
+        padding: 0;
+        max-width: 100%;
+        width: 100%;
+        overflow-x: hidden;
+    }
+
+    /* Tables: scrollable horizontally */
+    .admin-table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-x pan-y;
+        border-radius: 8px;
+        margin: 0 -2px;
+    }
+
+    .admin-table {
+        min-width: 500px;
+    }
+
+    /* Section overflow fix */
+    .admin-section {
+        overflow: visible;
+        padding: 12px;
+        border-radius: 8px;
+    }
+
+    /* Stats grid: ensure no overflow */
+    .stats-grid {
+        width: 100%;
+        overflow: hidden;
     }
 
     /* Header compact */
@@ -1361,8 +1544,14 @@ body.admin-menu-open {
 
     /* Table scroll indicator */
     .admin-table-wrapper::after {
+        content: '← Vuốt để xem thêm →';
+        display: block;
+        text-align: center;
         font-size: 10px;
-        padding: 5px;
+        padding: 6px;
+        color: var(--admin-text-muted);
+        background: var(--admin-bg);
+        border-top: 1px solid var(--admin-border);
     }
 
     /* Mobile nav */
@@ -1452,7 +1641,17 @@ body.admin-menu-open {
     }
 
     .admin-page {
-        padding: 10px 8px;
+        padding: 8px 6px;
+    }
+
+    /* Smaller tables on very small screens */
+    .admin-table {
+        min-width: 420px;
+    }
+
+    .admin-table-wrapper {
+        margin: 0 -4px;
+        border-radius: 6px;
     }
 
     .admin-page__title {

@@ -6,7 +6,7 @@
         <div class="admin-page-header">
             <div class="admin-page-header__left">
                 <h1>Quản Lý Sản Phẩm</h1>
-                <p><%= products ? products.length : 0 %> sản phẩm</p>
+                <p><%= pagination ? pagination.totalItems : (products ? products.length : 0) %> sản phẩm</p>
             </div>
         </div>
 
@@ -190,6 +190,7 @@
                     </tbody>
                 </table>
             </div>
+            <%- include('../partials/admin-pagination', { pagination }) %>
         <% } else { %>
             <div class="admin-empty">
                 <div class="admin-empty__icon">
@@ -762,6 +763,11 @@
 function toggleSection(titleElement) {
     const section = titleElement.closest('.admin-section--collapsible');
     section.classList.toggle('is-open');
+}
+
+// Change items per page
+function changePerPage(limit) {
+    window.location.href = '?page=1&limit=' + limit;
 }
 </script>
 <script src="/js/admin/products.js"></script>

@@ -19,36 +19,13 @@ function togglePassword(button) {
 
 // Show developing alert for verify buttons
 function showDevelopingAlert() {
-    alert('🚧 Tính năng này đang được phát triển. Vui lòng quay lại sau!');
+    showGlobalToast('Tính năng này đang được phát triển. Vui lòng quay lại sau!', 'info');
 }
 
-// Show alert message
+// Show alert message using global toast
 function showProfileAlert(message, type = 'success') {
-    const alertHtml = `
-        <div class="profile-alert profile-alert--${type}" id="profileAlert">
-            <span>${type === 'success' ? '✅' : '❌'}</span>
-            <span>${message}</span>
-        </div>
-    `;
-    
-    // Remove existing alert
-    const existingAlert = document.getElementById('profileAlert');
-    if (existingAlert) {
-        existingAlert.remove();
-    }
-    
-    // Insert new alert
-    const container = document.querySelector('.profile-content');
-    if (container) {
-        container.insertAdjacentHTML('afterbegin', alertHtml);
-        
-        // Auto remove after 5 seconds
-        setTimeout(() => {
-            const alert = document.getElementById('profileAlert');
-            if (alert) {
-                alert.remove();
-            }
-        }, 5000);
+    if (typeof showGlobalToast === 'function') {
+        showGlobalToast(message, type);
     }
 }
 

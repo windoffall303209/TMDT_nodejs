@@ -103,6 +103,8 @@
 <script>
 // Admin Mobile Menu - IIFE to work regardless of script loading order
 (function() {
+    var savedScrollY = 0;
+
     function initAdminMobileMenu() {
         var adminMobileMenuBtn = document.getElementById('adminMobileMenuBtn');
         var adminMobileNav = document.getElementById('adminMobileNav');
@@ -114,11 +116,13 @@
         if (adminMobileMenuBtn.dataset.initialized) return;
         adminMobileMenuBtn.dataset.initialized = 'true';
 
-        function toggleAdminMenu() {
-            adminMobileMenuBtn.classList.toggle('active');
-            adminMobileNav.classList.toggle('active');
-            if (adminMobileOverlay) adminMobileOverlay.classList.toggle('active');
-            document.body.classList.toggle('admin-menu-open');
+        function openAdminMenu() {
+            savedScrollY = window.scrollY;
+            adminMobileMenuBtn.classList.add('active');
+            adminMobileNav.classList.add('active');
+            if (adminMobileOverlay) adminMobileOverlay.classList.add('active');
+            document.body.classList.add('admin-menu-open');
+            document.body.style.top = '-' + savedScrollY + 'px';
         }
 
         function closeAdminMenu() {
@@ -126,6 +130,16 @@
             adminMobileNav.classList.remove('active');
             if (adminMobileOverlay) adminMobileOverlay.classList.remove('active');
             document.body.classList.remove('admin-menu-open');
+            document.body.style.top = '';
+            window.scrollTo(0, savedScrollY);
+        }
+
+        function toggleAdminMenu() {
+            if (adminMobileNav.classList.contains('active')) {
+                closeAdminMenu();
+            } else {
+                openAdminMenu();
+            }
         }
 
         adminMobileMenuBtn.addEventListener('click', toggleAdminMenu);

@@ -59,29 +59,12 @@ function checkoutSelected() {
 }
 
 /**
- * Show notification toast
+ * Show notification using global toast
  */
 function showNotification(message, type = 'success') {
-    // Remove existing notification
-    const existing = document.querySelector('.cart-notification');
-    if (existing) existing.remove();
-
-    const notification = document.createElement('div');
-    notification.className = `cart-notification cart-notification--${type}`;
-    notification.innerHTML = `
-        <span>${type === 'success' ? '✓' : '✕'}</span>
-        <span>${message}</span>
-    `;
-    document.body.appendChild(notification);
-
-    // Animate in
-    setTimeout(() => notification.classList.add('show'), 10);
-
-    // Remove after 2 seconds
-    setTimeout(() => {
-        notification.classList.remove('show');
-        setTimeout(() => notification.remove(), 300);
-    }, 2000);
+    if (typeof showGlobalToast === 'function') {
+        showGlobalToast(message, type);
+    }
 }
 
 /**
