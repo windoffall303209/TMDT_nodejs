@@ -176,6 +176,13 @@
                                     </div>
                                     <div class="order-summary__item-info">
                                         <div class="order-summary__item-name"><%= item.product_name %></div>
+                                        <% if (item.size || item.color) { %>
+                                            <div style="font-size: 13px; color: #888; margin-top: 2px;">
+                                                <% if (item.color) { %>Màu: <%= item.color %><% } %>
+                                                <% if (item.color && item.size) { %> | <% } %>
+                                                <% if (item.size) { %>Size: <%= item.size %><% } %>
+                                            </div>
+                                        <% } %>
                                         <div class="order-summary__item-qty">SL: <%= item.quantity %></div>
                                     </div>
                                     <div class="order-summary__item-price">

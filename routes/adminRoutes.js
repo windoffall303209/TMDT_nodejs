@@ -25,6 +25,11 @@ router.post('/products/:id/images/upload', upload.single('image'), uploadToCloud
 router.delete('/products/images/:imageId', adminController.deleteProductImage);
 router.put('/products/images/:imageId/primary', adminController.setPrimaryImage);
 
+// Product Variants
+router.get('/products/:id/variants', adminController.getProductVariants);
+router.post('/products/:id/variants', adminController.addProductVariant);
+router.delete('/products/variants/:variantId', adminController.deleteProductVariant);
+
 // Orders
 router.get('/orders', adminController.getOrders);
 router.get('/orders/:id', adminController.getOrderDetail);

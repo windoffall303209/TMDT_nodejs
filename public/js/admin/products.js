@@ -34,7 +34,7 @@ function showConfirm(message, title = 'Xác nhận', yesText = 'Xác nhận', ye
 }
 
 // Edit Modal Functions
-function openEditModal(id, name, categoryId, price, stock, description) {
+async function openEditModal(id, name, categoryId, price, stock, description) {
     document.getElementById('editProductId').value = id;
     document.getElementById('editName').value = name;
     document.getElementById('editCategoryId').value = categoryId || '';
@@ -42,6 +42,19 @@ function openEditModal(id, name, categoryId, price, stock, description) {
     document.getElementById('editStock').value = stock;
     document.getElementById('editDescription').value = description || '';
     document.getElementById('editModal').style.display = 'flex';
+
+    // Load existing variants
+    const variantsList = document.getElementById('editVariantsList');
+    variantsList.innerHTML = '';
+    try {
+        const response = await fetch(`/admin/products/${id}/variants`, { credentials: 'same-origin' });
+        const data = await response.json();
+        if (data.success && data.variants.length > 0) {
+            data.variants.forEach(v => addVariantRow('edit', v));
+        }
+    } catch (e) {
+        console.error('Load variants error:', e);
+    }
 }
 
 function closeEditModal() {
@@ -200,7 +213,8 @@ function initAdminProducts() {
             category_id: document.getElementById('editCategoryId').value,
             price: document.getElementById('editPrice').value,
             stock_quantity: document.getElementById('editStock').value,
-            description: document.getElementById('editDescription').value
+            description: document.getElementById('editDescription').value,
+            variants: document.getElementById('editVariantsJson').value
         };
         
         try {
@@ -272,3 +286,79 @@ function initAdminProducts() {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', initAdminProducts);
+
+// =============================================================================
+// VARIANT MANAGEMENT - QUẢN LÝ BIẾN THỂ
+// =============================================================================
+
+function addVariantRow(mode, data = {}) {
+    const container = document.getElementById(`${mode}VariantsList`);
+    const row = document.createElement('div');
+    row.className = 'variant-row';
+    row.style.cssText = 'display: flex; gap: 8px; margin-bottom: 8px; align-items: center; flex-wrap: wrap;';
+    row.innerHTML = `
+        <select class="variant-size" style="width: 100px; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; background: white;">
+            <option value="" ${!data.size ? 'selected' : ''}>-- Size --</option>
+            <option value="S" ${data.size === 'S' ? 'selected' : ''}>S</option>
+            <option value="M" ${data.size === 'M' ? 'selected' : ''}>M</option>
+            <option value="L" ${data.size === 'L' ? 'selected' : ''}>L</option>
+            <option value="XL" ${data.size === 'XL' ? 'selected' : ''}>XL</option>
+            <option value="XXL" ${data.size === 'XXL' ? 'selected' : ''}>XXL</option>
+            <option value="Free Size" ${data.size === 'Free Size' ? 'selected' : ''}>Free Size</option>
+        </select>
+        <select class="variant-color" style="width: 120px; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; background: white;">
+            <option value="" ${!data.color ? 'selected' : ''}>-- Màu --</option>
+            <option value="Đen" ${data.color === 'Đen' ? 'selected' : ''}>Đen</option>
+            <option value="Trắng" ${data.color === 'Trắng' ? 'selected' : ''}>Trắng</option>
+            <option value="Đỏ" ${data.color === 'Đỏ' ? 'selected' : ''}>Đỏ</option>
+            <option value="Xanh dương" ${data.color === 'Xanh dương' ? 'selected' : ''}>Xanh dương</option>
+            <option value="Xanh lá" ${data.color === 'Xanh lá' ? 'selected' : ''}>Xanh lá</option>
+            <option value="Vàng" ${data.color === 'Vàng' ? 'selected' : ''}>Vàng</option>
+            <option value="Hồng" ${data.color === 'Hồng' ? 'selected' : ''}>Hồng</option>
+            <option value="Tím" ${data.color === 'Tím' ? 'selected' : ''}>Tím</option>
+            <option value="Cam" ${data.color === 'Cam' ? 'selected' : ''}>Cam</option>
+            <option value="Nâu" ${data.color === 'Nâu' ? 'selected' : ''}>Nâu</option>
+            <option value="Xám" ${data.color === 'Xám' ? 'selected' : ''}>Xám</option>
+            <option value="Be" ${data.color === 'Be' ? 'selected' : ''}>Be</option>
+            <option value="Kem" ${data.color === 'Kem' ? 'selected' : ''}>Kem</option>
+        </select>
+        <input type="number" placeholder="Giá thêm" value="${data.additional_price || 0}"
+               class="variant-price" style="width: 100px; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" min="0">
+        <input type="number" placeholder="Tồn kho" value="${data.stock_quantity || 0}"
+               class="variant-stock" style="width: 80px; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" min="0">
+        <input type="text" placeholder="SKU" value="${data.sku || ''}"
+               class="variant-sku" style="width: 100px; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+        <button type="button" onclick="this.parentElement.remove(); collectVariants('${mode}')"
+                style="padding: 6px 10px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; line-height: 1;">×</button>
+    `;
+    container.appendChild(row);
+
+    row.querySelectorAll('input').forEach(input => {
+        input.addEventListener('input', () => collectVariants(mode));
+    });
+    row.querySelectorAll('select').forEach(select => {
+        select.addEventListener('change', () => collectVariants(mode));
+    });
+
+    collectVariants(mode);
+}
+
+function collectVariants(mode) {
+    const container = document.getElementById(`${mode}VariantsList`);
+    const rows = container.querySelectorAll('.variant-row');
+    const variants = [];
+    rows.forEach(row => {
+        const size = row.querySelector('.variant-size').value.trim();
+        const color = row.querySelector('.variant-color').value.trim();
+        if (size || color) {
+            variants.push({
+                size,
+                color,
+                additional_price: parseFloat(row.querySelector('.variant-price').value) || 0,
+                stock_quantity: parseInt(row.querySelector('.variant-stock').value) || 0,
+                sku: row.querySelector('.variant-sku').value.trim()
+            });
+        }
+    });
+    document.getElementById(`${mode}VariantsJson`).value = JSON.stringify(variants);
+}

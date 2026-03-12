@@ -626,6 +626,64 @@ class Product {
         const query = 'UPDATE products SET stock_quantity = stock_quantity - ?, sold_count = sold_count + ? WHERE id = ?';
         await pool.execute(query, [quantity, quantity, productId]);
     }
+
+    // =========================================================================
+    // QUẢN LÝ BIẾN THỂ SẢN PHẨM - PRODUCT VARIANTS
+    // =========================================================================
+
+    static async getVariants(productId) {
+        const [rows] = await pool.execute(
+            'SELECT * FROM product_variants WHERE product_id = ? ORDER BY color, size',
+            [productId]
+        );
+        return rows;
+    }
+
+    static async addVariant(productId, variantData) {
+        const { size, color, additional_price, stock_quantity, sku } = variantData;
+        const query = `
+            INSERT INTO product_variants (product_id, size, color, additional_price, stock_quantity, sku)
+            VALUES (?, ?, ?, ?, ?, ?)
+        `;
+        const [result] = await pool.execute(query, [
+            productId,
+            size || null,
+            color || null,
+            parseFloat(additional_price) || 0,
+            parseInt(stock_quantity) || 0,
+            sku || null
+        ]);
+        return { id: result.insertId, product_id: productId, ...variantData };
+    }
+
+    static async updateVariant(variantId, variantData) {
+        const { size, color, additional_price, stock_quantity, sku } = variantData;
+        const query = `
+            UPDATE product_variants
+            SET size = ?, color = ?, additional_price = ?, stock_quantity = ?, sku = ?
+            WHERE id = ?
+        `;
+        await pool.execute(query, [
+            size || null,
+            color || null,
+            parseFloat(additional_price) || 0,
+            parseInt(stock_quantity) || 0,
+            sku || null,
+            variantId
+        ]);
+        return { id: variantId, ...variantData };
+    }
+
+    static async deleteVariant(variantId) {
+        await pool.execute('DELETE FROM product_variants WHERE id = ?', [variantId]);
+    }
+
+    static async updateVariantStock(variantId, quantity) {
+        await pool.execute(
+            'UPDATE product_variants SET stock_quantity = stock_quantity - ? WHERE id = ?',
+            [quantity, variantId]
+        );
+    }
 }
 
 module.exports = Product;

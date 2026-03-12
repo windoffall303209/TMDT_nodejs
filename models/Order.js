@@ -101,7 +101,7 @@ class Order {
                 await connection.execute(orderItemQuery, [
                     orderId,
                     item.product_id,
-                    item.variant_id || null,
+                    item.variant_id ?? null,
                     item.product_name,
                     item.product_image,
                     item.product_price,
@@ -115,6 +115,14 @@ class Order {
                     'UPDATE products SET stock_quantity = stock_quantity - ?, sold_count = sold_count + ? WHERE id = ?',
                     [item.quantity, item.quantity, item.product_id]
                 );
+
+                // Cập nhật tồn kho variant nếu có
+                if (item.variant_id) {
+                    await connection.execute(
+                        'UPDATE product_variants SET stock_quantity = stock_quantity - ? WHERE id = ?',
+                        [item.quantity, item.variant_id]
+                    );
+                }
             }
 
             // Xóa giỏ hàng sau khi đặt hàng thành công
@@ -148,7 +156,7 @@ class Order {
      *
      * @returns {Object} { id, order_code, final_amount }
      */
-    static async createFromProduct(userId, addressId, product, quantity, paymentMethod, notes = null) {
+    static async createFromProduct(userId, addressId, product, quantity, paymentMethod, notes = null, variantId = null) {
         const connection = await pool.getConnection();
 
         try {
@@ -195,7 +203,7 @@ class Order {
             await connection.execute(orderItemQuery, [
                 orderId,
                 product.id,
-                null,
+                variantId ?? null,
                 product.name,
                 productImage,
                 product.price,
@@ -209,6 +217,14 @@ class Order {
                 'UPDATE products SET stock_quantity = stock_quantity - ?, sold_count = sold_count + ? WHERE id = ?',
                 [quantity, quantity, product.id]
             );
+
+            // Cập nhật tồn kho variant nếu có
+            if (variantId) {
+                await connection.execute(
+                    'UPDATE product_variants SET stock_quantity = stock_quantity - ? WHERE id = ?',
+                    [quantity, variantId]
+                );
+            }
 
             await connection.commit();
 
@@ -261,7 +277,10 @@ class Order {
 
         // Lấy danh sách sản phẩm trong đơn
         const [items] = await pool.execute(
-            'SELECT * FROM order_items WHERE order_id = ?',
+            `SELECT oi.*, pv.size as variant_size, pv.color as variant_color
+             FROM order_items oi
+             LEFT JOIN product_variants pv ON oi.variant_id = pv.id
+             WHERE oi.order_id = ?`,
             [orderId]
         );
         order.items = items;
@@ -318,9 +337,11 @@ class Order {
         for (let order of orders) {
             const [items] = await pool.execute(`
                 SELECT oi.*, p.name as product_name,
+                       pv.size as variant_size, pv.color as variant_color,
                        (SELECT pi.image_url FROM product_images pi WHERE pi.product_id = oi.product_id AND pi.is_primary = TRUE LIMIT 1) as image_url
                 FROM order_items oi
                 LEFT JOIN products p ON oi.product_id = p.id
+                LEFT JOIN product_variants pv ON oi.variant_id = pv.id
                 WHERE oi.order_id = ?
             `, [order.id]);
             order.items = items;

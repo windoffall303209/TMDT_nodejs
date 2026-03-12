@@ -42,6 +42,13 @@
                             </div>
                             <div style="flex: 1;">
                                 <div style="font-weight: 500; color: #333;"><%= item.product_name %></div>
+                                <% if (item.variant_color || item.variant_size) { %>
+                                    <div style="color: #888; font-size: 12px; margin-top: 2px;">
+                                        <% if (item.variant_color) { %>Màu: <%= item.variant_color %><% } %>
+                                        <% if (item.variant_color && item.variant_size) { %> | <% } %>
+                                        <% if (item.variant_size) { %>Size: <%= item.variant_size %><% } %>
+                                    </div>
+                                <% } %>
                                 <div style="color: #666; font-size: 13px; margin-top: 3px;">SL: <%= item.quantity %></div>
                             </div>
                             <div style="text-align: right; font-weight: 600; color: #d32f2f;">

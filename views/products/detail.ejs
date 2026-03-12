@@ -72,19 +72,65 @@
                         <p class="product-info__price-original">
                             <%= product.price.toLocaleString('vi-VN') %>đ
                         </p>
-                        <p class="product-info__price-current">
+                        <p class="product-info__price-current" id="productPrice">
                             <%= product.final_price.toLocaleString('vi-VN') %>đ
                         </p>
                         <span class="product-info__discount-badge">
                             Giảm <%= Math.round((1 - product.final_price / product.price) * 100) %>%
                         </span>
                     <% } else { %>
-                        <p class="product-info__price-current">
+                        <p class="product-info__price-current" id="productPrice">
                             <%= (product.final_price || product.price).toLocaleString('vi-VN') %>đ
                         </p>
                     <% } %>
                 </div>
-                
+
+                <% if (product.variants && product.variants.length > 0) { %>
+                    <div class="variant-selector" style="margin: 20px 0;">
+                        <%
+                            const colors = [...new Set(product.variants.filter(v => v.color).map(v => v.color))];
+                            const sizes = [...new Set(product.variants.filter(v => v.size).map(v => v.size))];
+                        %>
+
+                        <% if (colors.length > 0) { %>
+                        <div class="variant-group" style="margin-bottom: 15px;">
+                            <label style="font-weight: 600; display: block; margin-bottom: 8px; color: #333;">Màu sắc:</label>
+                            <div class="variant-options" id="colorOptions" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                <% colors.forEach(color => { %>
+                                    <button type="button" class="variant-btn color-btn" data-color="<%= color %>"
+                                            onclick="selectColor(this, '<%= color %>')"
+                                            style="padding: 8px 18px; border: 2px solid #ddd; border-radius: 6px; background: #fff; cursor: pointer; font-size: 14px; transition: all 0.2s;">
+                                        <%= color %>
+                                    </button>
+                                <% }) %>
+                            </div>
+                        </div>
+                        <% } %>
+
+                        <% if (sizes.length > 0) { %>
+                        <div class="variant-group" style="margin-bottom: 15px;">
+                            <label style="font-weight: 600; display: block; margin-bottom: 8px; color: #333;">Kích thước:</label>
+                            <div class="variant-options" id="sizeOptions" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                <% sizes.forEach(size => { %>
+                                    <button type="button" class="variant-btn size-btn" data-size="<%= size %>"
+                                            onclick="selectSize(this, '<%= size %>')"
+                                            style="padding: 8px 18px; border: 2px solid #ddd; border-radius: 6px; background: #fff; cursor: pointer; font-size: 14px; transition: all 0.2s;">
+                                        <%= size %>
+                                    </button>
+                                <% }) %>
+                            </div>
+                        </div>
+                        <% } %>
+
+                        <div id="variantStock" style="margin-top: 10px; font-size: 14px; color: #666;"></div>
+                    </div>
+
+                    <script>
+                        window.productVariants = <%- JSON.stringify(product.variants) %>;
+                        window.productBasePrice = <%= product.final_price || product.price %>;
+                    </script>
+                <% } %>
+
                 <% if (product.description) { %>
                     <div class="product-info__description">
                         <h3 class="product-info__description-title">Mô tả sản phẩm</h3>
@@ -93,10 +139,10 @@
                 <% } %>
                 
                 <div class="product-info__actions">
-                    <button onclick="addToCart(<%= product.id %>)" class="btn product-info__action-btn product-info__action-btn--cart">
+                    <button onclick="addToCartWithVariant(<%= product.id %>)" class="btn product-info__action-btn product-info__action-btn--cart">
                         🛒 Thêm vào giỏ hàng
                     </button>
-                    <button onclick="buyNow(<%= product.id %>)" class="product-info__action-btn product-info__action-btn--buy">
+                    <button onclick="buyNowWithVariant(<%= product.id %>)" class="product-info__action-btn product-info__action-btn--buy">
                         ⚡ Mua ngay
                     </button>
                 </div>

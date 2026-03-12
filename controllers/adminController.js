@@ -201,6 +201,24 @@ exports.createProduct = async (req, res) => {
             );
         }
 
+        // Xử lý biến thể sản phẩm (variants)
+        if (req.body.variants) {
+            try {
+                const variants = JSON.parse(req.body.variants);
+                for (const variant of variants) {
+                    await Product.addVariant(product.id, {
+                        size: variant.size,
+                        color: variant.color,
+                        additional_price: variant.additional_price || 0,
+                        stock_quantity: variant.stock_quantity || 0,
+                        sku: variant.sku || null
+                    });
+                }
+            } catch (e) {
+                console.error('Error parsing variants:', e);
+            }
+        }
+
         // Redirect về trang danh sách sản phẩm
         res.redirect('/admin/products');
     } catch (error) {
@@ -227,25 +245,54 @@ exports.updateProduct = async (req, res) => {
         // Lấy ID sản phẩm từ URL params
         const { id } = req.params;
         // Lấy dữ liệu cập nhật từ body
-        const { category_id, name, slug, description, price, stock_quantity, sku, sale_id, is_featured } = req.body;
+        const { category_id, name, description, price, stock_quantity } = req.body;
 
-        // Cập nhật sản phẩm trong database
+        // Lấy sản phẩm hiện tại để giữ các field không được gửi
+        const currentProduct = await Product.findById(id);
+        if (!currentProduct) {
+            return res.status(404).json({ success: false, message: 'Sản phẩm không tồn tại' });
+        }
+
+        // Cập nhật sản phẩm trong database (giữ nguyên field nếu client không gửi)
         await Product.update(id, {
-            category_id,
-            name,
-            slug,
-            description,
-            price: parseFloat(price),
-            stock_quantity: parseInt(stock_quantity) || 0,
-            sku,
-            sale_id: sale_id || null,
-            is_featured: is_featured === 'on'
+            category_id: category_id || currentProduct.category_id,
+            name: name || currentProduct.name,
+            slug: req.body.slug || currentProduct.slug,
+            description: description !== undefined ? description : currentProduct.description,
+            price: price ? parseFloat(price) : currentProduct.price,
+            stock_quantity: stock_quantity !== undefined ? (parseInt(stock_quantity) || 0) : currentProduct.stock_quantity,
+            sku: req.body.sku !== undefined ? (req.body.sku || null) : (currentProduct.sku || null),
+            sale_id: req.body.sale_id !== undefined ? (req.body.sale_id || null) : (currentProduct.sale_id || null),
+            is_featured: req.body.is_featured !== undefined ? (req.body.is_featured === 'on' || req.body.is_featured === true) : currentProduct.is_featured
         });
 
-        // Redirect về trang danh sách
-        res.redirect('/admin/products');
+        // Xử lý biến thể sản phẩm (variants) - xóa cũ, tạo lại
+        if (req.body.variants !== undefined) {
+            const pool = require('../config/database');
+            await pool.execute('DELETE FROM product_variants WHERE product_id = ?', [id]);
+
+            if (req.body.variants && req.body.variants !== '[]') {
+                try {
+                    const variants = typeof req.body.variants === 'string' ? JSON.parse(req.body.variants) : req.body.variants;
+                    for (const variant of variants) {
+                        await Product.addVariant(id, {
+                            size: variant.size,
+                            color: variant.color,
+                            additional_price: variant.additional_price || 0,
+                            stock_quantity: variant.stock_quantity || 0,
+                            sku: variant.sku || null
+                        });
+                    }
+                } catch (e) {
+                    console.error('Error parsing variants:', e);
+                }
+            }
+        }
+
+        // Trả JSON response cho AJAX request
+        res.json({ success: true, message: 'Cập nhật sản phẩm thành công' });
     } catch (error) {
-        res.status(400).json({ message: error.message });
+        res.status(400).json({ success: false, message: error.message });
     }
 };
 
@@ -982,6 +1029,37 @@ exports.updateVoucherStatus = async (req, res) => {
         const { is_active } = req.body;
         await Voucher.updateStatus(id, is_active === 'true' || is_active === true);
         res.json({ success: true, message: 'Voucher status updated' });
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+};
+
+// =============================================================================
+// BIẾN THỂ SẢN PHẨM - PRODUCT VARIANTS
+// =============================================================================
+
+exports.getProductVariants = async (req, res) => {
+    try {
+        const variants = await Product.getVariants(req.params.id);
+        res.json({ success: true, variants });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+exports.addProductVariant = async (req, res) => {
+    try {
+        const variant = await Product.addVariant(req.params.id, req.body);
+        res.json({ success: true, variant });
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+};
+
+exports.deleteProductVariant = async (req, res) => {
+    try {
+        await Product.deleteVariant(req.params.variantId);
+        res.json({ success: true, message: 'Variant deleted' });
     } catch (error) {
         res.status(400).json({ success: false, message: error.message });
     }

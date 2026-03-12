@@ -349,15 +349,31 @@ exports.showBuyNow = async (req, res) => {
         // Lấy địa chỉ giao hàng của user
         const addresses = await Address.findByUser(req.user.id);
 
+        // Xử lý variant nếu có
+        const variantId = req.query.variant_id ? parseInt(req.query.variant_id) : null;
+        let selectedVariant = null;
+
+        if (variantId && product.variants) {
+            selectedVariant = product.variants.find(v => v.id === variantId);
+        }
+
+        // Tính giá đã bao gồm variant additional_price
+        let unitPrice = product.final_price || product.price;
+        if (selectedVariant) {
+            unitPrice += (selectedVariant.additional_price || 0);
+        }
+
         // Tạo cấu trúc giỏ hàng giả cho trang checkout
         const buyNowItem = {
             product_id: product.id,
             product_name: product.name,
             product_slug: product.slug,
             product_image: product.images && product.images.length > 0 ? product.images[0].image_url : null,
-            unit_price: product.final_price || product.price,
+            unit_price: unitPrice,
             quantity: 1,
-            subtotal: product.final_price || product.price
+            subtotal: unitPrice,
+            size: selectedVariant ? selectedVariant.size : null,
+            color: selectedVariant ? selectedVariant.color : null
         };
 
         const cart = {
@@ -372,7 +388,9 @@ exports.showBuyNow = async (req, res) => {
             product,
             addresses,
             user: req.user,
-            isBuyNow: true
+            isBuyNow: true,
+            selectedVariant,
+            variantId
         });
     } catch (error) {
         console.error('Buy now error:', error);
@@ -406,7 +424,7 @@ exports.createBuyNowOrder = async (req, res) => {
             return res.status(401).json({ message: 'Vui lòng đăng nhập' });
         }
 
-        const { product_id, quantity, address_id, payment_method, notes } = req.body;
+        const { product_id, quantity, address_id, payment_method, notes, variant_id } = req.body;
 
         // Validate dữ liệu bắt buộc
         if (!product_id || !address_id || !payment_method) {
@@ -421,6 +439,15 @@ exports.createBuyNowOrder = async (req, res) => {
             return res.status(404).json({ message: 'Không tìm thấy sản phẩm' });
         }
 
+        // Xử lý variant: điều chỉnh giá nếu có variant
+        const variantId = variant_id ? parseInt(variant_id) : null;
+        if (variantId && product.variants) {
+            const variant = product.variants.find(v => v.id === variantId);
+            if (variant && variant.additional_price) {
+                product.final_price = (product.final_price || product.price) + variant.additional_price;
+            }
+        }
+
         // Tạo đơn hàng trực tiếp từ sản phẩm (không qua giỏ hàng)
         const orderResult = await Order.createFromProduct(
             req.user.id,
@@ -428,7 +455,8 @@ exports.createBuyNowOrder = async (req, res) => {
             product,
             parseInt(quantity) || 1,
             payment_method,
-            notes
+            notes,
+            variantId
         );
 
         // Lấy thông tin đầy đủ đơn hàng

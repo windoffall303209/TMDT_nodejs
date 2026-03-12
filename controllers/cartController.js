@@ -87,7 +87,8 @@ exports.addToCart = async (req, res) => {
         const cart = await Cart.getOrCreate(userId, sessionId);
 
         // Thêm sản phẩm vào giỏ hàng
-        await Cart.addItem(cart.id, parseInt(product_id), parseInt(quantity), variant_id);
+        const safeVariantId = (variant_id != null && variant_id !== '') ? parseInt(variant_id) : null;
+        await Cart.addItem(cart.id, parseInt(product_id), parseInt(quantity), safeVariantId);
 
         // Lấy số lượng sản phẩm mới trong giỏ để cập nhật UI
         const cartCount = await Cart.getCartCount(cart.id);

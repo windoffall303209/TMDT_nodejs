@@ -12,6 +12,7 @@
         <form action="/orders/buy-now/create" method="POST" id="buyNowForm">
             <input type="hidden" name="product_id" value="<%= product.id %>">
             <input type="hidden" name="quantity" value="1">
+            <input type="hidden" name="variant_id" value="<%= typeof variantId !== 'undefined' && variantId ? variantId : '' %>">
             
             <div class="checkout-grid">
                 
@@ -30,6 +31,13 @@
                             </div>
                             <div class="order-summary__item-info">
                                 <div class="order-summary__item-name" style="font-size: 16px;"><%= product.name %></div>
+                                <% if (typeof selectedVariant !== 'undefined' && selectedVariant) { %>
+                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">
+                                        <% if (selectedVariant.color) { %>Màu: <%= selectedVariant.color %><% } %>
+                                        <% if (selectedVariant.color && selectedVariant.size) { %> | <% } %>
+                                        <% if (selectedVariant.size) { %>Size: <%= selectedVariant.size %><% } %>
+                                    </div>
+                                <% } %>
                                 <div style="margin-top: 8px;">
                                     <% if (product.price !== product.final_price && product.final_price) { %>
                                         <span style="color: #999; text-decoration: line-through; font-size: 14px;"><%= product.price.toLocaleString('vi-VN') %>đ</span>

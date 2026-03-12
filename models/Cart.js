@@ -125,7 +125,7 @@ class Cart {
             SELECT * FROM cart_items
             WHERE cart_id = ? AND product_id = ? AND (variant_id = ? OR (variant_id IS NULL AND ? IS NULL))
         `;
-        const [existing] = await pool.execute(checkQuery, [cartId, productId, variantId, variantId]);
+        const [existing] = await pool.execute(checkQuery, [cartId, productId, variantId ?? null, variantId ?? null]);
 
         if (existing.length > 0) {
             // Đã có: cập nhật số lượng (cộng thêm)
@@ -138,7 +138,7 @@ class Cart {
                 INSERT INTO cart_items (cart_id, product_id, variant_id, quantity)
                 VALUES (?, ?, ?, ?)
             `;
-            const [result] = await pool.execute(insertQuery, [cartId, productId, variantId || null, quantity]);
+            const [result] = await pool.execute(insertQuery, [cartId, productId, variantId ?? null, quantity]);
 
             // Cập nhật thời gian giỏ hàng
             await pool.execute('UPDATE cart SET updated_at = NOW() WHERE id = ?', [cartId]);
