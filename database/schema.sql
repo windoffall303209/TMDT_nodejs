@@ -412,6 +412,43 @@ CREATE TABLE email_verification_tokens (
 ) ENGINE=InnoDB;
 
 -- =============================================================================
+-- CHAT CONVERSATIONS TABLE
+-- =============================================================================
+CREATE TABLE chat_conversations (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT DEFAULT NULL,
+    session_id VARCHAR(255) DEFAULT NULL,
+    guest_name VARCHAR(100) DEFAULT 'Khách',
+    status ENUM('active', 'closed') DEFAULT 'active',
+    last_message_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_user (user_id),
+    INDEX idx_session (session_id),
+    INDEX idx_status (status),
+    INDEX idx_last_message (last_message_at)
+) ENGINE=InnoDB;
+
+-- =============================================================================
+-- CHAT MESSAGES TABLE
+-- =============================================================================
+CREATE TABLE chat_messages (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    conversation_id INT NOT NULL,
+    sender_type ENUM('customer', 'admin', 'bot') NOT NULL,
+    sender_id INT DEFAULT NULL,
+    message TEXT NOT NULL,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (conversation_id) REFERENCES chat_conversations(id) ON DELETE CASCADE,
+    FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_conversation (conversation_id),
+    INDEX idx_read (is_read),
+    INDEX idx_created (created_at)
+) ENGINE=InnoDB;
+
+-- =============================================================================
 -- END OF SCHEMA
 -- =============================================================================
 SELECT 'Database schema created successfully!' AS Status;

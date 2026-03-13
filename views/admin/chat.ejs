@@ -1,0 +1,508 @@
+<%- include('../partials/admin-header') %>
+
+<div class="admin-page">
+    <h1 class="admin-page__title">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        Quan Ly Chat
+        <% if (unreadCount > 0) { %>
+            <span style="background:#ef4444;color:white;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:600;"><%= unreadCount %> chua doc</span>
+        <% } %>
+    </h1>
+
+    <div class="admin-chat-layout">
+        <!-- Conversations List -->
+        <div class="admin-chat-list" id="chatList">
+            <div class="admin-chat-list__header">
+                <h3>Cuoc tro chuyen</h3>
+            </div>
+            <div class="admin-chat-list__items" id="chatListItems">
+                <% if (conversations.length === 0) { %>
+                    <div class="admin-chat-list__empty">
+                        <p>Chua co cuoc tro chuyen nao</p>
+                    </div>
+                <% } else { %>
+                    <% conversations.forEach(conv => { %>
+                        <div class="admin-chat-list__item <%= conv.unread_count > 0 ? 'unread' : '' %>"
+                             data-id="<%= conv.id %>"
+                             onclick="selectConversation(<%= conv.id %>)">
+                            <div class="admin-chat-list__avatar">
+                                <% if (conv.user_avatar) { %>
+                                    <img src="<%= conv.user_avatar %>" alt="">
+                                <% } else { %>
+                                    <%= (conv.user_name || conv.guest_name || 'K').charAt(0).toUpperCase() %>
+                                <% } %>
+                            </div>
+                            <div class="admin-chat-list__info">
+                                <div class="admin-chat-list__name">
+                                    <%= conv.user_name || conv.user_email || conv.guest_name || 'Khach' %>
+                                    <% if (conv.status === 'closed') { %>
+                                        <span style="color:#94a3b8;font-size:11px;">(da dong)</span>
+                                    <% } %>
+                                </div>
+                                <div class="admin-chat-list__last-msg">
+                                    <% if (conv.last_sender === 'admin') { %>
+                                        <span style="color:#3b82f6;">Ban: </span>
+                                    <% } else if (conv.last_sender === 'bot') { %>
+                                        <span style="color:#10b981;">Bot: </span>
+                                    <% } %>
+                                    <%= conv.last_message ? conv.last_message.substring(0, 50) : 'Chua co tin nhan' %>
+                                </div>
+                            </div>
+                            <% if (conv.unread_count > 0) { %>
+                                <span class="admin-chat-list__badge"><%= conv.unread_count %></span>
+                            <% } %>
+                        </div>
+                    <% }); %>
+                <% } %>
+            </div>
+        </div>
+
+        <!-- Chat Detail -->
+        <div class="admin-chat-detail" id="chatDetail">
+            <div class="admin-chat-detail__empty" id="chatDetailEmpty">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+                <p>Chon cuoc tro chuyen de xem</p>
+            </div>
+
+            <div id="chatDetailContent" style="display:none;height:100%;display:none;flex-direction:column;">
+                <!-- Chat Header -->
+                <div class="admin-chat-detail__header" id="chatDetailHeader">
+                    <div class="admin-chat-detail__user">
+                        <strong id="chatUserName">Khach</strong>
+                        <span id="chatUserEmail" style="color:#64748b;font-size:12px;"></span>
+                    </div>
+                    <div class="admin-chat-detail__actions">
+                        <button onclick="closeCurrentConversation()" class="admin-btn admin-btn--delete" title="Dong">
+                            Dong
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Messages -->
+                <div class="admin-chat-detail__messages" id="adminChatMessages"></div>
+
+                <!-- Reply Input -->
+                <div class="admin-chat-detail__input">
+                    <form onsubmit="adminReply(event)">
+                        <input type="text" id="adminReplyInput" placeholder="Nhap tin nhan tra loi..."
+                               autocomplete="off" maxlength="1000">
+                        <button type="submit" class="admin-btn admin-btn--primary">Gui</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.admin-chat-layout {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 0;
+    height: calc(100vh - 160px);
+    background: var(--admin-card-bg);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: var(--admin-shadow);
+    border: 1px solid var(--admin-border);
+}
+
+.admin-chat-list {
+    border-right: 1px solid var(--admin-border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.admin-chat-list__header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--admin-border);
+}
+
+.admin-chat-list__header h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--admin-text-primary);
+}
+
+.admin-chat-list__items {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.admin-chat-list__empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--admin-text-muted);
+    font-size: 14px;
+}
+
+.admin-chat-list__item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--admin-border);
+    transition: background 0.15s;
+}
+
+.admin-chat-list__item:hover {
+    background: var(--admin-bg);
+}
+
+.admin-chat-list__item.active {
+    background: rgba(59, 130, 246, 0.08);
+    border-left: 3px solid var(--admin-accent);
+}
+
+.admin-chat-list__item.unread {
+    background: rgba(59, 130, 246, 0.04);
+}
+
+.admin-chat-list__avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--admin-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--admin-text-secondary);
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.admin-chat-list__avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.admin-chat-list__info {
+    flex: 1;
+    min-width: 0;
+}
+
+.admin-chat-list__name {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--admin-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.admin-chat-list__last-msg {
+    font-size: 12px;
+    color: var(--admin-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+}
+
+.admin-chat-list__badge {
+    background: var(--admin-danger);
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    min-width: 22px;
+    height: 22px;
+    border-radius: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 6px;
+    flex-shrink: 0;
+}
+
+/* Chat Detail */
+.admin-chat-detail {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.admin-chat-detail__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--admin-text-muted);
+    gap: 12px;
+    font-size: 14px;
+}
+
+.admin-chat-detail__header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--admin-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.admin-chat-detail__messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: var(--admin-bg);
+}
+
+.admin-chat-msg {
+    max-width: 75%;
+    padding: 10px 16px;
+    border-radius: 12px;
+    font-size: 14px;
+    line-height: 1.5;
+    word-wrap: break-word;
+}
+
+.admin-chat-msg--customer {
+    background: white;
+    align-self: flex-start;
+    border: 1px solid var(--admin-border);
+    border-radius: 12px 12px 12px 4px;
+}
+
+.admin-chat-msg--admin {
+    background: var(--admin-accent);
+    color: white;
+    align-self: flex-end;
+    border-radius: 12px 12px 4px 12px;
+}
+
+.admin-chat-msg--bot {
+    background: #e0f2fe;
+    color: #0c4a6e;
+    align-self: flex-start;
+    border-radius: 12px 12px 12px 4px;
+}
+
+.admin-chat-msg__label {
+    font-size: 11px;
+    font-weight: 600;
+    margin-bottom: 3px;
+    opacity: 0.7;
+}
+
+.admin-chat-msg__time {
+    font-size: 10px;
+    opacity: 0.6;
+    margin-top: 4px;
+}
+
+.admin-chat-detail__input {
+    padding: 14px 20px;
+    border-top: 1px solid var(--admin-border);
+    background: white;
+}
+
+.admin-chat-detail__input form {
+    display: flex;
+    gap: 10px;
+}
+
+.admin-chat-detail__input input {
+    flex: 1;
+    padding: 10px 16px;
+    border: 1px solid var(--admin-border);
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    font-family: inherit;
+}
+
+.admin-chat-detail__input input:focus {
+    border-color: var(--admin-accent);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+@media (max-width: 768px) {
+    .admin-chat-layout {
+        grid-template-columns: 1fr;
+        height: calc(100vh - 120px);
+    }
+
+    .admin-chat-list {
+        max-height: 250px;
+        border-right: none;
+        border-bottom: 1px solid var(--admin-border);
+    }
+}
+</style>
+
+<script>
+let currentConversationId = null;
+let adminPollInterval = null;
+
+async function selectConversation(id) {
+    currentConversationId = id;
+
+    // Highlight active
+    document.querySelectorAll('.admin-chat-list__item').forEach(el => el.classList.remove('active'));
+    const activeItem = document.querySelector(`.admin-chat-list__item[data-id="${id}"]`);
+    if (activeItem) {
+        activeItem.classList.add('active');
+        activeItem.classList.remove('unread');
+        const badge = activeItem.querySelector('.admin-chat-list__badge');
+        if (badge) badge.remove();
+    }
+
+    // Show chat detail
+    document.getElementById('chatDetailEmpty').style.display = 'none';
+    const content = document.getElementById('chatDetailContent');
+    content.style.display = 'flex';
+
+    // Load messages
+    try {
+        const response = await fetch(`/chat/admin/${id}/messages`, { credentials: 'same-origin' });
+        const data = await response.json();
+
+        if (data.success) {
+            // Update header
+            const conv = data.conversation;
+            document.getElementById('chatUserName').textContent =
+                conv.user_id ? (conv.guest_name || 'Khach hang') : (conv.guest_name || 'Khach');
+            document.getElementById('chatUserEmail').textContent = '';
+
+            // Render messages
+            const container = document.getElementById('adminChatMessages');
+            container.innerHTML = '';
+            data.messages.forEach(msg => {
+                appendAdminMsg(msg);
+            });
+            container.scrollTop = container.scrollHeight;
+        }
+    } catch (error) {
+        console.error('Load messages error:', error);
+    }
+
+    // Start polling
+    startAdminPoll();
+
+    document.getElementById('adminReplyInput').focus();
+}
+
+function appendAdminMsg(msg) {
+    const container = document.getElementById('adminChatMessages');
+    const div = document.createElement('div');
+    div.className = `admin-chat-msg admin-chat-msg--${msg.sender_type}`;
+
+    let label = '';
+    if (msg.sender_type === 'bot') label = '<div class="admin-chat-msg__label">AI Bot</div>';
+    else if (msg.sender_type === 'admin') label = '<div class="admin-chat-msg__label">Admin</div>';
+
+    const time = new Date(msg.created_at);
+    const timeStr = time.getHours().toString().padStart(2,'0') + ':' + time.getMinutes().toString().padStart(2,'0');
+
+    const textDiv = document.createElement('div');
+    textDiv.textContent = msg.message;
+
+    div.innerHTML = `${label}`;
+    div.appendChild(textDiv);
+    div.innerHTML += `<div class="admin-chat-msg__time">${timeStr}</div>`;
+
+    container.appendChild(div);
+}
+
+async function adminReply(e) {
+    e.preventDefault();
+    const input = document.getElementById('adminReplyInput');
+    const message = input.value.trim();
+    if (!message || !currentConversationId) return;
+
+    input.value = '';
+
+    try {
+        const response = await fetch(`/chat/admin/${currentConversationId}/reply`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ message })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            appendAdminMsg({ sender_type: 'admin', message, created_at: new Date().toISOString() });
+            const container = document.getElementById('adminChatMessages');
+            container.scrollTop = container.scrollHeight;
+        }
+    } catch (error) {
+        if (typeof showToast === 'function') showToast('Loi gui tin nhan', 'error');
+    }
+
+    input.focus();
+}
+
+async function closeCurrentConversation() {
+    if (!currentConversationId) return;
+    try {
+        await fetch(`/chat/admin/${currentConversationId}/close`, {
+            method: 'PUT',
+            credentials: 'same-origin'
+        });
+        if (typeof showToast === 'function') showToast('Da dong cuoc tro chuyen', 'success');
+        location.reload();
+    } catch (error) {
+        if (typeof showToast === 'function') showToast('Loi dong cuoc tro chuyen', 'error');
+    }
+}
+
+function startAdminPoll() {
+    if (adminPollInterval) clearInterval(adminPollInterval);
+    adminPollInterval = setInterval(async () => {
+        if (!currentConversationId) return;
+        try {
+            const response = await fetch(`/chat/admin/${currentConversationId}/messages`, { credentials: 'same-origin' });
+            const data = await response.json();
+            if (data.success) {
+                const container = document.getElementById('adminChatMessages');
+                const currentCount = container.children.length;
+                if (data.messages.length > currentCount) {
+                    const newMsgs = data.messages.slice(currentCount);
+                    newMsgs.forEach(msg => appendAdminMsg(msg));
+                    container.scrollTop = container.scrollHeight;
+                }
+            }
+        } catch (e) {}
+    }, 3000);
+}
+
+// Refresh conversation list periodically
+setInterval(async () => {
+    try {
+        const response = await fetch('/chat/admin/conversations', { credentials: 'same-origin' });
+        const data = await response.json();
+        if (data.success && data.conversations) {
+            // Update unread badges
+            data.conversations.forEach(conv => {
+                const item = document.querySelector(`.admin-chat-list__item[data-id="${conv.id}"]`);
+                if (item && conv.unread_count > 0 && conv.id !== currentConversationId) {
+                    item.classList.add('unread');
+                    let badge = item.querySelector('.admin-chat-list__badge');
+                    if (!badge) {
+                        badge = document.createElement('span');
+                        badge.className = 'admin-chat-list__badge';
+                        item.appendChild(badge);
+                    }
+                    badge.textContent = conv.unread_count;
+                }
+            });
+        }
+    } catch (e) {}
+}, 5000);
+</script>
+
+<%- include('../partials/admin-footer') %>

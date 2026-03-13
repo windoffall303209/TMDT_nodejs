@@ -10,6 +10,7 @@ const cartRoutes = require('./cartRoutes');
 const orderRoutes = require('./orderRoutes');
 const adminRoutes = require('./adminRoutes');
 const newsletterRoutes = require('./newsletterRoutes');
+const chatRoutes = require('./chatRoutes');
 
 // Homepage
 router.get('/', optionalAuth, productController.getHomePage);
@@ -78,5 +79,6 @@ router.use('/cart', cartRoutes);
 router.use('/orders', orderRoutes);
 router.use('/admin', adminRoutes);
 router.use('/newsletter', newsletterRoutes);
+router.use('/chat', chatRoutes);
 
 module.exports = router;
