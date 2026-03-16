@@ -9,12 +9,12 @@ const Product = require('../models/Product');
 async function getSystemPrompt() {
     let productContext = '';
     try {
-        const products = await Product.findAll({ limit: 10, page: 1 });
-        if (products.products && products.products.length > 0) {
+        const bestSellers = await Product.getBestSellers(5);
+        if (bestSellers && bestSellers.length > 0) {
             productContext = '\n\nDanh sách sản phẩm hiện có:\n' +
-                products.products.map(p => `- ${p.name}: ${Number(p.price).toLocaleString('vi-VN')}đ (Còn ${p.stock_quantity} sản phẩm)`).join('\n');
+                bestSellers.map(p => `- ${p.name}: ${Number(p.price).toLocaleString('vi-VN')}đ (Còn ${p.stock_quantity} sản phẩm)`).join('\n');
         }
-    } catch (e) {}
+    } catch (e) { console.error("Lỗi lấy sản phẩm cho chatbot:", e); }
 
     return `Bạn là trợ lý bán hàng AI của cửa hàng thời trang "WIND OF FALL".
 Nhiệm vụ: tư vấn sản phẩm, hỗ trợ mua hàng, trả lời thắc mắc về đơn hàng.
