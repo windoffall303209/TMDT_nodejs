@@ -169,7 +169,11 @@ class Product {
 
         // Lấy các biến thể sản phẩm (size, color, etc.)
         const [variants] = await pool.execute(
-            'SELECT * FROM product_variants WHERE product_id = ?',
+            `SELECT pv.*, pi.image_url AS variant_image_url
+             FROM product_variants pv
+             LEFT JOIN product_images pi ON pi.id = pv.image_id
+             WHERE pv.product_id = ?
+             ORDER BY pv.color, pv.size, pv.id`,
             [id]
         );
         product.variants = variants;
@@ -590,7 +594,6 @@ class Product {
      * @returns {Promise<Object>} Thông tin ảnh vừa thêm
      */
     static async addImage(productId, imageUrl, isPrimary = false, displayOrder = 0) {
-        // Nếu đặt làm ảnh chính, bỏ flag của các ảnh khác
         if (isPrimary) {
             await pool.execute(
                 'UPDATE product_images SET is_primary = FALSE WHERE product_id = ?',
@@ -604,7 +607,23 @@ class Product {
         `;
 
         const [result] = await pool.execute(query, [productId, imageUrl, isPrimary, displayOrder]);
-        return { id: result.insertId, product_id: productId, image_url: imageUrl };
+        return { id: result.insertId, product_id: productId, image_url: imageUrl, is_primary: isPrimary, display_order: displayOrder };
+    }
+
+    static async getImages(productId) {
+        const [rows] = await pool.execute(
+            'SELECT * FROM product_images WHERE product_id = ? ORDER BY is_primary DESC, display_order ASC, id ASC',
+            [productId]
+        );
+        return rows;
+    }
+
+    static async findImageById(productId, imageId) {
+        const [rows] = await pool.execute(
+            'SELECT * FROM product_images WHERE product_id = ? AND id = ? LIMIT 1',
+            [productId, imageId]
+        );
+        return rows[0] || null;
     }
 
     // =============================================================================
@@ -633,42 +652,48 @@ class Product {
 
     static async getVariants(productId) {
         const [rows] = await pool.execute(
-            'SELECT * FROM product_variants WHERE product_id = ? ORDER BY color, size',
+            `SELECT pv.*, pi.image_url AS variant_image_url
+             FROM product_variants pv
+             LEFT JOIN product_images pi ON pi.id = pv.image_id
+             WHERE pv.product_id = ?
+             ORDER BY pv.color, pv.size, pv.id`,
             [productId]
         );
         return rows;
     }
 
     static async addVariant(productId, variantData) {
-        const { size, color, additional_price, stock_quantity, sku } = variantData;
+        const { size, color, additional_price, stock_quantity, sku, image_id } = variantData;
         const query = `
-            INSERT INTO product_variants (product_id, size, color, additional_price, stock_quantity, sku)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO product_variants (product_id, size, color, additional_price, stock_quantity, sku, image_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         `;
         const [result] = await pool.execute(query, [
             productId,
             size || null,
             color || null,
             parseFloat(additional_price) || 0,
-            parseInt(stock_quantity) || 0,
-            sku || null
+            parseInt(stock_quantity, 10) || 0,
+            sku || null,
+            image_id || null
         ]);
         return { id: result.insertId, product_id: productId, ...variantData };
     }
 
     static async updateVariant(variantId, variantData) {
-        const { size, color, additional_price, stock_quantity, sku } = variantData;
+        const { size, color, additional_price, stock_quantity, sku, image_id } = variantData;
         const query = `
             UPDATE product_variants
-            SET size = ?, color = ?, additional_price = ?, stock_quantity = ?, sku = ?
+            SET size = ?, color = ?, additional_price = ?, stock_quantity = ?, sku = ?, image_id = ?
             WHERE id = ?
         `;
         await pool.execute(query, [
             size || null,
             color || null,
             parseFloat(additional_price) || 0,
-            parseInt(stock_quantity) || 0,
+            parseInt(stock_quantity, 10) || 0,
             sku || null,
+            image_id || null,
             variantId
         ]);
         return { id: variantId, ...variantData };
@@ -678,12 +703,24 @@ class Product {
         await pool.execute('DELETE FROM product_variants WHERE id = ?', [variantId]);
     }
 
+    static async isVariantReferenced(variantId) {
+        const [rows] = await pool.execute(
+            `SELECT
+                EXISTS(SELECT 1 FROM cart_items WHERE variant_id = ? LIMIT 1) AS in_cart,
+                EXISTS(SELECT 1 FROM order_items WHERE variant_id = ? LIMIT 1) AS in_order`,
+            [variantId, variantId]
+        );
+
+        return Boolean(rows[0] && (rows[0].in_cart || rows[0].in_order));
+    }
+
     static async updateVariantStock(variantId, quantity) {
         await pool.execute(
             'UPDATE product_variants SET stock_quantity = stock_quantity - ? WHERE id = ?',
             [quantity, variantId]
         );
     }
+
 }
 
 module.exports = Product;

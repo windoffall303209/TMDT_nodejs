@@ -134,7 +134,7 @@
                                     <div class="product-info">
                                         <div class="product-info__image">
                                             <% if (product.primary_image) { %>
-                                                <img src="<%= product.primary_image %>" alt="<%= product.name %>">
+                                                <img src="<%= product.primary_image %>" alt="<%= product.name %>" loading="lazy" decoding="async">
                                             <% } else { %>
                                                 <div class="product-info__placeholder">
                                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
@@ -222,7 +222,7 @@
 
 <!-- Edit Modal -->
 <div id="editModal" class="admin-modal">
-    <div class="admin-modal__content">
+    <div class="admin-modal__content admin-modal__content--product-edit">
         <div class="admin-modal__header">
             <h3 class="admin-modal__title">Sửa Sản Phẩm</h3>
             <button class="admin-modal__close" onclick="closeEditModal()">
@@ -232,14 +232,14 @@
                 </svg>
             </button>
         </div>
-        <form id="editForm" class="admin-form">
+        <form id="editForm" class="admin-form product-edit-form">
             <input type="hidden" id="editProductId">
-            <div class="admin-form__group">
-                <label class="admin-form__label">Tên sản phẩm <span>*</span></label>
-                <input type="text" id="editName" required class="admin-form__input">
-            </div>
-            <div class="admin-form__row">
-                <div class="admin-form__group">
+            <div class="product-edit-form__grid">
+                <div class="admin-form__group product-edit-form__group--name">
+                    <label class="admin-form__label">Tên sản phẩm <span>*</span></label>
+                    <input type="text" id="editName" required class="admin-form__input">
+                </div>
+                <div class="admin-form__group product-edit-form__group--category">
                     <label class="admin-form__label">Danh mục <span>*</span></label>
                     <select id="editCategoryId" required class="admin-form__select">
                         <% if (categories && categories.length > 0) { %>
@@ -249,28 +249,27 @@
                         <% } %>
                     </select>
                 </div>
-                <div class="admin-form__group">
+                <div class="admin-form__group product-edit-form__group--price">
                     <label class="admin-form__label">Giá (VNĐ) <span>*</span></label>
                     <input type="number" id="editPrice" required class="admin-form__input">
                 </div>
-            </div>
-            <div class="admin-form__group">
-                <label class="admin-form__label">Số lượng</label>
-                <input type="number" id="editStock" value="0" class="admin-form__input">
-            </div>
-            <div class="admin-form__group">
-                <label class="admin-form__label">Mô tả</label>
-                <textarea id="editDescription" rows="3" class="admin-form__textarea"></textarea>
+                <div class="admin-form__group product-edit-form__group--stock">
+                    <label class="admin-form__label">Số lượng</label>
+                    <input type="number" id="editStock" value="0" class="admin-form__input">
+                </div>
+                <div class="admin-form__group product-edit-form__group--description">
+                    <label class="admin-form__label">Mô tả</label>
+                    <textarea id="editDescription" rows="4" class="admin-form__textarea"></textarea>
+                </div>
             </div>
 
             <!-- Biến thể sản phẩm (Edit) -->
             <input type="hidden" id="editVariantsJson" value="[]">
-            <div class="admin-form__group" style="border-top: 1px solid #eee; padding-top: 15px; margin-top: 10px;">
-                <label class="admin-form__label" style="font-size: 15px; font-weight: 600;">Biến thể sản phẩm (Size / Màu sắc)</label>
-                <small class="admin-form__hint" style="margin-bottom: 10px; display: block;">Thêm các biến thể nếu sản phẩm có nhiều size hoặc màu sắc</small>
+            <div class="admin-form__group product-edit-form__variants">
+                <label class="admin-form__label product-edit-form__variants-title">Biến thể sản phẩm (Size / Màu sắc)</label>
+                <small class="admin-form__hint product-edit-form__variants-hint">Thêm các biến thể nếu sản phẩm có nhiều size hoặc màu sắc</small>
                 <div id="editVariantsList"></div>
-                <button type="button" onclick="addVariantRow('edit')"
-                        style="margin-top: 8px; padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px;">
+                <button type="button" onclick="addVariantRow('edit')" class="product-edit-form__add-variant">
                     + Thêm biến thể
                 </button>
             </div>
@@ -315,7 +314,8 @@
             <h4 class="image-section__title">Thêm ảnh mới</h4>
             <form id="addImageForm" enctype="multipart/form-data" class="image-upload">
                 <div class="image-upload__file">
-                    <input type="file" id="newImageFile" name="image" accept="image/*" class="admin-form__input">
+                    <input type="file" id="newImageFile" name="images" accept="image/*" multiple class="admin-form__input">
+                    <small class="admin-form__hint">Có thể chọn nhiều ảnh cùng lúc</small>
                     <label class="image-upload__checkbox">
                         <input type="checkbox" id="isPrimaryImage"> Đặt làm ảnh chính
                     </label>
@@ -395,6 +395,215 @@
 .admin-form__group {
     display: flex;
     flex-direction: column;
+}
+
+.admin-modal__content--product-edit {
+    width: min(1260px, calc(100vw - 40px));
+    max-width: min(1260px, calc(100vw - 40px));
+    max-height: min(90vh, 940px);
+    overflow-y: auto;
+    padding: 30px 36px;
+}
+
+.product-edit-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.product-edit-form__grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 18px 20px;
+    align-items: start;
+}
+
+.product-edit-form__group--name {
+    grid-column: span 5;
+}
+
+.product-edit-form__group--category {
+    grid-column: span 3;
+}
+
+.product-edit-form__group--price {
+    grid-column: span 2;
+}
+
+.product-edit-form__group--stock {
+    grid-column: span 2;
+}
+
+.product-edit-form__group--description {
+    grid-column: 1 / -1;
+}
+
+.product-edit-form__group--description .admin-form__textarea {
+    min-height: 120px;
+}
+
+.product-edit-form__variants {
+    border-top: 1px solid var(--admin-border);
+    padding-top: 18px;
+    margin-top: 4px;
+}
+
+.product-edit-form__variants-title {
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.product-edit-form__variants-hint {
+    display: block;
+    margin-bottom: 12px;
+}
+
+.product-edit-form__add-variant {
+    margin-top: 12px;
+    padding: 10px 16px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.product-edit-form__add-variant:hover {
+    filter: brightness(0.97);
+}
+
+#createVariantsList,
+#editVariantsList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.variant-row {
+    display: grid !important;
+    grid-template-columns: minmax(48px, 0.4fr) minmax(66px, 0.48fr) minmax(132px, 0.95fr) minmax(55px, 0.4fr) minmax(154px, 1fr) minmax(115px, 0.72fr) minmax(220px, 1.25fr) 84px 52px;
+    gap: 10px 12px;
+    align-items: end;
+    margin-bottom: 0 !important;
+    padding: 16px !important;
+    border: 1px solid var(--admin-border) !important;
+    border-radius: 12px !important;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+}
+
+.variant-row .variant-id {
+    display: none;
+}
+
+.variant-row__field,
+.variant-row__action {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.variant-row__action {
+    justify-content: flex-end;
+}
+
+.variant-row__label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--admin-text-muted);
+}
+
+.variant-row__field--preview {
+    align-items: center;
+}
+
+.variant-row__field--preview .variant-row__label {
+    width: 100%;
+}
+
+.variant-row .variant-size,
+.variant-row .variant-color,
+.variant-row .variant-price,
+.variant-row .variant-stock,
+.variant-row .variant-sku,
+.variant-row .variant-image-select,
+.variant-row .variant-image-file {
+    width: 100% !important;
+    min-width: 0;
+    margin: 0;
+    padding: 10px 12px;
+    border: 1px solid var(--admin-border);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--admin-text-primary);
+    font-size: 13px;
+}
+
+.variant-row .variant-size,
+.variant-row .variant-color,
+.variant-row .variant-price,
+.variant-row .variant-stock,
+.variant-row .variant-sku,
+.variant-row .variant-image-select {
+    min-height: 42px;
+}
+
+.variant-row .variant-image-file {
+    font-size: 12px;
+    padding: 9px 10px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 10px;
+    background: #fff;
+}
+
+.variant-row .variant-image-file::file-selector-button {
+    margin-right: 10px;
+    padding: 7px 12px;
+    border: none;
+    border-radius: 8px;
+    background: #e2e8f0;
+    color: var(--admin-text-primary);
+    cursor: pointer;
+}
+
+.variant-row .variant-image-preview {
+    width: 60px;
+    height: 60px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.variant-row .variant-image-preview img {
+    width: 60px !important;
+    height: 60px !important;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 1px solid #dbe1ea;
+}
+
+.variant-row .variant-remove-btn {
+    width: 100%;
+    min-height: 42px;
+    align-self: auto;
+    border: none;
+    border-radius: 8px !important;
+    background: #ef4444;
+    color: white;
+    font-weight: 700;
+    margin-top: auto;
+    cursor: pointer;
+    transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.variant-row .variant-remove-btn:hover {
+    filter: brightness(0.95);
+    transform: translateY(-1px);
 }
 
 .admin-form__hint {
@@ -503,13 +712,23 @@
 .admin-modal__header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
+    position: relative;
     padding-bottom: 20px;
     border-bottom: 1px solid var(--admin-border);
     margin-bottom: 20px;
 }
 
+.admin-modal__header .admin-modal__title {
+    margin-bottom: 0;
+    padding-inline: 48px;
+}
+
 .admin-modal__close {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
     width: 36px;
     height: 36px;
     border: none;
@@ -727,9 +946,79 @@
 }
 
 /* Responsive */
+@media (max-width: 1200px) {
+    .admin-modal__content--product-edit {
+        width: min(1180px, calc(100vw - 24px));
+        max-width: min(1180px, calc(100vw - 24px));
+        padding: 24px 26px;
+    }
+
+    .product-edit-form__grid {
+        grid-template-columns: repeat(8, minmax(0, 1fr));
+    }
+
+    .product-edit-form__group--name {
+        grid-column: span 4;
+    }
+
+    .product-edit-form__group--category {
+        grid-column: span 2;
+    }
+
+    .product-edit-form__group--price,
+    .product-edit-form__group--stock {
+        grid-column: span 1;
+    }
+
+    .variant-row {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+    }
+}
+
 @media (max-width: 768px) {
     .admin-form__row {
         grid-template-columns: 1fr;
+    }
+
+    .admin-modal__content--product-edit {
+        width: calc(100vw - 16px);
+        max-width: calc(100vw - 16px);
+        padding: 18px;
+    }
+
+    .product-edit-form__grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+
+    .product-edit-form__group--name,
+    .product-edit-form__group--category,
+    .product-edit-form__group--price,
+    .product-edit-form__group--stock,
+    .product-edit-form__group--description {
+        grid-column: 1 / -1;
+    }
+
+    .variant-row {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .variant-row__field--image,
+    .variant-row__field--upload,
+    .variant-row__field--preview,
+    .variant-row__action {
+        grid-column: 1 / -1;
+    }
+
+    .variant-row .variant-image-preview {
+        width: 56px;
+        height: 56px;
+    }
+
+    .variant-row .variant-image-preview img {
+        width: 56px !important;
+        height: 56px !important;
     }
 
     .images-grid {

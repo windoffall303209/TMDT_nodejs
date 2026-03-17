@@ -1,69 +1,150 @@
 // Product Detail page JavaScript
 // Extracted from views/products/detail.ejs
 
-// Gallery state - will be initialized from EJS data
 let currentImageIndex = 0;
 let productImages = [];
 
-/**
- * Initialize the product gallery
- * @param {string[]} images - Array of image URLs
- */
-function initProductGallery(images) {
-    productImages = images || [];
+function normalizeImageUrl(imageUrl) {
+    if (!imageUrl) return '';
+
+    try {
+        return new URL(imageUrl, window.location.origin).href;
+    } catch (error) {
+        return String(imageUrl);
+    }
 }
 
-/**
- * Select image by index
- * @param {number} index - Image index
- * @param {string} imageUrl - Image URL
- */
-function selectImage(index, imageUrl) {
-    currentImageIndex = index;
-    const mainImage = document.getElementById('mainImage');
+function getMainImageElement() {
+    return document.getElementById('mainImage');
+}
+
+function getFallbackElement() {
+    return document.getElementById('fallbackIcon');
+}
+
+function showMainImage() {
+    const mainImage = getMainImageElement();
+    const fallback = getFallbackElement();
+
     if (mainImage) {
-        mainImage.src = imageUrl;
+        mainImage.style.display = 'block';
     }
-    
-    // Update thumbnail borders
-    document.querySelectorAll('.gallery-thumb').forEach((thumb, i) => {
-        thumb.style.borderColor = i === index ? '#667eea' : 'transparent';
+    if (fallback) {
+        fallback.style.display = 'none';
+    }
+}
+
+function showGalleryFallback() {
+    const mainImage = getMainImageElement();
+    const fallback = getFallbackElement();
+
+    if (mainImage) {
+        mainImage.style.display = 'none';
+    }
+    if (fallback) {
+        fallback.style.display = 'flex';
+    }
+}
+
+function scrollActiveThumbIntoView(index) {
+    const activeThumb = document.querySelectorAll('.product-gallery__thumb')[index];
+    activeThumb?.scrollIntoView({
+        block: 'nearest',
+        inline: 'nearest',
+        behavior: 'smooth'
     });
-    
-    // Update counter
+}
+
+function initProductGallery(images) {
+    productImages = Array.isArray(images) ? images.filter(Boolean) : [];
+
+    bindGalleryEvents();
+
+    const mainImage = getMainImageElement();
+    if (!mainImage || productImages.length === 0) {
+        return;
+    }
+
+    const currentSrc = normalizeImageUrl(
+        mainImage.getAttribute('src') || mainImage.src || window.productInitialImage
+    );
+
+    const initialIndex = productImages.findIndex(imageUrl => normalizeImageUrl(imageUrl) === currentSrc);
+    currentImageIndex = initialIndex >= 0 ? initialIndex : 0;
+
+    if (initialIndex === -1 && productImages[currentImageIndex]) {
+        mainImage.src = productImages[currentImageIndex];
+    }
+
+    updateGalleryThumbState(currentImageIndex);
+
+    if (mainImage.complete) {
+        if (mainImage.naturalWidth > 0) {
+            showMainImage();
+        } else {
+            showGalleryFallback();
+        }
+    }
+}
+
+function updateGalleryThumbState(index) {
+    document.querySelectorAll('.product-gallery__thumb').forEach((thumb, thumbIndex) => {
+        thumb.classList.toggle('product-gallery__thumb--active', thumbIndex === index);
+    });
+
     const counter = document.getElementById('currentIndex');
     if (counter) counter.textContent = index + 1;
+
+    scrollActiveThumbIntoView(index);
 }
 
-/**
- * Show previous image
- */
+function selectImage(index, imageUrl) {
+    if (productImages.length === 0) return;
+
+    const normalizedTarget = normalizeImageUrl(imageUrl || productImages[index]);
+    const resolvedIndex = Number.isInteger(index) && index >= 0 && index < productImages.length
+        ? index
+        : productImages.findIndex(url => normalizeImageUrl(url) === normalizedTarget);
+
+    const nextIndex = resolvedIndex >= 0 ? resolvedIndex : 0;
+    const nextImageUrl = productImages[nextIndex] || imageUrl;
+
+    currentImageIndex = nextIndex;
+    const mainImage = document.getElementById('mainImage');
+    if (mainImage) {
+        if (normalizeImageUrl(mainImage.getAttribute('src') || mainImage.src) !== normalizeImageUrl(nextImageUrl)) {
+            mainImage.src = nextImageUrl;
+        }
+        showMainImage();
+    }
+
+    updateGalleryThumbState(nextIndex);
+}
+
+function switchGalleryToImage(imageUrl) {
+    if (!imageUrl || !productImages.length) return;
+    const normalizedTarget = normalizeImageUrl(imageUrl);
+    const index = productImages.findIndex(url => normalizeImageUrl(url) === normalizedTarget);
+    if (index >= 0) {
+        selectImage(index, productImages[index]);
+    }
+}
+
 function prevImage() {
     if (productImages.length === 0) return;
     currentImageIndex = (currentImageIndex - 1 + productImages.length) % productImages.length;
     selectImage(currentImageIndex, productImages[currentImageIndex]);
 }
 
-/**
- * Show next image
- */
 function nextImage() {
     if (productImages.length === 0) return;
     currentImageIndex = (currentImageIndex + 1) % productImages.length;
     selectImage(currentImageIndex, productImages[currentImageIndex]);
 }
 
-/**
- * Buy now - redirect to buy now page
- * @param {number} productId - Product ID
- */
 function buyNow(productId) {
     window.location.href = '/orders/buy-now/' + productId;
 }
-
-// =============================================================================
-// VARIANT SELECTION - CHỌN BIẾN THỂ SẢN PHẨM
-// =============================================================================
 
 let selectedColor = null;
 let selectedSize = null;
@@ -104,7 +185,6 @@ function resolveVariant() {
     const hasColors = colors.length > 0;
     const hasSizes = sizes.length > 0;
 
-    // Find matching variant
     const match = variants.find(v => {
         const colorMatch = !hasColors || v.color === selectedColor;
         const sizeMatch = !hasSizes || v.size === selectedSize;
@@ -114,14 +194,12 @@ function resolveVariant() {
     if (match) {
         selectedVariantId = match.id;
 
-        // Update displayed price
         const newPrice = window.productBasePrice + (match.additional_price || 0);
         const priceEl = document.getElementById('productPrice');
         if (priceEl) {
             priceEl.textContent = newPrice.toLocaleString('vi-VN') + 'đ';
         }
 
-        // Show stock for this variant
         const stockEl = document.getElementById('variantStock');
         if (stockEl) {
             if (match.stock_quantity > 0) {
@@ -131,6 +209,10 @@ function resolveVariant() {
                 stockEl.textContent = 'Hết hàng';
                 stockEl.style.color = '#c62828';
             }
+        }
+
+        if (match.variant_image_url) {
+            switchGalleryToImage(match.variant_image_url);
         }
     } else {
         selectedVariantId = null;
@@ -145,7 +227,6 @@ function addToCartWithVariant(productId) {
         showNotification('Vui lòng chọn phân loại sản phẩm', 'warning');
         return;
     }
-    // main.js addToCart(productId, variantId) — 2-arg path maps productId→arg1, variantId→arg2
     addToCart(productId, selectedVariantId);
 }
 
@@ -158,3 +239,44 @@ function buyNowWithVariant(productId) {
     const variantParam = selectedVariantId ? '?variant_id=' + selectedVariantId : '';
     window.location.href = '/orders/buy-now/' + productId + variantParam;
 }
+
+function bindGalleryEvents() {
+    const mainImage = getMainImageElement();
+    if (mainImage && mainImage.dataset.galleryBound !== 'true') {
+        mainImage.dataset.galleryBound = 'true';
+        mainImage.addEventListener('load', showMainImage);
+        mainImage.addEventListener('error', showGalleryFallback);
+    }
+
+    document.querySelectorAll('.product-gallery__thumb').forEach((thumb, thumbIndex) => {
+        if (thumb.dataset.galleryBound === 'true') return;
+
+        thumb.dataset.galleryBound = 'true';
+        thumb.addEventListener('click', () => {
+            const thumbIndexValue = parseInt(thumb.dataset.index, 10);
+            const imageUrl = thumb.dataset.imageUrl || productImages[thumbIndex] || thumb.getAttribute('src');
+            selectImage(Number.isNaN(thumbIndexValue) ? thumbIndex : thumbIndexValue, imageUrl);
+        });
+    });
+
+    document.querySelectorAll('[data-gallery-nav]').forEach(button => {
+        if (button.dataset.galleryBound === 'true') return;
+
+        button.dataset.galleryBound = 'true';
+        button.addEventListener('click', () => {
+            if (button.dataset.galleryNav === 'prev') {
+                prevImage();
+            } else {
+                nextImage();
+            }
+        });
+    });
+}
+
+window.selectImage = selectImage;
+window.prevImage = prevImage;
+window.nextImage = nextImage;
+
+document.addEventListener('DOMContentLoaded', () => {
+    initProductGallery(window.productImageUrls || []);
+});

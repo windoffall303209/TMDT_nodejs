@@ -1,117 +1,99 @@
 require('dotenv').config();
-const express = require('express');
-const path = require('path');
-const cookieParser = require('cookie-parser');
-const session = require('express-session');
-const helmet = require('helmet');
-const cors = require('cors');
-const bodyParser = require('body-parser');
-const { optionalAuth } = require('./middleware/auth');
+const app = require('./app');
 
-// Initialize app
-const app = express();
 const PORT = process.env.PORT || 3000;
+let server = null;
 
-// Security middleware
-app.use(helmet({
-    contentSecurityPolicy: {
-        directives: {
-            defaultSrc: ["'self'"],
-            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-            scriptSrc: ["'self'", "'unsafe-inline'"],
-            scriptSrcAttr: ["'unsafe-inline'"],
-            fontSrc: ["'self'", "https://fonts.gstatic.com"],
-            imgSrc: ["'self'", "data:", "https:"],
-            connectSrc: ["'self'"]
-        }
+function formatStartupMessage(port) {
+    const emailConfigured = Boolean(process.env.RESEND_API_KEY);
+    const environment = process.env.NODE_ENV || 'development';
+
+    return [
+        'Fashion Store E-commerce Server',
+        `Server running on port ${port}`,
+        `Environment: ${environment}`,
+        `Local: http://localhost:${port}`,
+        `Email (Resend): ${emailConfigured ? 'configured' : 'not configured'}`,
+        'Payment: VNPay, MoMo, COD'
+    ].join('\n');
+}
+
+function startServer(port = PORT) {
+    if (server && server.listening) {
+        return Promise.resolve(server);
     }
-}));
 
-// CORS
-app.use(cors());
+    return new Promise((resolve, reject) => {
+        const instance = app.listen(port);
 
-// Body parser
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
+        const handleError = (error) => {
+            instance.off('listening', handleListening);
+            reject(error);
+        };
 
-// Cookie parser
-app.use(cookieParser());
+        const handleListening = () => {
+            instance.off('error', handleError);
+            server = instance;
 
-// Session - shared across all tabs in same browser
-app.use(session({
-    secret: process.env.SESSION_SECRET || 'your-secret-key',
-    resave: false,
-    saveUninitialized: true,
-    name: 'sessionId', // Explicit cookie name
-    cookie: {
-        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days for guest cart
-        httpOnly: true,
-        sameSite: 'lax', // Ensures cookie is sent with same-site requests
-        secure: process.env.NODE_ENV === 'production' // HTTPS only in production
+            const address = server.address();
+            const listeningPort = typeof address === 'object' && address ? address.port : port;
+
+            console.log(formatStartupMessage(listeningPort));
+            resolve(server);
+        };
+
+        instance.once('error', handleError);
+        instance.once('listening', handleListening);
+    });
+}
+
+function stopServer() {
+    if (!server) {
+        return Promise.resolve();
     }
-}));
 
-// View engine setup
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
+    return new Promise((resolve, reject) => {
+        server.close((error) => {
+            if (error) {
+                return reject(error);
+            }
 
-// Static files
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Global auth check - populate req.user from JWT token for all requests
-app.use(optionalAuth);
-
-// Make user available to all views
-app.use((req, res, next) => {
-    res.locals.user = req.user || null;
-    next();
-});
-
-// Import routes
-const routes = require('./routes');
-app.use('/', routes);
-
-// 404 handler
-app.use((req, res) => {
-    res.status(404).render('error', {
-        message: 'Page not found',
-        user: req.user || null
+            server = null;
+            resolve();
+        });
     });
-});
+}
 
-// Error handler
-app.use((err, req, res, next) => {
-    console.error('Error:', err);
-    
-    res.status(err.status || 500).render('error', {
-        message: err.message || 'Something went wrong',
-        user: req.user || null
-    });
-});
+async function shutdown(signal) {
+    console.log(`${signal} received. Shutting down gracefully...`);
 
-// Start server
-app.listen(PORT, () => {
-    console.log(`
-    ╔════════════════════════════════════════╗
-    ║   🛍️  Fashion Store E-commerce Server  ║
-    ╠════════════════════════════════════════╣
-    ║   Server running on port ${PORT}        ║
-    ║   Environment: ${process.env.NODE_ENV || 'development'}                  ║
-    ║                                        ║
-    ║   🌐 Local: http://localhost:${PORT}     ║
-    ║   📧 Email: ${process.env.EMAIL_USER ? '✅ Configured' : '❌ Not configured'}    ║
-    ║   💳 Payment: VNPay, MoMo, COD         ║
-    ╚════════════════════════════════════════╝
-    `);
-});
-
-// Graceful shutdown
-process.on('SIGTERM', () => {
-    console.log('SIGTERM received. Shutting down gracefully...');
-    server.close(() => {
+    try {
+        await stopServer();
         console.log('Server closed');
         process.exit(0);
-    });
+    } catch (error) {
+        console.error('Graceful shutdown failed:', error);
+        process.exit(1);
+    }
+}
+
+process.once('SIGTERM', () => {
+    shutdown('SIGTERM');
 });
 
-module.exports = app;
+process.once('SIGINT', () => {
+    shutdown('SIGINT');
+});
+
+if (require.main === module) {
+    startServer().catch((error) => {
+        console.error('Server failed to start:', error);
+        process.exit(1);
+    });
+}
+
+module.exports = {
+    app,
+    startServer,
+    stopServer
+};

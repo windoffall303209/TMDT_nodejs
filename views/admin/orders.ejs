@@ -287,13 +287,23 @@
 .admin-modal__header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
+    position: relative;
     padding-bottom: 20px;
     border-bottom: 1px solid var(--admin-border);
     margin-bottom: 20px;
 }
 
+.admin-modal__header .admin-modal__title {
+    margin-bottom: 0;
+    padding-inline: 48px;
+}
+
 .admin-modal__close {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
     width: 36px;
     height: 36px;
     border: none;

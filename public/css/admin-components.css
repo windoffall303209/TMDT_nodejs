@@ -16,7 +16,10 @@
     margin: 0 0 32px 0;
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 12px;
+    text-align: center;
+    flex-wrap: wrap;
 }
 
 /* =============================================================================
@@ -417,7 +420,10 @@
     margin: 0 0 24px 0;
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 10px;
+    text-align: center;
+    width: 100%;
 }
 
 .admin-modal__buttons {

@@ -1,64 +1,230 @@
-// Chat Widget JavaScript
-let chatOpen = false;
-let chatLoaded = false;
+const chatState = {
+    open: false,
+    loaded: false,
+    pollInterval: null,
+    badgeInterval: null,
+    pollErrors: 0,
+    renderedMessageIds: new Set(),
+    conversation: null
+};
 
-function toggleChatWidget() {
-    const box = document.getElementById('chatBox');
-    const btn = document.getElementById('chatToggleBtn');
-    chatOpen = !chatOpen;
+function getChatElements() {
+    return {
+        box: document.getElementById('chatBox'),
+        toggleButton: document.getElementById('chatToggleBtn'),
+        badge: document.getElementById('chatBadge'),
+        messages: document.getElementById('chatMessages'),
+        input: document.getElementById('chatInput'),
+        sendButton: document.getElementById('chatSendBtn')
+    };
+}
 
-    if (chatOpen) {
-        box.style.display = 'flex';
-        btn.style.display = 'none';
-        if (!chatLoaded) {
-            loadChatHistory();
-            chatLoaded = true;
+function updateChatBadge(count) {
+    const { badge } = getChatElements();
+    if (!badge) {
+        return;
+    }
+
+    if (!count || count <= 0 || chatState.open) {
+        badge.style.display = 'none';
+        badge.textContent = '0';
+        return;
+    }
+
+    badge.style.display = 'flex';
+    badge.textContent = String(count);
+}
+
+async function refreshChatBadge() {
+    if (chatState.open) {
+        updateChatBadge(0);
+        return;
+    }
+
+    try {
+        const response = await fetch('/chat/unread-count', { credentials: 'same-origin' });
+        if (!response.ok) {
+            return;
         }
-        document.getElementById('chatInput').focus();
-        // Start polling for new messages
-        startChatPolling();
-    } else {
-        box.style.display = 'none';
-        btn.style.display = 'flex';
-        stopChatPolling();
+
+        const data = await response.json();
+        if (data.success) {
+            updateChatBadge(data.count || 0);
+        }
+    } catch (error) {
+        console.error('Refresh chat badge error:', error);
     }
 }
 
-// Load chat history
+function formatChatTime(date) {
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+}
+
+function scrollToBottom() {
+    const { messages } = getChatElements();
+    if (!messages) {
+        return;
+    }
+
+    setTimeout(() => {
+        messages.scrollTop = messages.scrollHeight;
+    }, 50);
+}
+
+function buildMessageLabel(type) {
+    if (type === 'admin') {
+        return 'Admin';
+    }
+
+    if (type === 'bot') {
+        return 'Trợ lý AI';
+    }
+
+    if (type === 'system') {
+        return 'Hệ thống';
+    }
+
+    return '';
+}
+
+function appendMessage(type, text, time, options = {}) {
+    const { messages } = getChatElements();
+    if (!messages) {
+        return;
+    }
+
+    if (options.messageId && chatState.renderedMessageIds.has(options.messageId)) {
+        return;
+    }
+
+    if (options.messageId) {
+        chatState.renderedMessageIds.add(options.messageId);
+    }
+
+    const wrapper = document.createElement('div');
+    wrapper.className = `chat-msg chat-msg--${type}`;
+    if (options.messageId) {
+        wrapper.dataset.messageId = String(options.messageId);
+    }
+
+    const labelText = options.label || buildMessageLabel(type);
+    if (labelText) {
+        const label = document.createElement('div');
+        label.className = 'chat-msg__label';
+        label.textContent = labelText;
+        wrapper.appendChild(label);
+    }
+
+    const messageText = document.createElement('div');
+    messageText.textContent = text;
+    wrapper.appendChild(messageText);
+
+    const timeElement = document.createElement('div');
+    timeElement.className = 'chat-msg__time';
+    timeElement.textContent = time ? formatChatTime(new Date(time)) : formatChatTime(new Date());
+    wrapper.appendChild(timeElement);
+
+    messages.appendChild(wrapper);
+    scrollToBottom();
+}
+
+function appendMessageRecord(message) {
+    if (!message || message.sender_type === 'customer' && chatState.renderedMessageIds.has(message.id)) {
+        return;
+    }
+
+    appendMessage(message.sender_type, message.message, message.created_at, {
+        messageId: message.id
+    });
+}
+
+function showTyping() {
+    hideTyping();
+
+    const { messages } = getChatElements();
+    if (!messages) {
+        return;
+    }
+
+    const typing = document.createElement('div');
+    typing.className = 'chat-typing';
+    typing.id = 'chatTypingIndicator';
+    typing.innerHTML = '<span></span><span></span><span></span>';
+    messages.appendChild(typing);
+    scrollToBottom();
+}
+
+function hideTyping() {
+    const typing = document.getElementById('chatTypingIndicator');
+    if (typing) {
+        typing.remove();
+    }
+}
+
+function syncInputState() {
+    const { input, sendButton } = getChatElements();
+    if (!input || !sendButton) {
+        return;
+    }
+
+    const isManualMode = chatState.conversation?.handling_mode === 'manual';
+    input.placeholder = isManualMode
+        ? 'Nhập tin nhắn để admin hỗ trợ...'
+        : 'Nhập tin nhắn...';
+
+    input.disabled = false;
+    sendButton.disabled = false;
+}
+
 async function loadChatHistory() {
+    const { messages } = getChatElements();
+    if (!messages) {
+        return;
+    }
+
     try {
         const response = await fetch('/chat/messages', { credentials: 'same-origin' });
         const data = await response.json();
 
-        if (data.success && data.messages.length > 0) {
-            const container = document.getElementById('chatMessages');
-            // Keep welcome message, add history
-            data.messages.forEach(msg => {
-                appendMessage(msg.sender_type, msg.message, msg.created_at);
-            });
-            scrollToBottom();
+        if (!data.success) {
+            return;
         }
+
+        chatState.conversation = data.conversation || null;
+        chatState.renderedMessageIds.clear();
+        messages.querySelectorAll('.chat-msg, .chat-typing').forEach((element) => element.remove());
+
+        data.messages.forEach((message) => {
+            appendMessageRecord(message);
+        });
+
+        syncInputState();
+        chatState.loaded = true;
+        updateChatBadge(0);
+        scrollToBottom();
     } catch (error) {
         console.error('Load chat history error:', error);
     }
 }
 
-// Send message
-async function sendChatMessage(e) {
-    e.preventDefault();
-    const input = document.getElementById('chatInput');
-    const sendBtn = document.getElementById('chatSendBtn');
+async function sendChatMessage(event) {
+    event.preventDefault();
+
+    const { input, sendButton } = getChatElements();
+    if (!input || !sendButton) {
+        return;
+    }
+
     const message = input.value.trim();
+    if (!message) {
+        return;
+    }
 
-    if (!message) return;
-
-    // Show customer message immediately
-    appendMessage('customer', message);
+    appendMessage('customer', message, new Date().toISOString());
     input.value = '';
-    sendBtn.disabled = true;
-    scrollToBottom();
-
-    // Show typing indicator
+    sendButton.disabled = true;
     showTyping();
 
     try {
@@ -72,119 +238,153 @@ async function sendChatMessage(e) {
         const data = await response.json();
         hideTyping();
 
-        if (data.success && data.botMessage) {
-            appendMessage(data.botMessage.sender_type, data.botMessage.message);
+        if (!response.ok || !data.success) {
+            appendMessage('system', data.message || 'Không thể gửi tin nhắn lúc này.', new Date().toISOString());
+            sendButton.disabled = false;
+            input.focus();
+            return;
         }
+
+        if (data.customerMessage?.id) {
+            chatState.renderedMessageIds.add(data.customerMessage.id);
+        }
+
+        chatState.conversation = {
+            id: data.conversationId || chatState.conversation?.id || null,
+            status: 'active',
+            handling_mode: data.manualMode ? 'manual' : 'ai'
+        };
+
+        if (data.notice) {
+            appendMessage('system', data.notice, new Date().toISOString());
+        }
+
+        if (data.botMessage) {
+            appendMessageRecord(data.botMessage);
+        }
+
+        syncInputState();
     } catch (error) {
         hideTyping();
-        appendMessage('bot', 'Xin loi, co loi xay ra. Vui long thu lai!');
+        appendMessage('system', 'Xin lỗi, có lỗi xảy ra. Vui lòng thử lại!', new Date().toISOString());
     }
 
-    sendBtn.disabled = false;
+    sendButton.disabled = false;
     input.focus();
     scrollToBottom();
 }
 
-// Append message to chat
-function appendMessage(type, text, time) {
-    const container = document.getElementById('chatMessages');
-    const div = document.createElement('div');
-    div.className = `chat-msg chat-msg--${type}`;
-
-    let label = '';
-    if (type === 'admin') {
-        label = '<div class="chat-msg__label">Admin</div>';
-    }
-
-    const timeStr = time ? formatChatTime(new Date(time)) : formatChatTime(new Date());
-    div.innerHTML = `${label}<div>${escapeHtml(text)}</div><div class="chat-msg__time">${timeStr}</div>`;
-    container.appendChild(div);
-    scrollToBottom();
-}
-
-// Show typing indicator
-function showTyping() {
-    hideTyping();
-    const container = document.getElementById('chatMessages');
-    const div = document.createElement('div');
-    div.className = 'chat-typing';
-    div.id = 'chatTypingIndicator';
-    div.innerHTML = '<span></span><span></span><span></span>';
-    container.appendChild(div);
-    scrollToBottom();
-}
-
-function hideTyping() {
-    const el = document.getElementById('chatTypingIndicator');
-    if (el) el.remove();
-}
-
-// Scroll to bottom
-function scrollToBottom() {
-    const container = document.getElementById('chatMessages');
-    setTimeout(() => {
-        container.scrollTop = container.scrollHeight;
-    }, 50);
-}
-
-// Format time
-function formatChatTime(date) {
-    const h = date.getHours().toString().padStart(2, '0');
-    const m = date.getMinutes().toString().padStart(2, '0');
-    return `${h}:${m}`;
-}
-
-// Escape HTML
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-// Polling for new admin messages
-let chatPollInterval = null;
-let lastMessageCount = 0;
-let chatPollErrors = 0;
-
-function startChatPolling() {
-    if (chatPollInterval) return;
-    chatPollErrors = 0;
-    chatPollInterval = setInterval(pollNewMessages, 5000);
-}
-
-function stopChatPolling() {
-    if (chatPollInterval) {
-        clearInterval(chatPollInterval);
-        chatPollInterval = null;
-    }
-}
-
 async function pollNewMessages() {
-    if (!chatOpen) return;
-    // Stop polling after 3 consecutive errors
-    if (chatPollErrors >= 3) {
+    if (!chatState.open) {
+        return;
+    }
+
+    if (chatState.pollErrors >= 3) {
         stopChatPolling();
         return;
     }
+
     try {
         const response = await fetch('/chat/messages', { credentials: 'same-origin' });
         if (!response.ok) {
-            chatPollErrors++;
+            chatState.pollErrors += 1;
             return;
         }
-        const data = await response.json();
-        chatPollErrors = 0; // Reset on success
 
-        if (data.success && data.messages.length > lastMessageCount) {
-            const newMessages = data.messages.slice(lastMessageCount);
-            newMessages.forEach(msg => {
-                if (msg.sender_type === 'admin') {
-                    appendMessage('admin', msg.message, msg.created_at);
+        const data = await response.json();
+        if (!data.success) {
+            chatState.pollErrors += 1;
+            return;
+        }
+
+        chatState.pollErrors = 0;
+        chatState.conversation = data.conversation || null;
+
+        let hasNewSupportMessage = false;
+        data.messages.forEach((message) => {
+            if (message.sender_type === 'customer') {
+                if (message.id) {
+                    chatState.renderedMessageIds.add(message.id);
                 }
-            });
-            lastMessageCount = data.messages.length;
+                return;
+            }
+
+            if (!chatState.renderedMessageIds.has(message.id)) {
+                appendMessageRecord(message);
+                hasNewSupportMessage = true;
+            }
+        });
+
+        syncInputState();
+        updateChatBadge(0);
+
+        if (hasNewSupportMessage) {
+            scrollToBottom();
         }
     } catch (error) {
-        chatPollErrors++;
+        chatState.pollErrors += 1;
     }
 }
+
+function startChatPolling() {
+    if (chatState.pollInterval) {
+        return;
+    }
+
+    chatState.pollErrors = 0;
+    chatState.pollInterval = setInterval(pollNewMessages, 5000);
+}
+
+function stopChatPolling() {
+    if (chatState.pollInterval) {
+        clearInterval(chatState.pollInterval);
+        chatState.pollInterval = null;
+    }
+}
+
+function toggleChatWidget() {
+    const { box, toggleButton, input } = getChatElements();
+    if (!box || !toggleButton) {
+        return;
+    }
+
+    chatState.open = !chatState.open;
+
+    if (chatState.open) {
+        box.style.display = 'flex';
+        toggleButton.style.display = 'none';
+
+        if (!chatState.loaded) {
+            loadChatHistory();
+        }
+
+        startChatPolling();
+        refreshChatBadge();
+        input?.focus();
+        return;
+    }
+
+    box.style.display = 'none';
+    toggleButton.style.display = 'flex';
+    stopChatPolling();
+    refreshChatBadge();
+}
+
+function initChatWidget() {
+    const { toggleButton } = getChatElements();
+    if (!toggleButton) {
+        return;
+    }
+
+    refreshChatBadge();
+
+    if (!chatState.badgeInterval) {
+        chatState.badgeInterval = setInterval(() => {
+            if (!chatState.open) {
+                refreshChatBadge();
+            }
+        }, 15000);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', initChatWidget);

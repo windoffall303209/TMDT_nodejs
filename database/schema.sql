@@ -126,6 +126,7 @@ CREATE TABLE product_images (
 CREATE TABLE product_variants (
     id INT AUTO_INCREMENT PRIMARY KEY,
     product_id INT NOT NULL,
+    image_id INT NULL,
     size VARCHAR(50),
     color VARCHAR(50),
     additional_price DECIMAL(10, 2) DEFAULT 0,
@@ -133,7 +134,9 @@ CREATE TABLE product_variants (
     sku VARCHAR(100) UNIQUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
-    INDEX idx_product (product_id)
+    FOREIGN KEY (image_id) REFERENCES product_images(id) ON DELETE SET NULL,
+    INDEX idx_product (product_id),
+    INDEX idx_variant_image (image_id)
 ) ENGINE=InnoDB;
 
 -- =============================================================================
@@ -420,6 +423,7 @@ CREATE TABLE chat_conversations (
     session_id VARCHAR(255) DEFAULT NULL,
     guest_name VARCHAR(100) DEFAULT 'Khách',
     status ENUM('active', 'closed') DEFAULT 'active',
+    handling_mode ENUM('ai', 'manual') DEFAULT 'ai',
     last_message_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

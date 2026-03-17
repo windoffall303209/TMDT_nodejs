@@ -15,14 +15,20 @@ const pool = mysql.createPool({
     keepAliveInitialDelay: 0
 });
 
-// Test connection
-pool.getConnection()
-    .then(connection => {
-        console.log('✅ Database connected successfully');
-        connection.release();
-    })
-    .catch(err => {
-        console.error('❌ Database connection failed:', err.message);
-    });
+const shouldProbeConnection =
+    process.env.NODE_ENV !== 'test' &&
+    process.env.SKIP_DB_CONNECTION_PROBE !== 'true';
+
+// Skip eager connection probes in tests so the app can be imported safely.
+if (shouldProbeConnection) {
+    pool.getConnection()
+        .then(connection => {
+            console.log('Database connected successfully');
+            connection.release();
+        })
+        .catch(err => {
+            console.error('Database connection failed:', err.message);
+        });
+}
 
 module.exports = pool;

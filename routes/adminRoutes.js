@@ -14,14 +14,14 @@ router.get('/', (req, res) => res.redirect('/admin/dashboard'));
 
 // Products
 router.get('/products', adminController.getProducts);
-router.post('/products', upload.array('images', 5), uploadToCloud, adminController.createProduct);
-router.put('/products/:id', adminController.updateProduct);
+router.post('/products', upload.any(), uploadToCloud, adminController.createProduct);
+router.put('/products/:id', upload.any(), uploadToCloud, adminController.updateProduct);
 router.delete('/products/:id', adminController.deleteProduct);
 
 // Product Images
 router.get('/products/:id/images', adminController.getProductImages);
 router.post('/products/:id/images', adminController.addProductImageUrl);
-router.post('/products/:id/images/upload', upload.single('image'), uploadToCloud, adminController.uploadProductImage);
+router.post('/products/:id/images/upload', upload.array('images', 20), uploadToCloud, adminController.uploadProductImage);
 router.delete('/products/images/:imageId', adminController.deleteProductImage);
 router.put('/products/images/:imageId/primary', adminController.setPrimaryImage);
 

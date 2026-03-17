@@ -203,6 +203,17 @@
     border-left: 3px solid #3b82f6;
 }
 
+.chat-msg--system {
+    background: #e2e8f0;
+    color: #1e293b;
+    align-self: center;
+    text-align: center;
+    max-width: 100%;
+    box-shadow: none;
+    border-radius: 999px;
+    padding: 8px 14px;
+}
+
 .chat-msg__label {
     font-size: 11px;
     font-weight: 600;
@@ -269,6 +280,12 @@
 
 .chat-widget__input-area input:focus {
     border-color: #3b82f6;
+}
+
+.chat-widget__input-area input:disabled {
+    background: #f1f5f9;
+    color: #64748b;
+    cursor: not-allowed;
 }
 
 .chat-widget__input-area button[type="submit"] {

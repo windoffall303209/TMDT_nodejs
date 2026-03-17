@@ -1,51 +1,54 @@
 const Chat = require('../models/Chat');
 const Product = require('../models/Product');
 
-// ============================================================================
-// AI INTEGRATION (Hỗ trợ OpenAI + Gemini, tự chọn theo .env)
-// ============================================================================
-
-// Lấy system prompt + product context
 async function getSystemPrompt() {
     let productContext = '';
+
     try {
         const bestSellers = await Product.getBestSellers(5);
         if (bestSellers && bestSellers.length > 0) {
-            productContext = '\n\nDanh sách sản phẩm hiện có:\n' +
-                bestSellers.map(p => `- ${p.name}: ${Number(p.price).toLocaleString('vi-VN')}đ (Còn ${p.stock_quantity} sản phẩm)`).join('\n');
+            productContext = '\n\nDanh sách sản phẩm hiện có:\n' + bestSellers
+                .map((product) => `- ${product.name}: ${Number(product.price).toLocaleString('vi-VN')}đ (Còn ${product.stock_quantity} sản phẩm)`)
+                .join('\n');
         }
-    } catch (e) { console.error("Lỗi lấy sản phẩm cho chatbot:", e); }
+    } catch (error) {
+        console.error('Lỗi lấy dữ liệu sản phẩm cho AI chat:', error);
+    }
 
     return `Bạn là trợ lý bán hàng AI của cửa hàng thời trang "WIND OF FALL".
-Nhiệm vụ: tư vấn sản phẩm, hỗ trợ mua hàng, trả lời thắc mắc về đơn hàng.
+Nhiệm vụ: tư vấn sản phẩm, hỗ trợ mua hàng và giải đáp các câu hỏi cơ bản về đơn hàng.
 
 Quy tắc:
-- Trả lời bằng tiếng Việt, thân thiện, ngắn gọn (tối đa 3-4 câu)
-- Tư vấn phù hợp với khách hàng
-- Nếu không biết câu trả lời, hãy đề nghị khách liên hệ admin
-- Không bịa thông tin về giá cả hoặc chính sách
-- Website: windoffall3k32k9.online
+- Trả lời bằng tiếng Việt, thân thiện, ngắn gọn, tối đa 3-4 câu
+- Không bịa thông tin về giá, tồn kho, chính sách hay khuyến mãi
+- Nếu khách cần hỗ trợ sâu hơn, hãy nói rõ rằng admin sẽ hỗ trợ thêm
+- Chỉ tư vấn dựa trên thông tin có trong ngữ cảnh
 
 Thông tin cửa hàng:
 - Chuyên thời trang nam nữ
 - Hỗ trợ thanh toán: COD, VNPay, MoMo
-- Giao hàng toàn quốc${productContext}`;
+- Giao hàng toàn quốc
+- Website: windoffall3k32k9.online${productContext}`;
 }
 
-// Gọi OpenAI API (hoặc proxy tương thích OpenAI)
 async function callOpenAI(systemPrompt, messages, userMessage) {
     const apiKey = process.env.OPENAI_API_KEY;
     const baseUrl = process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1';
 
     const chatMessages = [{ role: 'system', content: systemPrompt }];
     const recentMessages = messages.slice(-10);
-    for (const msg of recentMessages) {
-        if (msg.sender_type === 'customer') {
-            chatMessages.push({ role: 'user', content: msg.message });
-        } else if (msg.sender_type === 'bot' || msg.sender_type === 'admin') {
-            chatMessages.push({ role: 'assistant', content: msg.message });
+
+    recentMessages.forEach((message) => {
+        if (message.sender_type === 'customer') {
+            chatMessages.push({ role: 'user', content: message.message });
+            return;
         }
-    }
+
+        if (message.sender_type === 'bot' || message.sender_type === 'admin') {
+            chatMessages.push({ role: 'assistant', content: message.message });
+        }
+    });
+
     chatMessages.push({ role: 'user', content: userMessage });
 
     const response = await fetch(`${baseUrl}/chat/completions`, {
@@ -67,26 +70,27 @@ async function callOpenAI(systemPrompt, messages, userMessage) {
         console.error('OpenAI API error:', response.status, JSON.stringify(data));
         return null;
     }
-    if (data.choices && data.choices[0] && data.choices[0].message) {
-        return data.choices[0].message.content;
-    }
-    return null;
+
+    return data.choices?.[0]?.message?.content || null;
 }
 
-// Gọi Gemini API
 async function callGemini(systemPrompt, messages, userMessage) {
     const apiKey = process.env.GEMINI_API_KEY;
     const model = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
-
     const contents = [];
     const recentMessages = messages.slice(-10);
-    for (const msg of recentMessages) {
-        if (msg.sender_type === 'customer') {
-            contents.push({ role: 'user', parts: [{ text: msg.message }] });
-        } else if (msg.sender_type === 'bot' || msg.sender_type === 'admin') {
-            contents.push({ role: 'model', parts: [{ text: msg.message }] });
+
+    recentMessages.forEach((message) => {
+        if (message.sender_type === 'customer') {
+            contents.push({ role: 'user', parts: [{ text: message.message }] });
+            return;
         }
-    }
+
+        if (message.sender_type === 'bot' || message.sender_type === 'admin') {
+            contents.push({ role: 'model', parts: [{ text: message.message }] });
+        }
+    });
+
     contents.push({ role: 'user', parts: [{ text: userMessage }] });
 
     const response = await fetch(
@@ -96,8 +100,11 @@ async function callGemini(systemPrompt, messages, userMessage) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 system_instruction: { parts: [{ text: systemPrompt }] },
-                contents: contents,
-                generationConfig: { maxOutputTokens: 300, temperature: 0.7 }
+                contents,
+                generationConfig: {
+                    maxOutputTokens: 300,
+                    temperature: 0.7
+                }
             })
         }
     );
@@ -107,137 +114,169 @@ async function callGemini(systemPrompt, messages, userMessage) {
         console.error('Gemini API error:', response.status, JSON.stringify(data));
         return null;
     }
-    if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-        return data.candidates[0].content.parts[0].text;
-    }
-    return null;
+
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
 }
 
-// Hàm chính: tự chọn provider theo .env
 async function callAI(messages, userMessage) {
-    const provider = process.env.AI_PROVIDER || 'openai'; // 'openai' hoặc 'gemini'
-
-    const hasOpenAI = !!process.env.OPENAI_API_KEY;
-    const hasGemini = !!process.env.GEMINI_API_KEY;
+    const provider = process.env.AI_PROVIDER || 'openai';
+    const hasOpenAI = Boolean(process.env.OPENAI_API_KEY);
+    const hasGemini = Boolean(process.env.GEMINI_API_KEY);
 
     if (!hasOpenAI && !hasGemini) {
-        return 'Xin lỗi, hệ thống AI đang bảo trì. Vui lòng đợi admin hỗ trợ bạn!';
+        return 'Xin lỗi, hệ thống AI đang tạm bảo trì. Admin sẽ hỗ trợ bạn sớm nhất có thể.';
     }
 
     try {
         const systemPrompt = await getSystemPrompt();
 
-        // Thử provider chính trước
         if (provider === 'gemini' && hasGemini) {
-            const result = await callGemini(systemPrompt, messages, userMessage);
-            if (result) return result;
-            // Fallback sang OpenAI nếu Gemini lỗi
+            const geminiResult = await callGemini(systemPrompt, messages, userMessage);
+            if (geminiResult) {
+                return geminiResult;
+            }
+
             if (hasOpenAI) {
                 const fallback = await callOpenAI(systemPrompt, messages, userMessage);
-                if (fallback) return fallback;
+                if (fallback) {
+                    return fallback;
+                }
             }
         } else if (hasOpenAI) {
-            const result = await callOpenAI(systemPrompt, messages, userMessage);
-            if (result) return result;
-            // Fallback sang Gemini nếu OpenAI lỗi
+            const openAIResult = await callOpenAI(systemPrompt, messages, userMessage);
+            if (openAIResult) {
+                return openAIResult;
+            }
+
             if (hasGemini) {
                 const fallback = await callGemini(systemPrompt, messages, userMessage);
-                if (fallback) return fallback;
+                if (fallback) {
+                    return fallback;
+                }
             }
         }
 
-        return 'Xin lỗi, tôi không thể xử lý yêu cầu này. Bạn có thể thử lại hoặc đợi admin hỗ trợ!';
+        return 'Xin lỗi, tôi chưa thể xử lý yêu cầu này lúc này. Admin sẽ hỗ trợ bạn thêm.';
     } catch (error) {
         console.error('AI API error:', error);
-        return 'Xin lỗi, hệ thống đang bận. Vui lòng đợi admin hỗ trợ bạn!';
+        return 'Xin lỗi, hệ thống đang bận. Admin sẽ hỗ trợ bạn thêm trong ít phút nữa.';
     }
 }
 
-// ============================================================================
-// CUSTOMER ENDPOINTS
-// ============================================================================
+function normalizeMessage(input) {
+    return typeof input === 'string' ? input.trim() : '';
+}
 
-// POST /chat/send - Khách gửi tin nhắn
+function resolveGuestName(req) {
+    if (req.user?.full_name) {
+        return req.user.full_name;
+    }
+
+    if (req.user?.email) {
+        return req.user.email;
+    }
+
+    return 'Khách';
+}
+
 exports.sendMessage = async (req, res) => {
     try {
-        const { message } = req.body;
-        if (!message || !message.trim()) {
-            return res.status(400).json({ success: false, message: 'Tin nhắn không được trống' });
+        const message = normalizeMessage(req.body.message);
+        if (!message) {
+            return res.status(400).json({ success: false, message: 'Tin nhắn không được để trống' });
         }
 
         const userId = req.user ? req.user.id : null;
         const sessionId = req.sessionID;
-        const guestName = req.user ? req.user.email : 'Khách';
+        const guestName = resolveGuestName(req);
 
-        // Tìm hoặc tạo conversation
         const conversation = await Chat.findOrCreateConversation(userId, sessionId, guestName);
+        const previousMessages = await Chat.getMessages(conversation.id, 20);
+        const customerMessage = await Chat.addMessage(conversation.id, 'customer', userId, message);
 
-        // Lưu tin nhắn khách
-        const customerMsg = await Chat.addMessage(conversation.id, 'customer', userId, message.trim());
+        if (conversation.handling_mode === 'manual') {
+            const hasAdminMessage = previousMessages.some((item) => item.sender_type === 'admin');
 
-        // Gọi AI trả lời
-        const previousMessages = await Chat.getMessages(conversation.id);
-        const aiResponse = await callAI(previousMessages, message.trim());
+            return res.json({
+                success: true,
+                conversationId: conversation.id,
+                customerMessage,
+                manualMode: true,
+                notice: hasAdminMessage
+                    ? null
+                    : 'Tin nhắn của bạn đã được chuyển cho admin. Vui lòng chờ phản hồi.'
+            });
+        }
 
-        // Lưu tin nhắn bot
-        const botMsg = await Chat.addMessage(conversation.id, 'bot', null, aiResponse);
+        const aiResponse = await callAI(previousMessages, message);
+        const botMessage = await Chat.addMessage(conversation.id, 'bot', null, aiResponse);
 
-        res.json({
+        return res.json({
             success: true,
-            customerMessage: customerMsg,
-            botMessage: botMsg
+            conversationId: conversation.id,
+            customerMessage,
+            botMessage,
+            manualMode: false
         });
     } catch (error) {
         console.error('Chat send error:', error);
-        res.status(500).json({ success: false, message: 'Lỗi gửi tin nhắn' });
+        return res.status(500).json({ success: false, message: 'Lỗi gửi tin nhắn' });
     }
 };
 
-// GET /chat/messages - Lấy lịch sử chat
 exports.getMessages = async (req, res) => {
     try {
         const userId = req.user ? req.user.id : null;
         const sessionId = req.sessionID;
+        const conversation = await Chat.getActiveConversationForCustomer(userId, sessionId);
 
-        let query, params;
-        if (userId) {
-            query = 'SELECT * FROM chat_conversations WHERE user_id = ? AND status = "active" ORDER BY updated_at DESC LIMIT 1';
-            params = [userId];
-        } else {
-            query = 'SELECT * FROM chat_conversations WHERE session_id = ? AND user_id IS NULL AND status = "active" ORDER BY updated_at DESC LIMIT 1';
-            params = [sessionId];
+        if (!conversation) {
+            return res.json({
+                success: true,
+                messages: [],
+                conversation: null,
+                unreadCount: 0
+            });
         }
 
-        const pool = require('../config/database');
-        const [convRows] = await pool.execute(query, params);
+        const messages = await Chat.getMessages(conversation.id, 100);
+        await Chat.markAsRead(conversation.id, 'customer');
 
-        if (convRows.length === 0) {
-            return res.json({ success: true, messages: [] });
-        }
-
-        const messages = await Chat.getMessages(convRows[0].id);
-
-        // Đánh dấu đã đọc tin nhắn từ admin/bot
-        await Chat.markAsRead(convRows[0].id, 'customer');
-
-        res.json({ success: true, messages, conversationId: convRows[0].id });
+        return res.json({
+            success: true,
+            messages,
+            conversation: {
+                id: conversation.id,
+                status: conversation.status,
+                handling_mode: conversation.handling_mode
+            },
+            unreadCount: 0
+        });
     } catch (error) {
         console.error('Chat getMessages error:', error);
-        res.status(500).json({ success: false, message: 'Lỗi tải tin nhắn' });
+        return res.status(500).json({ success: false, message: 'Lỗi tải tin nhắn' });
     }
 };
 
-// ============================================================================
-// ADMIN ENDPOINTS
-// ============================================================================
+exports.getUnreadCount = async (req, res) => {
+    try {
+        const userId = req.user ? req.user.id : null;
+        const sessionId = req.sessionID;
+        const count = await Chat.getCustomerUnreadCount(userId, sessionId);
 
-// GET /admin/chat - Trang quản lý chat
+        return res.json({ success: true, count });
+    } catch (error) {
+        console.error('Chat unreadCount error:', error);
+        return res.status(500).json({ success: false, count: 0 });
+    }
+};
+
 exports.adminChatPage = async (req, res) => {
     try {
         const { conversations, total } = await Chat.getAllConversations(1, 50);
         const unreadCount = await Chat.getUnreadCount();
 
-        res.render('admin/chat', {
+        return res.render('admin/chat', {
             currentPage: 'chat',
             conversations,
             total,
@@ -246,82 +285,143 @@ exports.adminChatPage = async (req, res) => {
         });
     } catch (error) {
         console.error('Admin chat page error:', error);
-        res.status(500).render('error', { message: 'Lỗi tải trang chat', user: req.user });
+        return res.status(500).render('error', {
+            message: 'Lỗi tải trang chat',
+            user: req.user
+        });
     }
 };
 
-// GET /admin/chat/:id/messages - Lấy tin nhắn của conversation
 exports.adminGetMessages = async (req, res) => {
     try {
         const conversationId = req.params.id;
-        const messages = await Chat.getMessages(conversationId, 100);
         const conversation = await Chat.getConversationById(conversationId);
 
-        // Đánh dấu đã đọc
+        if (!conversation) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy cuộc trò chuyện' });
+        }
+
+        const messages = await Chat.getMessages(conversationId, 100);
         await Chat.markAsRead(conversationId, 'admin');
 
-        res.json({ success: true, messages, conversation });
+        return res.json({ success: true, messages, conversation });
     } catch (error) {
         console.error('Admin getMessages error:', error);
-        res.status(500).json({ success: false, message: 'Lỗi tải tin nhắn' });
+        return res.status(500).json({ success: false, message: 'Lỗi tải tin nhắn' });
     }
 };
 
-// POST /admin/chat/:id/reply - Admin trả lời
 exports.adminReply = async (req, res) => {
     try {
         const conversationId = req.params.id;
-        const { message } = req.body;
+        const message = normalizeMessage(req.body.message);
 
-        if (!message || !message.trim()) {
-            return res.status(400).json({ success: false, message: 'Tin nhắn không được trống' });
+        if (!message) {
+            return res.status(400).json({ success: false, message: 'Tin nhắn không được để trống' });
         }
 
-        const adminMsg = await Chat.addMessage(conversationId, 'admin', req.user.id, message.trim());
+        const conversation = await Chat.getConversationById(conversationId);
+        if (!conversation) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy cuộc trò chuyện' });
+        }
 
-        res.json({ success: true, message: adminMsg });
+        if (conversation.status === 'closed') {
+            await Chat.reopenConversation(conversationId);
+        }
+
+        await Chat.setHandlingMode(conversationId, 'manual');
+        const adminMessage = await Chat.addMessage(conversationId, 'admin', req.user.id, message);
+        const updatedConversation = await Chat.getConversationById(conversationId);
+
+        return res.json({
+            success: true,
+            message: adminMessage,
+            conversation: updatedConversation
+        });
     } catch (error) {
         console.error('Admin reply error:', error);
-        res.status(500).json({ success: false, message: 'Lỗi gửi tin nhắn' });
+        return res.status(500).json({ success: false, message: 'Lỗi gửi tin nhắn' });
     }
 };
 
-// PUT /admin/chat/:id/close - Đóng conversation
 exports.adminCloseConversation = async (req, res) => {
     try {
+        const conversation = await Chat.getConversationById(req.params.id);
+        if (!conversation) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy cuộc trò chuyện' });
+        }
+
         await Chat.closeConversation(req.params.id);
-        res.json({ success: true, message: 'Đã đóng cuộc trò chuyện' });
+        return res.json({ success: true, message: 'Đã đóng cuộc trò chuyện' });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        console.error('Admin close conversation error:', error);
+        return res.status(500).json({ success: false, message: error.message });
     }
 };
 
-// PUT /admin/chat/:id/reopen - Mở lại conversation
 exports.adminReopenConversation = async (req, res) => {
     try {
+        const conversation = await Chat.getConversationById(req.params.id);
+        if (!conversation) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy cuộc trò chuyện' });
+        }
+
         await Chat.reopenConversation(req.params.id);
-        res.json({ success: true, message: 'Đã mở lại cuộc trò chuyện' });
+        return res.json({ success: true, message: 'Đã mở lại cuộc trò chuyện' });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        console.error('Admin reopen conversation error:', error);
+        return res.status(500).json({ success: false, message: error.message });
     }
 };
 
-// GET /admin/chat/unread-count - Đếm tin chưa đọc (cho polling)
+exports.adminSetHandlingMode = async (req, res) => {
+    try {
+        const mode = req.body.mode === 'manual' ? 'manual' : req.body.mode === 'ai' ? 'ai' : null;
+        if (!mode) {
+            return res.status(400).json({ success: false, message: 'Chế độ xử lý không hợp lệ' });
+        }
+
+        const conversation = await Chat.getConversationById(req.params.id);
+        if (!conversation) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy cuộc trò chuyện' });
+        }
+
+        const updatedConversation = await Chat.setHandlingMode(req.params.id, mode);
+
+        return res.json({
+            success: true,
+            message: mode === 'manual' ? 'Admin đã tiếp quản cuộc trò chuyện' : 'Đã bật lại chế độ AI tự động',
+            conversation: updatedConversation
+        });
+    } catch (error) {
+        console.error('Admin set handling mode error:', error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 exports.adminUnreadCount = async (req, res) => {
     try {
         const count = await Chat.getUnreadCount();
-        res.json({ success: true, count });
+        return res.json({ success: true, count });
     } catch (error) {
-        res.status(500).json({ success: false, count: 0 });
+        console.error('Admin unread count error:', error);
+        return res.status(500).json({ success: false, count: 0 });
     }
 };
 
-// GET /admin/chat/conversations - API lấy danh sách conversations (cho polling refresh)
 exports.adminGetConversations = async (req, res) => {
     try {
         const { conversations, total } = await Chat.getAllConversations(1, 50);
-        res.json({ success: true, conversations, total });
+        const unreadCount = await Chat.getUnreadCount();
+
+        return res.json({
+            success: true,
+            conversations,
+            total,
+            unreadCount
+        });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        console.error('Admin get conversations error:', error);
+        return res.status(500).json({ success: false, message: error.message });
     }
 };

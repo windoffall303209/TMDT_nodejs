@@ -6,6 +6,7 @@ const { verifyToken, isAdmin } = require('../middleware/auth');
 // Customer endpoints
 router.post('/send', chatController.sendMessage);
 router.get('/messages', chatController.getMessages);
+router.get('/unread-count', chatController.getUnreadCount);
 
 // Admin endpoints
 router.get('/admin', verifyToken, isAdmin, chatController.adminChatPage);
@@ -13,6 +14,7 @@ router.get('/admin/unread-count', verifyToken, isAdmin, chatController.adminUnre
 router.get('/admin/conversations', verifyToken, isAdmin, chatController.adminGetConversations);
 router.get('/admin/:id/messages', verifyToken, isAdmin, chatController.adminGetMessages);
 router.post('/admin/:id/reply', verifyToken, isAdmin, chatController.adminReply);
+router.put('/admin/:id/mode', verifyToken, isAdmin, chatController.adminSetHandlingMode);
 router.put('/admin/:id/close', verifyToken, isAdmin, chatController.adminCloseConversation);
 router.put('/admin/:id/reopen', verifyToken, isAdmin, chatController.adminReopenConversation);
 
