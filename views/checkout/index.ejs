@@ -246,6 +246,11 @@
                                                     Đơn tối thiểu <%= voucher.min_order_amount.toLocaleString('vi-VN') %>đ
                                                 </div>
                                                 <% } %>
+                                                <% if (voucher.applicable_product_count > 0) { %>
+                                                <div class="voucher-card__condition">
+                                                    Chỉ áp dụng cho <%= voucher.applicable_product_count %> sản phẩm đã chọn
+                                                </div>
+                                                <% } %>
                                             </div>
                                             <div class="voucher-card__code"><%= voucher.code %></div>
                                         </div>
@@ -293,19 +298,12 @@
     </div>
 </div>
 
-<script src="/js/main.js"></script>
 <script src="/js/leaflet.js"></script>
 <script>
 // Pass EJS data to external JS
 window.checkoutData = {
     subtotal: <%= cart.subtotal %>,
-    shippingFee: <%= cart.subtotal >= 500000 ? 0 : 30000 %>,
-    validVouchers: {
-        'GIAM10': { type: 'percent', value: 10, maxDiscount: 100000, minOrder: 200000 },
-        'GIAM20': { type: 'percent', value: 20, maxDiscount: 200000, minOrder: 500000 },
-        'FREESHIP': { type: 'fixed', value: <%= cart.subtotal >= 500000 ? 0 : 30000 %>, minOrder: 0 },
-        'VIP50K': { type: 'fixed', value: 50000, minOrder: 300000 }
-    }
+    shippingFee: <%= cart.subtotal >= 500000 ? 0 : 30000 %>
 };
 </script>
 <script src="/js/checkout.js"></script>

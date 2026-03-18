@@ -248,20 +248,16 @@
     </div>
 </div>
 
-<script src="/js/main.js"></script>
 <script src="/js/leaflet.js"></script>
 <script src="/js/checkout.js"></script>
 <script>
 // Pass product data to JS
 window.buyNowData = {
+    productId: <%= product.id %>,
+    quantity: 1,
+    variantId: <%= typeof variantId !== 'undefined' && variantId ? variantId : 'null' %>,
     subtotal: <%= productPrice %>,
-    shippingFee: <%= shippingFee %>,
-    validVouchers: {
-        'GIAM10': { type: 'percent', value: 10, maxDiscount: 100000, minOrder: 200000 },
-        'GIAM20': { type: 'percent', value: 20, maxDiscount: 200000, minOrder: 500000 },
-        'FREESHIP': { type: 'fixed', value: <%= shippingFee %>, minOrder: 0 },
-        'VIP50K': { type: 'fixed', value: 50000, minOrder: 300000 }
-    }
+    shippingFee: <%= shippingFee %>
 };
 </script>
 <script src="/js/buy-now.js"></script>

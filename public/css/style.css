@@ -310,6 +310,14 @@ ul, ol {
     height: 20px;
 }
 
+.logout-form {
+    display: inline-flex;
+}
+
+.logout-form button {
+    display: inline-flex;
+}
+
 /* Admin Badge - Styled button for admin link */
 .admin-badge {
     display: flex;
@@ -1413,7 +1421,8 @@ section {
     gap: 8px;
 }
 
-.mobile-nav__actions a {
+.mobile-nav__actions a,
+.mobile-nav__logout-btn {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -1425,15 +1434,24 @@ section {
     color: var(--gray-700);
     transition: all var(--transition-fast);
     border: 1px solid var(--gray-200);
+    width: 100%;
+    text-align: left;
 }
 
-.mobile-nav__actions a:hover {
+.mobile-nav__logout-form {
+    display: block;
+    width: 100%;
+}
+
+.mobile-nav__actions a:hover,
+.mobile-nav__logout-btn:hover {
     background: var(--gray-100);
     color: var(--black);
     border-color: var(--gray-300);
 }
 
-.mobile-nav__actions a svg {
+.mobile-nav__actions a svg,
+.mobile-nav__logout-btn svg {
     width: 18px;
     height: 18px;
     flex-shrink: 0;

@@ -4,13 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WIND OF FALL - Thời Trang Cao Cấp</title>
-    <link rel="icon" type="image/jpeg" href="https://res.cloudinary.com/drs7xrtxo/image/upload/v1773135637/z7606467693465_9fdaa8e775a54c925e4ce37b258ca07b_yo7jhg.jpg">
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <link rel="shortcut icon" href="/favicon.png">
     <link rel="stylesheet" href="/css/style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
-<body>
+<body data-user-authenticated="<%= user ? 'true' : 'false' %>">
 
 <header class="header">
     <div class="container">
@@ -67,12 +68,14 @@
                             <path d="M16 10a4 4 0 0 1-8 0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                         </svg>
                         <span class="cart-count" id="cart-count">0</span>
-                  </a>
-                    <a href="/auth/logout" class="icon-btn" title="Đăng xuất" style="color: var(--accent);">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
                     </a>
+                    <form action="/auth/logout" method="POST" class="logout-form">
+                        <button type="submit" class="icon-btn" title="Đăng xuất" style="color: var(--accent);">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                    </form>
                 <% } else { %>
                     <a href="/auth/login" class="auth-link" title="Đăng nhập">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -160,10 +163,12 @@
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 Giỏ hàng
             </a>
-            <a href="/auth/logout" style="color: var(--accent);">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                Đăng xuất
-            </a>
+            <form action="/auth/logout" method="POST" class="mobile-nav__logout-form">
+                <button type="submit" class="mobile-nav__logout-btn" style="color: var(--accent);">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    Đăng xuất
+                </button>
+            </form>
         <% } else { %>
             <a href="/auth/login">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -230,8 +235,12 @@
         });
 
         var mobileNavLinks = mobileNav.querySelectorAll('a');
+        var mobileNavForms = mobileNav.querySelectorAll('form');
         mobileNavLinks.forEach(function(link) {
             link.addEventListener('click', closeMobileMenu);
+        });
+        mobileNavForms.forEach(function(form) {
+            form.addEventListener('submit', closeMobileMenu);
         });
 
         window.addEventListener('resize', function() {

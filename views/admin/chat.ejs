@@ -26,6 +26,15 @@ document.querySelector('.admin-main-content')?.classList.add('admin-main-content
                     <h3>Hộp thư khách hàng</h3>
                     <p id="chatListSummary"><%= total %> cuộc trò chuyện</p>
                 </div>
+                <div class="admin-chat-list__search">
+                    <input
+                        type="search"
+                        id="adminChatSearchInput"
+                        class="admin-form__input"
+                        placeholder="Tìm theo tên, email, nội dung..."
+                        oninput="updateChatSearch(this.value)"
+                    >
+                </div>
             </div>
             <div class="admin-chat-list__items" id="chatListItems"></div>
         </section>
@@ -170,6 +179,14 @@ body.admin-body.admin-body--chat {
     margin: 4px 0 0 0;
     font-size: 13px;
     color: var(--admin-text-muted);
+}
+
+.admin-chat-list__search {
+    margin-top: 14px;
+}
+
+.admin-chat-list__search .admin-form__input {
+    width: 100%;
 }
 
 .admin-chat-list__items {
@@ -566,6 +583,7 @@ const adminChatState = {
     conversations: window.__INITIAL_ADMIN_CHAT__?.conversations || [],
     currentConversationId: null,
     currentConversation: null,
+    searchTerm: '',
     detailPollInterval: null,
     listPollInterval: null
 };
@@ -641,11 +659,41 @@ function updateListSummary() {
         return;
     }
 
+    const filteredTotal = getFilteredConversations().length;
     const total = adminChatState.conversations.length;
     const unread = adminChatState.conversations.filter((conversation) => conversation.unread_count > 0).length;
-    summary.textContent = unread > 0
-        ? `${total} cuộc trò chuyện, ${unread} cuộc chưa đọc`
+    const totalLabel = filteredTotal !== total
+        ? `${filteredTotal}/${total} cuộc trò chuyện`
         : `${total} cuộc trò chuyện`;
+    summary.textContent = unread > 0
+        ? `${totalLabel}, ${unread} cuộc chưa đọc`
+        : totalLabel;
+}
+
+function getFilteredConversations() {
+    const keyword = String(adminChatState.searchTerm || '').trim().toLowerCase();
+    if (!keyword) {
+        return adminChatState.conversations;
+    }
+
+    return adminChatState.conversations.filter((conversation) => {
+        const haystack = [
+            conversation.user_name,
+            conversation.user_email,
+            conversation.guest_name,
+            conversation.last_message
+        ]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase();
+
+        return haystack.includes(keyword);
+    });
+}
+
+function updateChatSearch(value) {
+    adminChatState.searchTerm = value || '';
+    renderConversationList();
 }
 
 function createConversationItem(conversation) {
@@ -746,17 +794,21 @@ function renderConversationList() {
 
     container.innerHTML = '';
 
-    if (!adminChatState.conversations.length) {
+    const filteredConversations = getFilteredConversations();
+
+    if (!filteredConversations.length) {
         const emptyState = document.createElement('div');
         emptyState.className = 'admin-chat-list__empty';
-        emptyState.textContent = 'Chưa có cuộc trò chuyện nào.';
+        emptyState.textContent = adminChatState.searchTerm
+            ? 'Không tìm thấy cuộc trò chuyện phù hợp.'
+            : 'Chưa có cuộc trò chuyện nào.';
         container.appendChild(emptyState);
         updateListSummary();
-        updateTitleUnreadBadge(0);
+        updateTitleUnreadBadge(adminChatState.conversations.filter((conversation) => conversation.unread_count > 0).length);
         return;
     }
 
-    adminChatState.conversations.forEach((conversation) => {
+    filteredConversations.forEach((conversation) => {
         container.appendChild(createConversationItem(conversation));
     });
 

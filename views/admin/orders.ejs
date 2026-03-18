@@ -52,6 +52,33 @@
             </div>
         </div>
 
+        <div class="admin-toolbar">
+            <div class="admin-toolbar__info">
+                <p class="admin-toolbar__title">Tìm đơn hàng nhanh</p>
+                <p class="admin-toolbar__text">
+                    Tìm theo mã đơn, tên khách, email hoặc số điện thoại.
+                    <% if (searchQuery) { %>
+                        Đang lọc với từ khóa: "<strong><%= searchQuery %></strong>"
+                    <% } %>
+                </p>
+            </div>
+            <form action="/admin/orders" method="GET" class="admin-search-form">
+                <input
+                    type="search"
+                    name="search"
+                    value="<%= searchQuery || '' %>"
+                    class="admin-form__input admin-search-form__input"
+                    placeholder="VD: ORD..., tên khách, email..."
+                >
+                <div class="admin-search-form__actions">
+                    <button type="submit" class="admin-btn admin-btn--primary">Tìm kiếm</button>
+                    <% if (searchQuery) { %>
+                        <a href="/admin/orders" class="admin-btn admin-btn--ghost">Xóa lọc</a>
+                    <% } %>
+                </div>
+            </form>
+        </div>
+
         <!-- Orders Table -->
         <% if (orders && orders.length > 0) { %>
             <div class="admin-table-wrapper">

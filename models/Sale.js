@@ -29,17 +29,27 @@ class Sale {
      *
      * @returns {Promise<Array>} Mảng chương trình khuyến mãi
      */
-    static async findAll(activeOnly = false) {
+    static async findAll(filters = {}) {
+        const normalizedFilters = typeof filters === 'boolean'
+            ? { activeOnly: filters }
+            : (filters || {});
         let query = 'SELECT * FROM sales WHERE 1=1';
+        const params = [];
 
         // Lọc chỉ lấy khuyến mãi đang hoạt động
-        if (activeOnly) {
+        if (normalizedFilters.activeOnly) {
             query += ' AND is_active = TRUE AND NOW() BETWEEN start_date AND end_date';
+        }
+
+        if (normalizedFilters.search) {
+            query += ' AND (name LIKE ? OR COALESCE(description, \'\') LIKE ? OR type LIKE ?)';
+            const searchTerm = `%${normalizedFilters.search}%`;
+            params.push(searchTerm, searchTerm, searchTerm);
         }
 
         query += ' ORDER BY created_at DESC';
 
-        const [rows] = await pool.execute(query);
+        const [rows] = await pool.query(query, params);
         return rows;
     }
 
@@ -74,7 +84,7 @@ class Sale {
      * @returns {Promise<Array>} Mảng khuyến mãi đang hoạt động
      */
     static async getActiveSales() {
-        return await this.findAll(true);
+        return await this.findAll({ activeOnly: true });
     }
 
     // =============================================================================
@@ -118,6 +128,66 @@ class Sale {
         ]);
 
         return { id: result.insertId, ...saleData };
+    }
+
+    /**
+     * Gán chương trình khuyến mãi cho danh sách sản phẩm.
+     * Nếu truyền mảng rỗng thì chương trình vẫn được tạo nhưng chưa áp dụng cho sản phẩm nào.
+     */
+    static async assignProducts(saleId, productIds = [], connection = pool) {
+        await connection.execute(
+            'UPDATE products SET sale_id = NULL WHERE sale_id = ?',
+            [saleId]
+        );
+
+        if (!Array.isArray(productIds) || productIds.length === 0) {
+            return;
+        }
+
+        const placeholders = productIds.map(() => '?').join(', ');
+        await connection.execute(
+            `UPDATE products SET sale_id = ? WHERE id IN (${placeholders})`,
+            [saleId, ...productIds]
+        );
+    }
+
+    /**
+     * Lấy danh sách sản phẩm đang gắn với từng chương trình sale.
+     */
+    static async getAssignedProductsMap(saleIds = []) {
+        if (!Array.isArray(saleIds) || saleIds.length === 0) {
+            return new Map();
+        }
+
+        const placeholders = saleIds.map(() => '?').join(', ');
+        const [rows] = await pool.execute(
+            `SELECT p.sale_id,
+                    p.id,
+                    p.name,
+                    p.slug,
+                    p.sku
+             FROM products p
+             WHERE p.sale_id IN (${placeholders})
+               AND p.is_active = TRUE
+             ORDER BY p.name ASC`,
+            saleIds
+        );
+
+        const assignments = new Map();
+        rows.forEach((row) => {
+            if (!assignments.has(row.sale_id)) {
+                assignments.set(row.sale_id, []);
+            }
+
+            assignments.get(row.sale_id).push({
+                id: row.id,
+                name: row.name,
+                slug: row.slug,
+                sku: row.sku
+            });
+        });
+
+        return assignments;
     }
 
     // =============================================================================

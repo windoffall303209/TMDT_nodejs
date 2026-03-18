@@ -17,8 +17,8 @@ router.post('/buy-now/create', verifyToken, orderController.createBuyNowOrder);
 // Order history (requires login) - must be before :orderCode route
 router.get('/history', verifyToken, orderController.getOrderHistory);
 
-// Order confirmation (public with order code)
-router.get('/:orderCode/confirmation', optionalAuth, orderController.orderConfirmation);
+// Order confirmation (requires login and owner access)
+router.get('/:orderCode/confirmation', verifyToken, orderController.orderConfirmation);
 
 // Payment callbacks
 router.get('/payment/vnpay/callback', orderController.vnpayReturn);

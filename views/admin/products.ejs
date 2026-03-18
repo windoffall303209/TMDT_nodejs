@@ -30,6 +30,34 @@
             </div>
         </div>
 
+        <div class="admin-toolbar">
+            <div class="admin-toolbar__info">
+                <p class="admin-toolbar__title">Tìm sản phẩm cần chỉnh sửa</p>
+                <p class="admin-toolbar__text">
+                    Tìm theo tên, SKU hoặc mô tả sản phẩm.
+                    <% if (searchQuery) { %>
+                        Đang lọc với từ khóa: "<strong><%= searchQuery %></strong>"
+                    <% } %>
+                </p>
+            </div>
+            <form action="/admin/products" method="GET" class="admin-search-form">
+                <input type="hidden" name="limit" value="<%= pagination ? pagination.limit : 10 %>">
+                <input
+                    type="search"
+                    name="search"
+                    value="<%= searchQuery || '' %>"
+                    class="admin-form__input admin-search-form__input"
+                    placeholder="Tìm theo tên, SKU..."
+                >
+                <div class="admin-search-form__actions">
+                    <button type="submit" class="admin-btn admin-btn--primary">Tìm kiếm</button>
+                    <% if (searchQuery) { %>
+                        <a href="/admin/products?limit=<%= pagination ? pagination.limit : 10 %>" class="admin-btn admin-btn--ghost">Xóa lọc</a>
+                    <% } %>
+                </div>
+            </form>
+        </div>
+
         <!-- Add Product Form -->
         <div class="admin-section admin-section--collapsible">
             <h3 class="admin-section__title admin-section__title--toggle" onclick="toggleSection(this)">
@@ -1082,7 +1110,10 @@ function toggleSection(titleElement) {
 
 // Change items per page
 function changePerPage(limit) {
-    window.location.href = '?page=1&limit=' + limit;
+    const url = new URL(window.location.href);
+    url.searchParams.set('page', '1');
+    url.searchParams.set('limit', limit);
+    window.location.href = url.toString();
 }
 </script>
 <script src="/js/admin/products.js"></script>

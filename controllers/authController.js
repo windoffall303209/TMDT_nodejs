@@ -21,6 +21,15 @@ const os = require('os');
 const fs = require('fs');
 const { uploadToCloudinary } = require('../config/cloudinary');
 
+function getAuthCookieOptions() {
+    return {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 24 * 60 * 60 * 1000
+    };
+}
+
 // =============================================================================
 // CẤU HÌNH UPLOAD AVATAR
 // =============================================================================
@@ -113,10 +122,7 @@ exports.register = async (req, res) => {
         const token = generateToken(user);
 
         // Lưu token vào cookie (httpOnly để bảo mật)
-        res.cookie('token', token, {
-            httpOnly: true,
-            maxAge: 24 * 60 * 60 * 1000 // Cookie hết hạn sau 24 giờ
-        });
+        res.cookie('token', token, getAuthCookieOptions());
 
         // Redirect về trang chủ nếu là request HTML
         if (req.accepts('html')) {
@@ -188,15 +194,12 @@ exports.login = async (req, res) => {
         const token = generateToken(user);
 
         // Lưu token vào cookie
-        res.cookie('token', token, {
-            httpOnly: true,
-            maxAge: 24 * 60 * 60 * 1000 // 24 giờ
-        });
+        res.cookie('token', token, getAuthCookieOptions());
 
         // Merge giỏ hàng của khách (session) vào tài khoản đã đăng nhập
-        if (req.session && req.session.id) {
+        if (req.sessionID) {
             const Cart = require('../models/Cart');
-            await Cart.mergeGuestCart(user.id, req.session.id).catch(err => {
+            await Cart.mergeGuestCart(user.id, req.sessionID).catch(err => {
                 console.error('Cart merge error:', err);
             });
         }
@@ -239,7 +242,8 @@ exports.login = async (req, res) => {
  */
 exports.logout = (req, res) => {
     // Xóa cookie chứa token
-    res.clearCookie('token');
+    const { maxAge, ...cookieOptions } = getAuthCookieOptions();
+    res.clearCookie('token', cookieOptions);
 
     if (req.accepts('html')) {
         return res.redirect('/');
@@ -388,7 +392,7 @@ exports.createAddress = async (req, res) => {
             ward,
             district,
             city,
-            is_default: is_default || true
+            is_default: is_default === true || is_default === 'true' || is_default === 'on'
         });
 
         res.json({

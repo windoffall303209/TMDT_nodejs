@@ -1,12 +1,13 @@
-const chatState = {
+const chatState = window.__tmdtChatWidgetState || (window.__tmdtChatWidgetState = {
     open: false,
     loaded: false,
     pollInterval: null,
-    badgeInterval: null,
     pollErrors: 0,
     renderedMessageIds: new Set(),
-    conversation: null
-};
+    conversation: null,
+    initialized: false,
+    badgeRequest: null
+});
 
 function getChatElements() {
     return {
@@ -35,25 +36,56 @@ function updateChatBadge(count) {
     badge.textContent = String(count);
 }
 
+function isChatPageVisible() {
+    return document.visibilityState !== 'hidden';
+}
+
+function runChatTaskWhenIdle(callback, fallbackDelay = 300) {
+    if (typeof callback !== 'function') {
+        return;
+    }
+
+    if (typeof window.requestIdleCallback === 'function') {
+        window.requestIdleCallback(() => callback(), { timeout: 1500 });
+        return;
+    }
+
+    window.setTimeout(callback, fallbackDelay);
+}
+
 async function refreshChatBadge() {
     if (chatState.open) {
         updateChatBadge(0);
         return;
     }
 
-    try {
-        const response = await fetch('/chat/unread-count', { credentials: 'same-origin' });
-        if (!response.ok) {
-            return;
-        }
-
-        const data = await response.json();
-        if (data.success) {
-            updateChatBadge(data.count || 0);
-        }
-    } catch (error) {
-        console.error('Refresh chat badge error:', error);
+    if (!isChatPageVisible()) {
+        return;
     }
+
+    if (chatState.badgeRequest) {
+        return chatState.badgeRequest;
+    }
+
+    chatState.badgeRequest = (async () => {
+        try {
+            const response = await fetch('/chat/unread-count', { credentials: 'same-origin' });
+            if (!response.ok) {
+                return;
+            }
+
+            const data = await response.json();
+            if (data.success) {
+                updateChatBadge(data.count || 0);
+            }
+        } catch (error) {
+            console.error('Refresh chat badge error:', error);
+        } finally {
+            chatState.badgeRequest = null;
+        }
+    })();
+
+    return chatState.badgeRequest;
 }
 
 function formatChatTime(date) {
@@ -327,12 +359,18 @@ async function pollNewMessages() {
 }
 
 function startChatPolling() {
-    if (chatState.pollInterval) {
+    if (chatState.pollInterval || !chatState.open || !isChatPageVisible()) {
         return;
     }
 
     chatState.pollErrors = 0;
-    chatState.pollInterval = setInterval(pollNewMessages, 5000);
+    chatState.pollInterval = setInterval(() => {
+        if (!chatState.open || !isChatPageVisible()) {
+            return;
+        }
+
+        pollNewMessages();
+    }, 7000);
 }
 
 function stopChatPolling() {
@@ -356,6 +394,8 @@ function toggleChatWidget() {
 
         if (!chatState.loaded) {
             loadChatHistory();
+        } else {
+            pollNewMessages();
         }
 
         startChatPolling();
@@ -370,21 +410,37 @@ function toggleChatWidget() {
     refreshChatBadge();
 }
 
-function initChatWidget() {
-    const { toggleButton } = getChatElements();
-    if (!toggleButton) {
+function syncChatAfterFocus() {
+    if (!isChatPageVisible()) {
+        stopChatPolling();
+        return;
+    }
+
+    if (chatState.open) {
+        if (!chatState.loaded) {
+            loadChatHistory();
+        } else {
+            pollNewMessages();
+        }
+
+        startChatPolling();
         return;
     }
 
     refreshChatBadge();
+}
 
-    if (!chatState.badgeInterval) {
-        chatState.badgeInterval = setInterval(() => {
-            if (!chatState.open) {
-                refreshChatBadge();
-            }
-        }, 15000);
+function initChatWidget() {
+    const { toggleButton } = getChatElements();
+    if (!toggleButton || chatState.initialized) {
+        return;
     }
+
+    chatState.initialized = true;
+    runChatTaskWhenIdle(() => refreshChatBadge());
+
+    document.addEventListener('visibilitychange', syncChatAfterFocus);
+    window.addEventListener('pagehide', stopChatPolling, { passive: true });
 }
 
 document.addEventListener('DOMContentLoaded', initChatWidget);

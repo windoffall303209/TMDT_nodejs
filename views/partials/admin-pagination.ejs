@@ -1,4 +1,15 @@
 <% if (pagination && pagination.totalPages > 0) { %>
+<%
+    const buildPaginationUrl = (page, limit) => {
+        const params = [`page=${page}`, `limit=${limit}`];
+
+        if (pagination.searchQuery) {
+            params.push(`search=${encodeURIComponent(pagination.searchQuery)}`);
+        }
+
+        return `?${params.join('&')}`;
+    };
+%>
 <div class="admin-pagination">
     <div class="admin-pagination__info">
         Hiển thị <%= ((pagination.currentPage - 1) * pagination.limit) + 1 %>–<%= Math.min(pagination.currentPage * pagination.limit, pagination.totalItems) %> / <%= pagination.totalItems %>
@@ -19,7 +30,7 @@
         <% if (pagination.totalPages > 1) { %>
         <div class="admin-pagination__nav">
             <% if (pagination.currentPage > 1) { %>
-                <a href="?page=<%= pagination.currentPage - 1 %>&limit=<%= pagination.limit %>" class="admin-pagination__btn">
+                <a href="<%= buildPaginationUrl(pagination.currentPage - 1, pagination.limit) %>" class="admin-pagination__btn">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
                 </a>
             <% } %>
@@ -34,21 +45,21 @@
             %>
 
             <% if (startPage > 1) { %>
-                <a href="?page=1&limit=<%= pagination.limit %>" class="admin-pagination__btn">1</a>
+                <a href="<%= buildPaginationUrl(1, pagination.limit) %>" class="admin-pagination__btn">1</a>
                 <% if (startPage > 2) { %><span class="admin-pagination__dots">...</span><% } %>
             <% } %>
 
             <% for (let i = startPage; i <= endPage; i++) { %>
-                <a href="?page=<%= i %>&limit=<%= pagination.limit %>" class="admin-pagination__btn <%= i === pagination.currentPage ? 'admin-pagination__btn--active' : '' %>"><%= i %></a>
+                <a href="<%= buildPaginationUrl(i, pagination.limit) %>" class="admin-pagination__btn <%= i === pagination.currentPage ? 'admin-pagination__btn--active' : '' %>"><%= i %></a>
             <% } %>
 
             <% if (endPage < pagination.totalPages) { %>
                 <% if (endPage < pagination.totalPages - 1) { %><span class="admin-pagination__dots">...</span><% } %>
-                <a href="?page=<%= pagination.totalPages %>&limit=<%= pagination.limit %>" class="admin-pagination__btn"><%= pagination.totalPages %></a>
+                <a href="<%= buildPaginationUrl(pagination.totalPages, pagination.limit) %>" class="admin-pagination__btn"><%= pagination.totalPages %></a>
             <% } %>
 
             <% if (pagination.currentPage < pagination.totalPages) { %>
-                <a href="?page=<%= pagination.currentPage + 1 %>&limit=<%= pagination.limit %>" class="admin-pagination__btn">
+                <a href="<%= buildPaginationUrl(pagination.currentPage + 1, pagination.limit) %>" class="admin-pagination__btn">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
                 </a>
             <% } %>

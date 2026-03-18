@@ -175,7 +175,7 @@ class PaymentService {
 
         if (signature === generatedSignature) {
             return {
-                success: resultCode === 0,
+                success: String(resultCode) === '0',
                 orderId,
                 transactionId: transId,
                 amount: parseInt(amount)

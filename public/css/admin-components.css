@@ -113,6 +113,54 @@
 }
 
 /* =============================================================================
+   ADMIN TOOLBAR / SEARCH
+   ============================================================================= */
+.admin-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+
+.admin-toolbar__info {
+    min-width: 0;
+}
+
+.admin-toolbar__title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--admin-text-primary);
+    margin: 0 0 4px 0;
+}
+
+.admin-toolbar__text {
+    font-size: 13px;
+    color: var(--admin-text-secondary);
+    margin: 0;
+}
+
+.admin-search-form {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: min(100%, 680px);
+    flex-wrap: wrap;
+}
+
+.admin-search-form__input {
+    flex: 1;
+    min-width: 260px;
+}
+
+.admin-search-form__actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* =============================================================================
    ADMIN TABLE
    ============================================================================= */
 .admin-table-wrapper {
@@ -460,6 +508,19 @@
     font-size: 14px;
     color: var(--admin-text-secondary);
     margin: 0;
+}
+
+@media (max-width: 768px) {
+    .admin-search-form {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .admin-search-form__input {
+        min-width: 0;
+        width: 100%;
+    }
 }
 
 /* =============================================================================

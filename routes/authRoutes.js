@@ -11,7 +11,6 @@ router.get('/login', authController.showLogin);
 router.post('/register', authController.register);
 router.post('/login', authController.login);
 router.post('/logout', authController.logout);
-router.get('/logout', authController.logout);
 
 // Protected routes - Profile
 router.get('/profile', verifyToken, authController.getProfile);

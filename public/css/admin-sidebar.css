@@ -115,8 +115,10 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    width: 100%;
     color: rgba(255, 255, 255, 0.6);
     text-decoration: none;
+    text-align: left;
     font-size: 13px;
     font-weight: 500;
     padding: 8px 0;
@@ -133,6 +135,10 @@
 
 .admin-sidebar__link--danger:hover {
     color: #ef4444;
+}
+
+.admin-sidebar__logout-form {
+    display: block;
 }
 
 /* =============================================================================
@@ -211,13 +217,22 @@
     gap: 12px;
 }
 
-.admin-topbar__actions a {
+.admin-topbar__actions a,
+.admin-topbar__actions button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     color: rgba(255, 255, 255, 0.7);
     transition: color 0.2s;
 }
 
-.admin-topbar__actions a:hover {
+.admin-topbar__actions a:hover,
+.admin-topbar__actions button:hover {
     color: white;
+}
+
+.admin-topbar__logout-form {
+    display: inline-flex;
 }
 
 /* =============================================================================

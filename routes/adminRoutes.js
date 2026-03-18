@@ -48,6 +48,8 @@ router.delete('/banners/:id', adminController.deleteBanner);
 // Sales
 router.get('/sales', adminController.getSales);
 router.post('/sales', adminController.createSale);
+router.put('/sales/:id', adminController.updateSale);
+router.delete('/sales/:id', adminController.deleteSale);
 
 // Vouchers
 router.get('/vouchers', adminController.getVouchers);

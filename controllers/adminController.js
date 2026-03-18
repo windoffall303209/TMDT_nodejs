@@ -24,6 +24,40 @@ const emailService = require('../services/emailService');
 const { attachUploadedImagesToProduct, parseVariantsPayload, syncVariants, validateVariants } = require('../services/adminProductVariantService');
 const upload = require('../middleware/upload');
 
+function parseSelectedProductIds(body) {
+    const rawValues = body.product_ids ?? body['product_ids[]'] ?? [];
+    const normalized = Array.isArray(rawValues) ? rawValues : [rawValues];
+
+    return [...new Set(
+        normalized
+            .flatMap((value) => String(value).split(','))
+            .map((value) => parseInt(value, 10))
+            .filter((value) => Number.isInteger(value) && value > 0)
+    )];
+}
+
+async function attachSaleAssignments(sales) {
+    const saleIds = Array.isArray(sales) ? sales.map((sale) => sale.id) : [];
+    const assignments = await Sale.getAssignedProductsMap(saleIds);
+
+    return (sales || []).map((sale) => ({
+        ...sale,
+        assigned_products: assignments.get(sale.id) || [],
+        assigned_product_count: (assignments.get(sale.id) || []).length
+    }));
+}
+
+async function attachVoucherAssignments(vouchers) {
+    const voucherIds = Array.isArray(vouchers) ? vouchers.map((voucher) => voucher.id) : [];
+    const assignments = await Voucher.getApplicableProductsMap(voucherIds);
+
+    return (vouchers || []).map((voucher) => ({
+        ...voucher,
+        applicable_products: assignments.get(voucher.id) || [],
+        applicable_product_count: (assignments.get(voucher.id) || []).length
+    }));
+}
+
 // =============================================================================
 // DASHBOARD - Trang tổng quan
 // =============================================================================
@@ -100,14 +134,18 @@ exports.getProducts = async (req, res) => {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const offset = (page - 1) * limit;
+        const searchQuery = typeof req.query.search === 'string' ? req.query.search.trim() : '';
 
         try {
-            products = await Product.findAll({ limit, offset });
+            const productFilters = {
+                limit,
+                offset,
+                ...(searchQuery ? { search: searchQuery } : {})
+            };
+
+            products = await Product.findAll(productFilters);
             categories = await Category.findAll();
-            // Đếm tổng sản phẩm
-            const pool = require('../config/database');
-            const [countResult] = await pool.execute('SELECT COUNT(*) as total FROM products WHERE is_active = TRUE');
-            totalItems = countResult[0].total;
+            totalItems = await Product.count(productFilters);
         } catch (err) {
             console.error('Products data error:', err);
         }
@@ -119,7 +157,8 @@ exports.getProducts = async (req, res) => {
             categories,
             user: req.user,
             currentPage: 'products',
-            pagination: { totalItems, totalPages, currentPage: page, limit }
+            searchQuery,
+            pagination: { totalItems, totalPages, currentPage: page, limit, searchQuery }
         });
     } catch (error) {
         res.status(500).render('error', { message: 'Lỗi tải sản phẩm: ' + error.message, user: req.user });
@@ -292,9 +331,14 @@ exports.deleteProduct = async (req, res) => {
 exports.getOrders = async (req, res) => {
     try {
         let orders = [];
+        const searchQuery = typeof req.query.search === 'string' ? req.query.search.trim() : '';
         try {
             // Lấy 50 đơn hàng gần nhất
-            orders = await Order.findAll({ limit: 50, offset: 0 });
+            orders = await Order.findAll({
+                limit: 50,
+                offset: 0,
+                ...(searchQuery ? { search: searchQuery } : {})
+            });
         } catch (err) {
             console.error('Orders data error:', err);
         }
@@ -302,6 +346,7 @@ exports.getOrders = async (req, res) => {
         // Render trang quản lý đơn hàng
         res.render('admin/orders', {
             orders,
+            searchQuery,
             user: req.user,
             currentPage: 'orders'
         });
@@ -592,8 +637,11 @@ exports.deleteBanner = async (req, res) => {
 exports.getSales = async (req, res) => {
     try {
         let sales = [];
+        let products = [];
+        const searchQuery = typeof req.query.search === 'string' ? req.query.search.trim() : '';
         try {
-            sales = await Sale.findAll();
+            sales = await attachSaleAssignments(await Sale.findAll(searchQuery ? { search: searchQuery } : {}));
+            products = await Product.findAll({ limit: 1000, offset: 0, sort_by: 'name', sort_order: 'ASC' });
         } catch (err) {
             console.error('Sales data error:', err);
         }
@@ -601,6 +649,8 @@ exports.getSales = async (req, res) => {
         // Render trang quản lý khuyến mãi
         res.render('admin/sales', {
             sales,
+            products,
+            searchQuery,
             user: req.user,
             currentPage: 'sales'
         });
@@ -629,9 +679,10 @@ exports.getSales = async (req, res) => {
 exports.createSale = async (req, res) => {
     try {
         const { name, description, type, value, start_date, end_date } = req.body;
+        const productIds = parseSelectedProductIds(req.body);
 
         // Tạo khuyến mãi trong database
-        await Sale.create({
+        const sale = await Sale.create({
             name,
             description,
             type,
@@ -640,10 +691,66 @@ exports.createSale = async (req, res) => {
             end_date
         });
 
+        await Sale.assignProducts(sale.id, productIds);
+
         // Redirect về trang danh sách
         res.redirect('/admin/sales');
     } catch (error) {
         res.status(400).json({ message: error.message });
+    }
+};
+
+/**
+ * Cập nhật chương trình khuyến mãi
+ */
+exports.updateSale = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const existingSale = await Sale.findById(id);
+
+        if (!existingSale) {
+            return res.status(404).json({ success: false, message: 'Khuyến mãi không tồn tại' });
+        }
+
+        const { name, description, type, value, start_date, end_date, is_active } = req.body;
+        const productIds = parseSelectedProductIds(req.body);
+
+        await Sale.update(id, {
+            name,
+            description,
+            type,
+            value: parseFloat(value),
+            start_date: start_date || null,
+            end_date: end_date || null,
+            is_active: is_active === 'on' || is_active === true || is_active === 'true'
+        });
+
+        await Sale.assignProducts(id, productIds);
+
+        res.json({ success: true, message: 'Cập nhật khuyến mãi thành công' });
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+};
+
+/**
+ * Ngừng và gỡ áp dụng khuyến mãi khỏi sản phẩm
+ */
+exports.deleteSale = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const existingSale = await Sale.findById(id);
+
+        if (!existingSale) {
+            return res.status(404).json({ success: false, message: 'Khuyến mãi không tồn tại' });
+        }
+
+        await Sale.assignProducts(id, []);
+        await Sale.delete(id);
+
+        res.json({ success: true, message: 'Đã ngừng khuyến mãi' });
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
     }
 };
 
@@ -872,14 +979,19 @@ exports.setPrimaryImage = async (req, res) => {
 exports.getVouchers = async (req, res) => {
     try {
         let vouchers = [];
+        let products = [];
+        const searchQuery = typeof req.query.search === 'string' ? req.query.search.trim() : '';
         try {
-            vouchers = await Voucher.findAll();
+            vouchers = await attachVoucherAssignments(await Voucher.findAll(searchQuery ? { search: searchQuery } : {}));
+            products = await Product.findAll({ limit: 1000, offset: 0, sort_by: 'name', sort_order: 'ASC' });
         } catch (err) {
             console.error('Vouchers data error:', err);
         }
 
         res.render('admin/vouchers', {
             vouchers,
+            products,
+            searchQuery,
             user: req.user,
             currentPage: 'vouchers'
         });
@@ -898,6 +1010,7 @@ exports.createVoucher = async (req, res) => {
             min_order_amount, max_discount_amount, usage_limit,
             user_limit, start_date, end_date, is_active
         } = req.body;
+        const productIds = parseSelectedProductIds(req.body);
 
         await Voucher.create({
             code,
@@ -911,7 +1024,8 @@ exports.createVoucher = async (req, res) => {
             user_limit: parseInt(user_limit) || 1,
             start_date,
             end_date,
-            is_active: is_active === 'on'
+            is_active: is_active === 'on',
+            product_ids: productIds
         });
 
         res.redirect('/admin/vouchers');
@@ -932,6 +1046,7 @@ exports.updateVoucher = async (req, res) => {
             min_order_amount, max_discount_amount, usage_limit,
             user_limit, start_date, end_date, is_active
         } = req.body;
+        const productIds = parseSelectedProductIds(req.body);
 
         await Voucher.update(id, {
             code,
@@ -945,7 +1060,8 @@ exports.updateVoucher = async (req, res) => {
             user_limit: parseInt(user_limit) || 1,
             start_date,
             end_date,
-            is_active: is_active === 'on' || is_active === true
+            is_active: is_active === 'on' || is_active === true,
+            product_ids: productIds
         });
 
         res.json({ success: true, message: 'Voucher updated successfully' });

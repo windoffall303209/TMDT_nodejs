@@ -1,3 +1,8 @@
+const mainState = window.__tmdtMainState || (window.__tmdtMainState = {
+    initialized: false,
+    cartCountRequest: null
+});
+
 // Add to cart function - handles both onclick="addToCart(event, productId)" and onclick="addToCart(productId)"
 async function addToCart(eventOrProductId, productId = null, variantId = null) {
     // Detect if first argument is an event or a productId
@@ -53,17 +58,31 @@ async function addToCart(eventOrProductId, productId = null, variantId = null) {
 
 // Update cart count in header
 async function updateCartCount() {
-    try {
-        const response = await fetch('/cart/count');
-        const data = await response.json();
-        
-        const cartCountElement = document.getElementById('cart-count');
-        if (cartCountElement) {
-            cartCountElement.textContent = data.count || 0;
-        }
-    } catch (error) {
-        console.error('Update cart count error:', error);
+    const cartCountElement = document.getElementById('cart-count');
+    if (!cartCountElement) {
+        return;
     }
+
+    if (mainState.cartCountRequest) {
+        return mainState.cartCountRequest;
+    }
+
+    mainState.cartCountRequest = (async () => {
+        try {
+            const response = await fetch('/cart/count', {
+                credentials: 'same-origin'
+            });
+            const data = await response.json();
+
+            cartCountElement.textContent = data.count || 0;
+        } catch (error) {
+            console.error('Update cart count error:', error);
+        } finally {
+            mainState.cartCountRequest = null;
+        }
+    })();
+
+    return mainState.cartCountRequest;
 }
 
 // Show notification using global toast
@@ -73,16 +92,35 @@ function showNotification(message, type = 'info') {
     }
 }
 
+function runWhenBrowserIdle(callback, fallbackDelay = 250) {
+    if (typeof callback !== 'function') {
+        return;
+    }
+
+    if (typeof window.requestIdleCallback === 'function') {
+        window.requestIdleCallback(() => callback(), { timeout: 1500 });
+        return;
+    }
+
+    window.setTimeout(callback, fallbackDelay);
+}
+
 // Initialize page
 document.addEventListener('DOMContentLoaded', () => {
-    // Update cart count on page load
-    updateCartCount();
+    if (mainState.initialized) {
+        return;
+    }
 
-    // Initialize newsletter form
-    initNewsletterForm();
+    mainState.initialized = true;
 
     // Initialize mobile menu
     initMobileMenu();
+
+    // Defer background requests so page navigation settles first.
+    runWhenBrowserIdle(() => {
+        updateCartCount();
+        initNewsletterForm();
+    });
 });
 
 // Mobile Menu functionality
@@ -219,6 +257,7 @@ async function checkNewsletterStatus() {
     const form = document.getElementById('newsletter-form');
     const successMsg = document.getElementById('newsletter-success');
     const newsletterSection = document.getElementById('newsletter-section');
+    const isAuthenticated = document.body?.dataset.userAuthenticated === 'true';
 
     if (!form || !successMsg || !newsletterSection) return;
 
@@ -256,9 +295,15 @@ async function checkNewsletterStatus() {
         }
     }
 
+    if (!isAuthenticated) {
+        return;
+    }
+
     // Check server for logged-in users
     try {
-        const response = await fetch('/newsletter/status');
+        const response = await fetch('/newsletter/status', {
+            credentials: 'same-origin'
+        });
         const data = await response.json();
 
         if (data.subscribed) {

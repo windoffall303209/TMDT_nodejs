@@ -10,9 +10,75 @@
  * =============================================================================
  */
 
+const crypto = require('crypto');
 const pool = require('../config/database');
 
 class Order {
+    static generateOrderCode() {
+        return `ORD${Date.now().toString(36).toUpperCase()}${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+    }
+
+    static calculateShippingFee(subtotal) {
+        return Number(subtotal) >= 500000 ? 0 : 30000;
+    }
+
+    static async assertAddressOwnership(connection, userId, addressId) {
+        const [addresses] = await connection.execute(
+            'SELECT id FROM addresses WHERE id = ? AND user_id = ? LIMIT 1',
+            [addressId, userId]
+        );
+
+        if (addresses.length === 0) {
+            throw new Error('Address not found');
+        }
+    }
+
+    static async assertProductStock(connection, productId, quantity) {
+        const [products] = await connection.execute(
+            'SELECT id, is_active, stock_quantity FROM products WHERE id = ? LIMIT 1 FOR UPDATE',
+            [productId]
+        );
+
+        const product = products[0];
+        if (!product || product.is_active === false || product.is_active === 0) {
+            throw new Error('Product is not available');
+        }
+
+        if (Number(product.stock_quantity) < quantity) {
+            throw new Error('Insufficient product stock');
+        }
+    }
+
+    static async assertVariantStock(connection, productId, variantId, quantity) {
+        const [variants] = await connection.execute(
+            'SELECT id, product_id, stock_quantity FROM product_variants WHERE id = ? LIMIT 1 FOR UPDATE',
+            [variantId]
+        );
+
+        const variant = variants[0];
+        if (!variant || Number(variant.product_id) !== Number(productId)) {
+            throw new Error('Variant is not available for this product');
+        }
+
+        if (Number(variant.stock_quantity) < quantity) {
+            throw new Error('Insufficient variant stock');
+        }
+    }
+
+    static async validateOrderItemAvailability(connection, item) {
+        const quantity = Number.parseInt(item.quantity, 10);
+
+        if (!Number.isInteger(quantity) || quantity <= 0) {
+            throw new Error('Cart contains invalid quantity');
+        }
+
+        await this.assertProductStock(connection, item.product_id, quantity);
+
+        if (item.variant_id !== null && item.variant_id !== undefined) {
+            await this.assertVariantStock(connection, item.product_id, item.variant_id, quantity);
+        }
+    }
+
     // =========================================================================
     // TẠO ĐƠN HÀNG
     // =========================================================================
@@ -34,13 +100,14 @@ class Order {
      * @returns {Object} { id, order_code, final_amount }
      * @throws {Error} Nếu giỏ hàng trống hoặc không tìm thấy
      */
-    static async create(userId, addressId, paymentMethod, notes = null, shippingFeeFromUI = null, discountAmount = 0, voucherCode = null) {
+    static async create(userId, addressId, paymentMethod, notes = null, shippingFeeFromUI = null, discountAmount = 0, voucherCode = null, voucherId = null) {
         // Lấy connection để sử dụng transaction
         const connection = await pool.getConnection();
 
         try {
             // Bắt đầu transaction
             await connection.beginTransaction();
+            await this.assertAddressOwnership(connection, userId, addressId);
 
             // Lấy giỏ hàng của user
             const Cart = require('./Cart');
@@ -62,24 +129,26 @@ class Order {
             }
 
             // Tạo mã đơn hàng unique: ORD + timestamp + random
-            const orderCode = `ORD${Date.now()}${Math.floor(Math.random() * 1000)}`;
+            const orderCode = this.generateOrderCode();
 
             // Tính phí ship: miễn phí nếu đơn >= 500k, còn lại 30k
-            const shippingFee = shippingFeeFromUI !== null ? shippingFeeFromUI : (cartData.subtotal >= 500000 ? 0 : 30000);
+            const shippingFee = this.calculateShippingFee(cartData.subtotal);
 
             // Tính tổng tiền cuối: tổng sản phẩm + ship - giảm giá
-            const finalAmount = cartData.subtotal + shippingFee - discountAmount;
+            const finalAmount = Math.max(0, cartData.subtotal + shippingFee - discountAmount);
 
             // Tạo đơn hàng trong database
             const orderQuery = `
-                INSERT INTO orders (user_id, address_id, order_code, total_amount, shipping_fee, final_amount, payment_method, notes)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO orders (user_id, address_id, voucher_id, order_code, total_amount, discount_amount, shipping_fee, final_amount, payment_method, notes)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `;
             const [orderResult] = await connection.execute(orderQuery, [
                 userId,
                 addressId,
+                voucherId,
                 orderCode,
                 cartData.subtotal,
+                discountAmount,
                 shippingFee,
                 finalAmount,
                 paymentMethod,
@@ -90,6 +159,8 @@ class Order {
 
             // Tạo các order_items từ giỏ hàng
             for (const item of cartData.items) {
+                await this.validateOrderItemAvailability(connection, item);
+
                 const orderItemQuery = `
                     INSERT INTO order_items (order_id, product_id, variant_id, product_name, product_image, price, sale_applied, quantity, subtotal)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -125,6 +196,18 @@ class Order {
                 }
             }
 
+            if (voucherId && discountAmount > 0) {
+                await connection.execute(
+                    'INSERT INTO voucher_usage (voucher_id, user_id, order_id, discount_amount) VALUES (?, ?, ?, ?)',
+                    [voucherId, userId, orderId, discountAmount]
+                );
+
+                await connection.execute(
+                    'UPDATE vouchers SET used_count = used_count + 1 WHERE id = ?',
+                    [voucherId]
+                );
+            }
+
             // Xóa giỏ hàng sau khi đặt hàng thành công
             await connection.execute('DELETE FROM cart_items WHERE cart_id = ?', [cartId]);
 
@@ -156,32 +239,45 @@ class Order {
      *
      * @returns {Object} { id, order_code, final_amount }
      */
-    static async createFromProduct(userId, addressId, product, quantity, paymentMethod, notes = null, variantId = null) {
+    static async createFromProduct(userId, addressId, product, quantity, paymentMethod, notes = null, variantId = null, discountAmount = 0, voucherId = null) {
         const connection = await pool.getConnection();
 
         try {
             await connection.beginTransaction();
+            await this.assertAddressOwnership(connection, userId, addressId);
+
+            const quantityNumber = Number.parseInt(quantity, 10);
+            if (!Number.isInteger(quantityNumber) || quantityNumber <= 0) {
+                throw new Error('Quantity is invalid');
+            }
+
+            await this.assertProductStock(connection, product.id, quantityNumber);
+            if (variantId !== null && variantId !== undefined) {
+                await this.assertVariantStock(connection, product.id, variantId, quantityNumber);
+            }
 
             // Tạo mã đơn hàng
-            const orderCode = `ORD${Date.now()}${Math.floor(Math.random() * 1000)}`;
+            const orderCode = this.generateOrderCode();
 
             // Tính giá (ưu tiên giá sau sale)
             const price = product.final_price || product.price;
-            const subtotal = price * quantity;
+            const subtotal = price * quantityNumber;
             // Phí ship: miễn phí nếu >= 500k
-            const shippingFee = subtotal >= 500000 ? 0 : 30000;
-            const finalAmount = subtotal + shippingFee;
+            const shippingFee = this.calculateShippingFee(subtotal);
+            const finalAmount = Math.max(0, subtotal + shippingFee - discountAmount);
 
             // Tạo đơn hàng
             const orderQuery = `
-                INSERT INTO orders (user_id, address_id, order_code, total_amount, shipping_fee, final_amount, payment_method, notes)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO orders (user_id, address_id, voucher_id, order_code, total_amount, discount_amount, shipping_fee, final_amount, payment_method, notes)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `;
             const [orderResult] = await connection.execute(orderQuery, [
                 userId,
                 addressId,
+                voucherId,
                 orderCode,
                 subtotal,
+                discountAmount,
                 shippingFee,
                 finalAmount,
                 paymentMethod,
@@ -208,21 +304,33 @@ class Order {
                 productImage,
                 product.price,
                 saleDiscount,
-                quantity,
+                quantityNumber,
                 subtotal
             ]);
 
             // Cập nhật tồn kho
             await connection.execute(
                 'UPDATE products SET stock_quantity = stock_quantity - ?, sold_count = sold_count + ? WHERE id = ?',
-                [quantity, quantity, product.id]
+                [quantityNumber, quantityNumber, product.id]
             );
 
             // Cập nhật tồn kho variant nếu có
             if (variantId) {
                 await connection.execute(
                     'UPDATE product_variants SET stock_quantity = stock_quantity - ? WHERE id = ?',
-                    [quantity, variantId]
+                    [quantityNumber, variantId]
+                );
+            }
+
+            if (voucherId && discountAmount > 0) {
+                await connection.execute(
+                    'INSERT INTO voucher_usage (voucher_id, user_id, order_id, discount_amount) VALUES (?, ?, ?, ?)',
+                    [voucherId, userId, orderId, discountAmount]
+                );
+
+                await connection.execute(
+                    'UPDATE vouchers SET used_count = used_count + 1 WHERE id = ?',
+                    [voucherId]
                 );
             }
 
@@ -432,9 +540,9 @@ class Order {
 
         // Tìm kiếm theo mã đơn, tên, email
         if (filters.search) {
-            query += ' AND (o.order_code LIKE ? OR u.full_name LIKE ? OR u.email LIKE ?)';
+            query += ' AND (o.order_code LIKE ? OR u.full_name LIKE ? OR u.email LIKE ? OR COALESCE(o.recipient_name, \'\') LIKE ? OR COALESCE(o.recipient_phone, \'\') LIKE ?)';
             const searchTerm = `%${filters.search}%`;
-            params.push(searchTerm, searchTerm, searchTerm);
+            params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
         }
 
         // Sắp xếp theo thời gian mới nhất

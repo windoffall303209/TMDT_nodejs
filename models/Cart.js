@@ -147,6 +147,28 @@ class Cart {
         }
     }
 
+    static async findItemByProduct(cartId, productId, variantId = null) {
+        const query = `
+            SELECT *
+            FROM cart_items
+            WHERE cart_id = ? AND product_id = ? AND (variant_id = ? OR (variant_id IS NULL AND ? IS NULL))
+            LIMIT 1
+        `;
+        const [items] = await pool.execute(query, [cartId, productId, variantId ?? null, variantId ?? null]);
+        return items[0] || null;
+    }
+
+    static async getScopedItem(cartId, cartItemId) {
+        const query = `
+            SELECT *
+            FROM cart_items
+            WHERE id = ? AND cart_id = ?
+            LIMIT 1
+        `;
+        const [items] = await pool.execute(query, [cartItemId, cartId]);
+        return items[0] || null;
+    }
+
     /**
      * Lấy danh sách sản phẩm trong giỏ hàng
      *
@@ -203,21 +225,18 @@ class Cart {
      *
      * @returns {void}
      */
-    static async updateQuantity(cartItemId, quantity) {
+    static async updateQuantity(cartId, cartItemId, quantity) {
         // Xóa nếu số lượng <= 0
         if (quantity <= 0) {
-            return await this.removeItem(cartItemId);
+            return await this.removeItem(cartId, cartItemId);
         }
 
         // Cập nhật số lượng
-        const query = 'UPDATE cart_items SET quantity = ? WHERE id = ?';
-        await pool.execute(query, [quantity, cartItemId]);
+        const query = 'UPDATE cart_items SET quantity = ? WHERE id = ? AND cart_id = ?';
+        await pool.execute(query, [quantity, cartItemId, cartId]);
 
         // Cập nhật thời gian giỏ hàng
-        const [item] = await pool.execute('SELECT cart_id FROM cart_items WHERE id = ?', [cartItemId]);
-        if (item.length > 0) {
-            await pool.execute('UPDATE cart SET updated_at = NOW() WHERE id = ?', [item[0].cart_id]);
-        }
+        await pool.execute('UPDATE cart SET updated_at = NOW() WHERE id = ?', [cartId]);
     }
 
     /**
@@ -226,7 +245,7 @@ class Cart {
      * @param {number} cartItemId - ID của item
      * @returns {Object} Thông tin item với giá đã tính
      */
-    static async getItemById(cartItemId) {
+    static async getItemById(cartItemId, cartId = null) {
         const query = `
             SELECT ci.*,
                    p.name as product_name,
@@ -241,8 +260,10 @@ class Cart {
                 AND NOW() BETWEEN s.start_date AND s.end_date
             LEFT JOIN product_variants pv ON ci.variant_id = pv.id
             WHERE ci.id = ?
+              ${cartId ? 'AND ci.cart_id = ?' : ''}
         `;
-        const [items] = await pool.execute(query, [cartItemId]);
+        const params = cartId ? [cartItemId, cartId] : [cartItemId];
+        const [items] = await pool.execute(query, params);
 
         if (items.length === 0) return null;
 
@@ -264,18 +285,13 @@ class Cart {
      *
      * @returns {void}
      */
-    static async removeItem(cartItemId) {
-        // Lấy cart_id trước khi xóa (để cập nhật timestamp)
-        const [item] = await pool.execute('SELECT cart_id FROM cart_items WHERE id = ?', [cartItemId]);
-
+    static async removeItem(cartId, cartItemId) {
         // Xóa item
-        const query = 'DELETE FROM cart_items WHERE id = ?';
-        await pool.execute(query, [cartItemId]);
+        const query = 'DELETE FROM cart_items WHERE id = ? AND cart_id = ?';
+        await pool.execute(query, [cartItemId, cartId]);
 
         // Cập nhật thời gian giỏ hàng
-        if (item.length > 0) {
-            await pool.execute('UPDATE cart SET updated_at = NOW() WHERE id = ?', [item[0].cart_id]);
-        }
+        await pool.execute('UPDATE cart SET updated_at = NOW() WHERE id = ?', [cartId]);
     }
 
     /**

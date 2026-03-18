@@ -54,6 +54,13 @@ function createApp() {
     app.set('view engine', 'ejs');
     app.set('views', path.join(__dirname, 'views'));
 
+    const faviconPath = path.join(__dirname, 'public', 'favicon.png');
+
+    app.get('/favicon.ico', (req, res) => {
+        res.type('image/png');
+        res.sendFile(faviconPath);
+    });
+
     // Static files
     app.use(express.static(path.join(__dirname, 'public')));
 

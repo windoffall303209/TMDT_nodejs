@@ -372,7 +372,8 @@ async function applyVoucher() {
             credentials: 'same-origin',
             body: JSON.stringify({
                 code: code,
-                order_amount: checkoutSubtotal
+                order_amount: checkoutSubtotal,
+                mode: 'cart'
             })
         });
 

@@ -166,7 +166,6 @@
 window.productImageUrls = <%- JSON.stringify((product.images || []).map(img => img.image_url)) %>;
 window.productInitialImage = <%- JSON.stringify((product.primary_image || ((product.images && product.images[0]) ? product.images[0].image_url : null))) %>;
 </script>
-<script src="/js/main.js"></script>
 <script src="/js/product-detail.js"></script>
 
 <%- include('../partials/footer') %>

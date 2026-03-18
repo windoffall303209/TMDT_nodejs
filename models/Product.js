@@ -17,6 +17,30 @@
 const pool = require('../config/database');
 
 class Product {
+    static getOptimizedCardImageUrl(imageUrl) {
+        if (!imageUrl || typeof imageUrl !== 'string') {
+            return imageUrl;
+        }
+
+        if (!imageUrl.includes('res.cloudinary.com') || !imageUrl.includes('/upload/')) {
+            return imageUrl;
+        }
+
+        return imageUrl.replace(
+            '/upload/',
+            '/upload/f_auto,q_auto,c_fill,g_auto,w_720,h_960/'
+        );
+    }
+
+    static hydrateListingProducts(products = []) {
+        products.forEach((product) => {
+            product.final_price = this.calculateFinalPrice(product.price, product.sale_type, product.sale_value);
+            product.card_image = this.getOptimizedCardImageUrl(product.primary_image);
+        });
+
+        return products;
+    }
+
     // =============================================================================
     // LẤY DANH SÁCH SẢN PHẨM - GET PRODUCTS LIST
     // =============================================================================
@@ -111,12 +135,50 @@ class Product {
 
         const [rows] = await pool.query(query, params);
 
-        // Tính giá cuối cùng sau khuyến mãi cho mỗi sản phẩm
-        rows.forEach(product => {
-            product.final_price = this.calculateFinalPrice(product.price, product.sale_type, product.sale_value);
-        });
+        return this.hydrateListingProducts(rows);
+    }
 
-        return rows;
+    static async count(filters = {}) {
+        let query = 'SELECT COUNT(*) AS total FROM products p WHERE p.is_active = TRUE';
+        const params = [];
+
+        if (filters.category_id) {
+            query += ' AND p.category_id = ?';
+            params.push(filters.category_id);
+        }
+
+        if (filters.min_price) {
+            query += ' AND p.price >= ?';
+            params.push(filters.min_price);
+        }
+
+        if (filters.max_price) {
+            query += ' AND p.price <= ?';
+            params.push(filters.max_price);
+        }
+
+        if (filters.search) {
+            query += ' AND (p.name LIKE ? OR p.description LIKE ? OR p.sku LIKE ?)';
+            const searchTerm = `%${filters.search}%`;
+            params.push(searchTerm, searchTerm, searchTerm);
+        }
+
+        if (filters.is_featured) {
+            query += ' AND p.is_featured = TRUE';
+        }
+
+        if (filters.on_sale) {
+            query += ` AND EXISTS (
+                SELECT 1
+                FROM sales s
+                WHERE s.id = p.sale_id
+                  AND s.is_active = TRUE
+                  AND NOW() BETWEEN s.start_date AND s.end_date
+            )`;
+        }
+
+        const [rows] = await pool.query(query, params);
+        return rows[0]?.total || 0;
     }
 
     // =============================================================================
@@ -138,7 +200,9 @@ class Product {
      *
      * @returns {Promise<Object|null>} Thông tin sản phẩm hoặc null nếu không tìm thấy
      */
-    static async findById(id) {
+    static async findById(id, options = {}) {
+        const { incrementView = true } = options;
+
         // Query lấy thông tin sản phẩm với JOIN
         const query = `
             SELECT p.*,
@@ -201,8 +265,9 @@ class Product {
         // Tính giá cuối cùng sau khuyến mãi
         product.final_price = this.calculateFinalPrice(product.price, product.sale_type, product.sale_value);
 
-        // Tăng lượt xem sản phẩm
-        await pool.execute('UPDATE products SET view_count = view_count + 1 WHERE id = ?', [id]);
+        if (incrementView) {
+            await pool.execute('UPDATE products SET view_count = view_count + 1 WHERE id = ?', [id]);
+        }
 
         return product;
     }
@@ -282,12 +347,7 @@ class Product {
             rows = await this.fuzzySearch(searchQuery, limitNum);
         }
 
-        // Tính giá cuối cùng cho mỗi sản phẩm
-        rows.forEach(product => {
-            product.final_price = this.calculateFinalPrice(product.price, product.sale_type, product.sale_value);
-        });
-
-        return rows;
+        return this.hydrateListingProducts(rows);
     }
 
     /**
