@@ -1,14 +1,19 @@
 <%- include('../partials/header') %>
 
-<!-- Load Home CSS -->
 <link rel="stylesheet" href="/css/home.css">
 
-<!-- Popup Banner - Hiển thị 1 lần khi truy cập -->
+<%
+    const heroVisual =
+        (banners && banners[1] && banners[1].image_url) ||
+        (newProducts && newProducts[0] && newProducts[0].primary_image) ||
+        'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1400&q=80';
+%>
+
 <% if (banners && banners.length > 0) { %>
 <div id="popupBanner" class="popup-banner">
     <div class="popup-banner__overlay" onclick="closePopup()"></div>
     <div class="popup-banner__content">
-        <button class="popup-banner__close" onclick="closePopup()">
+        <button class="popup-banner__close" onclick="closePopup()" aria-label="Đóng popup">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="18" y1="6" x2="6" y2="18"/>
                 <line x1="6" y1="6" x2="18" y2="18"/>
@@ -20,6 +25,7 @@
                 <img src="<%= popupBanner.image_url %>" alt="<%= popupBanner.title %>">
             <% } else { %>
                 <div class="popup-banner__text">
+                    <p class="popup-banner__eyebrow">WIND OF FALL</p>
                     <h2><%= popupBanner.title %></h2>
                     <% if (popupBanner.subtitle) { %>
                         <p><%= popupBanner.subtitle %></p>
@@ -32,40 +38,97 @@
 </div>
 <% } %>
 
-<!-- Hero Banner Section -->
-<section class="hero">
-    <div class="hero-content">
-        <p class="hero-subtitle">BST Thu Đông 2024</p>
-        <h1 class="hero-title">Phong Cách<br>Tối Giản</h1>
-        <a href="/products" class="btn btn-primary">Khám phá ngay</a>
-    </div>
-    <div class="hero-image">
-        <img src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1200&q=80" alt="BST Thu Đông">
+<section class="home-hero">
+    <div class="container home-hero__inner">
+        <div class="home-hero__content">
+            <p class="home-hero__eyebrow">Bộ sưu tập mới / mặc đẹp mỗi ngày</p>
+            <h1 class="home-hero__title">Chọn nhanh outfit đẹp cho nam, nữ và trẻ em.</h1>
+            <p class="home-hero__copy">
+                Áo polo, sơ mi, váy, jeans và nhiều mẫu dễ mặc đã sẵn sàng để bạn mua ngay.
+            </p>
+            <div class="home-hero__actions">
+                <a href="/products" class="btn btn-primary">Mua bộ sưu tập mới</a>
+                <a href="/products?sale=true" class="btn btn-secondary">Xem khu sale</a>
+            </div>
+            <div class="home-hero__stats">
+                <div>
+                    <strong>Từ 499K</strong>
+                    <span>Freeship toàn quốc</span>
+                </div>
+                <div>
+                    <strong>30 ngày</strong>
+                    <span>Đổi trả dễ dàng</span>
+                </div>
+                <div>
+                    <strong>Nam, nữ, trẻ em</strong>
+                    <span>Đủ size và màu cơ bản</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="home-hero__visual">
+            <div class="home-hero__visual-card home-hero__visual-card--main">
+                <img src="<%= heroVisual %>" alt="Bộ sưu tập mới">
+            </div>
+            <div class="home-hero__mini-grid">
+                <a href="/products/category/nam" class="home-hero__mini-card">
+                    <strong>Nam</strong>
+                    <span>Áo polo, tee, jeans</span>
+                </a>
+                <a href="/products/category/nu" class="home-hero__mini-card">
+                    <strong>Nữ</strong>
+                    <span>Váy, đầm, cardigan</span>
+                </a>
+                <a href="/products/category/tre-em" class="home-hero__mini-card">
+                    <strong>Trẻ em</strong>
+                    <span>Set đồ cho cả nhà</span>
+                </a>
+            </div>
+        </div>
     </div>
 </section>
 
-<!-- Categories Section - Đưa lên trước -->
-<section class="section-categories">
+<section class="home-strip">
+    <div class="container home-strip__grid">
+        <div class="home-strip__item">
+            <span>01</span>
+            <strong>Mẫu mới lên kệ đều mỗi tuần</strong>
+        </div>
+        <div class="home-strip__item">
+            <span>02</span>
+            <strong>Giá rõ ràng, ưu đãi dễ thấy</strong>
+        </div>
+        <div class="home-strip__item">
+            <span>03</span>
+            <strong>Mua nhanh trên cả desktop và mobile</strong>
+        </div>
+    </div>
+</section>
+
+<section class="home-categories section-block">
     <div class="container">
-        <div class="section-header">
+        <div class="home-section__header">
             <div>
-                <h2 class="section-title">Danh mục</h2>
-                <p class="section-subtitle">Khám phá theo phong cách của bạn</p>
+                <p class="section-kicker">Danh mục nổi bật</p>
+                <h2 class="section-title">Mua sắm theo nhu cầu của bạn.</h2>
+                <p class="section-copy">Chọn nhanh theo nam, nữ và trẻ em để tìm đúng sản phẩm bạn cần.</p>
             </div>
+            <a href="/products" class="home-section__link">Xem tất cả sản phẩm</a>
         </div>
 
         <% if (categories && categories.length > 0) { %>
-            <div class="category-grid">
-                <% categories.slice(0, 3).forEach(category => { %>
-                    <a href="/products/category/<%= category.slug %>" class="category-card">
+            <div class="category-showcase">
+                <% categories.slice(0, 3).forEach((category, index) => { %>
+                    <a href="/products/category/<%= category.slug %>" class="category-showcase__card category-showcase__card--<%= index + 1 %>">
                         <% if (category.image_url) { %>
                             <img src="<%= category.image_url %>" alt="<%= category.name %>">
                         <% } else { %>
-                            <div class="category-placeholder"></div>
+                            <div class="category-showcase__placeholder"></div>
                         <% } %>
-                        <div class="category-info">
+                        <div class="category-showcase__overlay">
+                            <p>Danh mục</p>
                             <h3><%= category.name %></h3>
-                            <span class="btn-link">Khám phá</span>
+                            <span>Khám phá ngay</span>
                         </div>
                     </a>
                 <% }) %>
@@ -74,195 +137,107 @@
     </div>
 </section>
 
-<!-- New Products Section -->
-<section class="section-products">
+<section class="section-block">
     <div class="container">
-        <div class="section-header">
+        <div class="home-section__header">
             <div>
-                <h2 class="section-title">Sản phẩm mới</h2>
-                <p class="section-subtitle">Khám phá những thiết kế mới nhất</p>
+                <p class="section-kicker">Mẫu mới</p>
+                <h2 class="section-title">Hàng mới lên kệ hôm nay.</h2>
             </div>
-            <a href="/products" class="section-link">
-                Xem tất cả
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M5 12h14M12 5l7 7-7 7"/>
-                </svg>
-            </a>
+            <a href="/products" class="home-section__link">Xem tất cả</a>
         </div>
 
         <% if (newProducts && newProducts.length > 0) { %>
-            <div class="product-grid">
+            <div class="home-products-grid">
                 <% newProducts.slice(0, 8).forEach(product => { %>
-                    <div class="product-card">
-                        <a href="/products/<%= product.slug %>">
-                            <div class="product-image">
-                                <% if (product.sale_type) { %>
-                                    <span class="product-badge sale-badge">
-                                        <% if (product.sale_type === 'percentage') { %>
-                                            -<%= product.sale_value %>%
-                                        <% } else { %>
-                                            SALE
-                                        <% } %>
-                                    </span>
-                                <% } %>
-                                <% if (product.primary_image) { %>
-                                    <img class="img-primary" src="<%= product.primary_image %>" alt="<%= product.name %>">
-                                    <img class="img-secondary" src="<%= product.primary_image %>" alt="<%= product.name %>">
-                                <% } else { %>
-                                    <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--gray-100);color:var(--gray-400);">
-                                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
-                                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                                            <circle cx="8.5" cy="8.5" r="1.5"/>
-                                            <polyline points="21,15 16,10 5,21"/>
-                                        </svg>
-                                    </div>
-                                <% } %>
-                                <button class="quick-add-btn" onclick="addToCart(event, <%= product.id %>)">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-                                        <line x1="3" y1="6" x2="21" y2="6"/>
-                                        <path d="M16 10a4 4 0 0 1-8 0"/>
-                                    </svg>
-                                    Thêm vào giỏ
-                                </button>
-                            </div>
-                            <div class="product-info">
-                                <h3 class="product-name"><%= product.name %></h3>
-                                <div class="product-price">
-                                    <% if (product.final_price && product.final_price < product.price) { %>
-                                        <span class="price-original"><%= product.price.toLocaleString('vi-VN') %>đ</span>
-                                        <span class="price-sale"><%= product.final_price.toLocaleString('vi-VN') %>đ</span>
-                                    <% } else { %>
-                                        <span class="price-current"><%= product.price.toLocaleString('vi-VN') %>đ</span>
-                                    <% } %>
-                                </div>
-                            </div>
-                        </a>
-                    </div>
+                    <%- include('../partials/product-card', { product }) %>
                 <% }) %>
             </div>
         <% } else { %>
-            <div class="empty-state">
-                <p>Chưa có sản phẩm. <a href="/admin">Đi tới Admin</a> để thêm sản phẩm.</p>
+            <div class="empty-panel">
+                <h3>Chưa có sản phẩm mới</h3>
+                <p>Hãy bổ sung sản phẩm trong trang quản trị để khu vực này hiển thị đầy đủ hơn.</p>
             </div>
         <% } %>
     </div>
 </section>
 
-<!-- Best Sellers Section -->
-<% if (bestSellers && bestSellers.length > 0) { %>
-<section class="section-products">
-    <div class="container">
-        <div class="section-header">
-            <div>
-                <h2 class="section-title">Bán chạy nhất</h2>
-                <p class="section-subtitle">Sản phẩm được yêu thích</p>
+<section class="home-editorial section-block">
+    <div class="container home-editorial__grid">
+        <div class="home-editorial__copy">
+            <p class="section-kicker">Gợi ý phối đồ</p>
+            <h2 class="section-title">Dễ mặc từ công sở đến cuối tuần.</h2>
+            <p class="section-copy">
+                Các nhóm sản phẩm được sắp theo những nhu cầu mặc thường ngày để bạn chọn nhanh hơn.
+            </p>
+            <div class="home-editorial__benefits">
+                <div>
+                    <strong>Dễ phối</strong>
+                    <span>Màu sắc cơ bản và phom dáng quen thuộc để mặc hằng ngày.</span>
+                </div>
+                <div>
+                    <strong>Dễ mua lại</strong>
+                    <span>Những item chủ lực luôn có mặt trong các đợt lên kệ mới.</span>
+                </div>
             </div>
-            <a href="/products?sort=sold_count" class="section-link">
-                Xem tất cả
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M5 12h14M12 5l7 7-7 7"/>
-                </svg>
-            </a>
+        </div>
+        <div class="home-editorial__cards">
+            <div class="home-editorial__card">
+                <span>Look 01</span>
+                <strong>Công sở chỉn chu</strong>
+                <p>Áo polo, sơ mi và quần kaki cho những ngày cần gọn gàng.</p>
+            </div>
+            <div class="home-editorial__card">
+                <span>Look 02</span>
+                <strong>Cuối tuần năng động</strong>
+                <p>Thun, jeans, hoodie và các item dễ mặc cho lịch trình linh hoạt.</p>
+            </div>
+            <div class="home-editorial__card">
+                <span>Look 03</span>
+                <strong>Cả nhà đồng điệu</strong>
+                <p>Danh mục trẻ em luôn sẵn để bạn chọn set đồ cho cả gia đình.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<% if (bestSellers && bestSellers.length > 0) { %>
+<section class="section-block section-block--alt">
+    <div class="container">
+        <div class="home-section__header">
+            <div>
+                <p class="section-kicker">Bán chạy</p>
+                <h2 class="section-title">Những mẫu được chọn nhiều nhất.</h2>
+            </div>
+            <a href="/products?sort=sold_count" class="home-section__link">Xem thêm</a>
         </div>
 
-        <div class="product-grid">
+        <div class="home-products-grid home-products-grid--featured">
             <% bestSellers.slice(0, 4).forEach(product => { %>
-                <div class="product-card">
-                    <a href="/products/<%= product.slug %>">
-                        <div class="product-image">
-                            <% if (product.sale_type) { %>
-                                <span class="product-badge sale-badge">
-                                    <% if (product.sale_type === 'percentage') { %>
-                                        -<%= product.sale_value %>%
-                                    <% } else { %>
-                                        SALE
-                                    <% } %>
-                                </span>
-                            <% } %>
-                            <% if (product.primary_image) { %>
-                                <img class="img-primary" src="<%= product.primary_image %>" alt="<%= product.name %>">
-                                <img class="img-secondary" src="<%= product.primary_image %>" alt="<%= product.name %>">
-                            <% } else { %>
-                                <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--gray-100);color:var(--gray-400);">
-                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
-                                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                                        <circle cx="8.5" cy="8.5" r="1.5"/>
-                                        <polyline points="21,15 16,10 5,21"/>
-                                    </svg>
-                                </div>
-                            <% } %>
-                            <button class="quick-add-btn" onclick="addToCart(event, <%= product.id %>)">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-                                    <line x1="3" y1="6" x2="21" y2="6"/>
-                                    <path d="M16 10a4 4 0 0 1-8 0"/>
-                                </svg>
-                                Thêm vào giỏ
-                            </button>
-                        </div>
-                        <div class="product-info">
-                            <h3 class="product-name"><%= product.name %></h3>
-                            <div class="product-price">
-                                <% if (product.final_price && product.final_price < product.price) { %>
-                                    <span class="price-original"><%= product.price.toLocaleString('vi-VN') %>đ</span>
-                                    <span class="price-sale"><%= product.final_price.toLocaleString('vi-VN') %>đ</span>
-                                <% } else { %>
-                                    <span class="price-current"><%= product.price.toLocaleString('vi-VN') %>đ</span>
-                                <% } %>
-                            </div>
-                        </div>
-                    </a>
-                </div>
+                <%- include('../partials/product-card', { product }) %>
             <% }) %>
         </div>
     </div>
 </section>
 <% } %>
 
-<!-- Features Section -->
-<section class="section-features">
-    <div class="container">
-        <div class="features-grid">
-            <div class="feature-item">
-                <div class="feature-icon">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <rect x="1" y="3" width="15" height="13"/>
-                        <polygon points="16,8 20,10.5 20,5.5"/>
-                        <line x1="1" y1="10" x2="16" y2="10"/>
-                    </svg>
-                </div>
-                <h4>Miễn phí vận chuyển</h4>
-                <p>Cho đơn hàng từ 500.000đ</p>
-            </div>
-            <div class="feature-item">
-                <div class="feature-icon">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <path d="M21 12a9 9 0 1 1-9-9"/>
-                        <path d="M21 3v6h-6"/>
-                    </svg>
-                </div>
-                <h4>Đổi trả 30 ngày</h4>
-                <p>Miễn phí đổi trả trong 30 ngày</p>
-            </div>
-            <div class="feature-item">
-                <div class="feature-icon">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                    </svg>
-                </div>
-                <h4>Thanh toán an toàn</h4>
-                <p>Bảo mật 100% thông tin</p>
-            </div>
-            <div class="feature-item">
-                <div class="feature-icon">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-                    </svg>
-                </div>
-                <h4>Hỗ trợ 24/7</h4>
-                <p>Hotline: 1900 123 456</p>
-            </div>
+<section class="home-services section-block">
+    <div class="container home-services__grid">
+        <div class="home-service-card">
+            <strong>Freeship đơn từ 499K</strong>
+            <p>Thông tin ưu đãi rõ ràng ngay từ trang đầu để bạn chốt đơn nhanh hơn.</p>
+        </div>
+        <div class="home-service-card">
+            <strong>Đổi trả trong 30 ngày</strong>
+            <p>Yên tâm thử size và đổi mẫu nếu chưa thật sự phù hợp.</p>
+        </div>
+        <div class="home-service-card">
+            <strong>Hỗ trợ qua hotline và chat</strong>
+            <p>Dễ hỏi size, hỏi phối đồ và theo dõi đơn hàng khi cần.</p>
+        </div>
+        <div class="home-service-card">
+            <strong>Thanh toán rõ ràng</strong>
+            <p>COD, VNPay và MoMo hiển thị sớm để người mua dễ lựa chọn.</p>
         </div>
     </div>
 </section>

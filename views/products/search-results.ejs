@@ -2,96 +2,37 @@
 
 <link rel="stylesheet" href="/css/product-list.css">
 
-<div class="products-page">
+<div class="catalog-page page-shell">
     <div class="container">
-        <!-- Page Header -->
-        <div class="products-page__header">
-            <h1 class="products-page__title">Kết quả tìm kiếm: "<%= query %>"</h1>
-            <p class="products-page__count"><%= products ? products.length : 0 %> sản phẩm</p>
-        </div>
+        <section class="page-intro page-intro--compact catalog-intro catalog-intro--compact catalog-intro--search">
+            <div class="catalog-intro__content">
+                <h1 class="page-intro__title page-intro__title-inline">
+                    <span>Tìm kiếm</span>
+                    <span class="page-intro__slash">/</span>
+                    <span>Kết quả cho "<%= query %>"</span>
+                </h1>
+            </div>
+            <p class="catalog-intro__meta"><%= products ? products.length : 0 %> sản phẩm</p>
+        </section>
 
         <% if (products && products.length > 0) { %>
-            <!-- Filters Bar -->
-            <div class="products-filters">
-                <div class="products-filters__left">
-                    <button class="filter-btn active" data-filter="all">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="3" y="3" width="7" height="7"/>
-                            <rect x="14" y="3" width="7" height="7"/>
-                            <rect x="14" y="14" width="7" height="7"/>
-                            <rect x="3" y="14" width="7" height="7"/>
-                        </svg>
-                        Tất cả
-                    </button>
-                    <button class="filter-btn" data-filter="new">Mới nhất</button>
-                    <button class="filter-btn" data-filter="bestseller">Bán chạy</button>
-                    <button class="filter-btn" data-filter="sale">Đang giảm giá</button>
-                </div>
-                <div class="products-filters__sort">
-                    <select id="sortProducts" onchange="sortProducts(this.value)">
-                        <option value="newest">Mới nhất</option>
-                        <option value="price-asc">Giá: Thấp đến Cao</option>
-                        <option value="price-desc">Giá: Cao đến Thấp</option>
-                        <option value="name-asc">Tên: A-Z</option>
-                        <option value="name-desc">Tên: Z-A</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Products Grid -->
-            <div class="products-grid">
+            <div class="products-grid catalog-grid">
                 <% products.forEach(product => { %>
                     <%- include('../partials/product-card', { product }) %>
                 <% }) %>
             </div>
         <% } else { %>
-            <!-- Empty State -->
-            <div class="products-empty">
-                <div class="products-empty__icon">
-                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
-                        <circle cx="11" cy="11" r="8"/>
-                        <path d="M21 21l-4.35-4.35"/>
-                    </svg>
-                </div>
-                <h3 class="products-empty__title">Không tìm thấy sản phẩm</h3>
-                <p class="products-empty__text">
-                    Rất tiếc, không tìm thấy sản phẩm nào phù hợp với "<%= query %>".
-                    <br>Vui lòng thử tìm kiếm với từ khóa khác.
-                </p>
-                <a href="/products" class="products-empty__link">Xem tất cả sản phẩm →</a>
-
-                <div style="margin-top: 40px; text-align: left; max-width: 400px; margin-left: auto; margin-right: auto;">
-                    <h4 style="margin-bottom: 15px; color: var(--black);">Gợi ý tìm kiếm:</h4>
-                    <ul style="color: var(--gray-600); line-height: 2; padding-left: 20px;">
-                        <li>Kiểm tra lại chính tả từ khóa</li>
-                        <li>Sử dụng từ khóa chung chung hơn</li>
-                        <li>Thử tìm kiếm theo danh mục:
-                            <a href="/products/category/nam" style="color: var(--accent);">Nam</a>,
-                            <a href="/products/category/nu" style="color: var(--accent);">Nữ</a>,
-                            <a href="/products/category/tre-em" style="color: var(--accent);">Trẻ Em</a>
-                        </li>
-                    </ul>
+            <div class="empty-panel search-empty">
+                <h3>Không tìm thấy sản phẩm phù hợp</h3>
+                <p>Thử tìm bằng từ khóa ngắn hơn hoặc đi đến các danh mục mua nhanh bên dưới.</p>
+                <div class="search-empty__actions">
+                    <a href="/products/category/nam" class="btn btn-secondary">Xem danh mục nam</a>
+                    <a href="/products/category/nu" class="btn btn-secondary">Xem danh mục nữ</a>
+                    <a href="/products" class="btn btn-primary">Xem tất cả sản phẩm</a>
                 </div>
             </div>
         <% } %>
     </div>
 </div>
-
-<script>
-// Filter buttons
-document.querySelectorAll('.filter-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-        this.classList.add('active');
-    });
-});
-
-// Sort products
-function sortProducts(value) {
-    const currentUrl = new URL(window.location.href);
-    currentUrl.searchParams.set('sort', value);
-    window.location.href = currentUrl.toString();
-}
-</script>
 
 <%- include('../partials/footer') %>

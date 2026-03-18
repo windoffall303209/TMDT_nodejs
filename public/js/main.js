@@ -3,28 +3,25 @@ const mainState = window.__tmdtMainState || (window.__tmdtMainState = {
     cartCountRequest: null
 });
 
-// Add to cart function - handles both onclick="addToCart(event, productId)" and onclick="addToCart(productId)"
 async function addToCart(eventOrProductId, productId = null, variantId = null) {
-    // Detect if first argument is an event or a productId
-    let actualProductId, actualVariantId;
-    
+    let actualProductId;
+    let actualVariantId;
+
     if (eventOrProductId && typeof eventOrProductId === 'object' && eventOrProductId.preventDefault) {
-        // Called with event: addToCart(event, productId, variantId)
         eventOrProductId.preventDefault();
         eventOrProductId.stopPropagation();
         actualProductId = productId;
         actualVariantId = variantId;
     } else {
-        // Called without event: addToCart(productId, variantId)
         actualProductId = eventOrProductId;
-        actualVariantId = productId; // second arg becomes variantId when no event
+        actualVariantId = productId;
     }
-    
+
     if (!actualProductId) {
         showNotification('Không tìm thấy sản phẩm', 'error');
         return;
     }
-    
+
     try {
         const response = await fetch('/cart/add', {
             method: 'POST',
@@ -38,14 +35,11 @@ async function addToCart(eventOrProductId, productId = null, variantId = null) {
                 quantity: 1
             })
         });
-        
+
         const data = await response.json();
-        
+
         if (data.success) {
-            // Update cart count
             updateCartCount();
-            
-            // Show success message
             showNotification(data.message || 'Đã thêm vào giỏ hàng!', 'success');
         } else {
             showNotification(data.message || 'Có lỗi xảy ra', 'error');
@@ -56,7 +50,6 @@ async function addToCart(eventOrProductId, productId = null, variantId = null) {
     }
 }
 
-// Update cart count in header
 async function updateCartCount() {
     const cartCountElement = document.getElementById('cart-count');
     if (!cartCountElement) {
@@ -85,7 +78,6 @@ async function updateCartCount() {
     return mainState.cartCountRequest;
 }
 
-// Show notification using global toast
 function showNotification(message, type = 'info') {
     if (typeof showGlobalToast === 'function') {
         showGlobalToast(message, type);
@@ -105,7 +97,34 @@ function runWhenBrowserIdle(callback, fallbackDelay = 250) {
     window.setTimeout(callback, fallbackDelay);
 }
 
-// Initialize page
+function initHeaderScrollState() {
+    const header = document.querySelector('.header');
+    if (!header) {
+        return;
+    }
+
+    const applyState = () => {
+        header.classList.toggle('header--scrolled', window.scrollY > 32);
+    };
+
+    let ticking = false;
+    const onScroll = () => {
+        if (ticking) {
+            return;
+        }
+
+        ticking = true;
+        window.requestAnimationFrame(() => {
+            applyState();
+            ticking = false;
+        });
+    };
+
+    applyState();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', applyState);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     if (mainState.initialized) {
         return;
@@ -113,17 +132,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     mainState.initialized = true;
 
-    // Initialize mobile menu
     initMobileMenu();
+    initHeaderScrollState();
 
-    // Defer background requests so page navigation settles first.
     runWhenBrowserIdle(() => {
         updateCartCount();
         initNewsletterForm();
     });
 });
 
-// Mobile Menu functionality
 function initMobileMenu() {
     const mobileMenuBtn = document.getElementById('mobileMenuBtn');
     const mobileNav = document.getElementById('mobileNav');
@@ -131,12 +148,9 @@ function initMobileMenu() {
     const mobileNavClose = document.getElementById('mobileNavClose');
 
     if (!mobileMenuBtn || !mobileNav || !mobileNavOverlay) return;
-
-    // Skip if already initialized (by header inline script or previous load)
     if (mobileMenuBtn.dataset.initialized) return;
     mobileMenuBtn.dataset.initialized = 'true';
 
-    // Toggle mobile menu
     function openMobileMenu() {
         mobileMenuBtn.classList.add('active');
         mobileNav.classList.add('active');
@@ -151,7 +165,6 @@ function initMobileMenu() {
         document.body.classList.remove('mobile-menu-open');
     }
 
-    // Event listeners
     mobileMenuBtn.addEventListener('click', (e) => {
         e.preventDefault();
         if (mobileNav.classList.contains('active')) {
@@ -167,22 +180,17 @@ function initMobileMenu() {
 
     mobileNavOverlay.addEventListener('click', closeMobileMenu);
 
-    // Close menu on escape key
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && mobileNav.classList.contains('active')) {
             closeMobileMenu();
         }
     });
 
-    // Close menu when clicking on a link
     const mobileNavLinks = mobileNav.querySelectorAll('a');
-    mobileNavLinks.forEach(link => {
-        link.addEventListener('click', () => {
-            closeMobileMenu();
-        });
+    mobileNavLinks.forEach((link) => {
+        link.addEventListener('click', closeMobileMenu);
     });
 
-    // Handle window resize - close menu if resizing to desktop
     let resizeTimer;
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimer);
@@ -194,7 +202,6 @@ function initMobileMenu() {
     });
 }
 
-// Newsletter form handling
 function initNewsletterForm() {
     const form = document.getElementById('newsletter-form');
     const successMsg = document.getElementById('newsletter-success');
@@ -202,7 +209,6 @@ function initNewsletterForm() {
 
     if (!form) return;
 
-    // Check if user already subscribed
     checkNewsletterStatus();
 
     form.addEventListener('submit', async (e) => {
@@ -231,7 +237,6 @@ function initNewsletterForm() {
                 successMsg.style.display = 'flex';
                 if (errorMsg) errorMsg.style.display = 'none';
 
-                // Save to localStorage
                 localStorage.setItem('newsletter_subscribed', 'true');
                 localStorage.setItem('newsletter_email', email);
             } else {
@@ -241,18 +246,17 @@ function initNewsletterForm() {
                 }
                 showNotification(data.message, 'error');
                 submitBtn.disabled = false;
-                submitBtn.textContent = 'Đăng ký';
+                submitBtn.textContent = 'Đăng ký ngay';
             }
         } catch (error) {
             console.error('Newsletter error:', error);
             showNotification('Đã xảy ra lỗi. Vui lòng thử lại.', 'error');
             submitBtn.disabled = false;
-            submitBtn.textContent = 'Đăng ký';
+            submitBtn.textContent = 'Đăng ký ngay';
         }
     });
 }
 
-// Check newsletter subscription status
 async function checkNewsletterStatus() {
     const form = document.getElementById('newsletter-form');
     const successMsg = document.getElementById('newsletter-success');
@@ -261,35 +265,28 @@ async function checkNewsletterStatus() {
 
     if (!form || !successMsg || !newsletterSection) return;
 
-    // Check if already subscribed
     if (localStorage.getItem('newsletter_subscribed') === 'true') {
         form.style.display = 'none';
         successMsg.style.display = 'flex';
         return;
     }
 
-    // Check if banner was dismissed and should still be hidden (12 hours = 43200000 ms)
     const dismissedTime = localStorage.getItem('newsletter_dismissed_at');
     if (dismissedTime) {
-        const timeSinceDismissed = Date.now() - parseInt(dismissedTime);
-        const twelveHours = 12 * 60 * 60 * 1000; // 12 hours in milliseconds
+        const timeSinceDismissed = Date.now() - parseInt(dismissedTime, 10);
+        const twelveHours = 12 * 60 * 60 * 1000;
 
         if (timeSinceDismissed < twelveHours) {
-            // Still within 12 hours, hide the banner
             newsletterSection.style.display = 'none';
             return;
-        } else {
-            // 12 hours passed, clear the dismissed flag and show banner
-            localStorage.removeItem('newsletter_dismissed_at');
         }
+
+        localStorage.removeItem('newsletter_dismissed_at');
     }
 
-    // Check if this is first visit in this session (mark as seen)
     const hasSeenBanner = sessionStorage.getItem('newsletter_banner_seen');
     if (!hasSeenBanner) {
-        // First time seeing banner in this browser session
         sessionStorage.setItem('newsletter_banner_seen', 'true');
-        // Mark the time banner was first shown (for 12-hour reset)
         if (!localStorage.getItem('newsletter_first_shown')) {
             localStorage.setItem('newsletter_first_shown', Date.now().toString());
         }
@@ -299,7 +296,6 @@ async function checkNewsletterStatus() {
         return;
     }
 
-    // Check server for logged-in users
     try {
         const response = await fetch('/newsletter/status', {
             credentials: 'same-origin'
@@ -312,11 +308,10 @@ async function checkNewsletterStatus() {
             localStorage.setItem('newsletter_subscribed', 'true');
         }
     } catch (error) {
-        // Ignore - user might not be logged in
+        return;
     }
 }
 
-// Dismiss newsletter banner (hide for 12 hours)
 function dismissNewsletterBanner() {
     const newsletterSection = document.getElementById('newsletter-section');
     if (newsletterSection) {

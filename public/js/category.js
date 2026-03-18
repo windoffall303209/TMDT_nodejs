@@ -1,174 +1,169 @@
-/**
- * Category Page JavaScript
- * Handles filtering and sorting products
- */
+const filterButtons = document.querySelectorAll('.filter-btn');
+const sortSelect = document.getElementById('sortProducts');
+const productCount = document.getElementById('productCount');
 
-// Filter buttons
-document.querySelectorAll('.filter-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+filterButtons.forEach((button) => {
+    button.addEventListener('click', function() {
+        filterButtons.forEach((item) => item.classList.remove('active'));
         this.classList.add('active');
-
-        const filter = this.dataset.filter;
-        filterProducts(filter);
+        filterProducts(this.dataset.filter);
     });
 });
 
-// Filter products locally
 function filterProducts(filter) {
     const cards = document.querySelectorAll('.product-card');
     let visibleCount = 0;
 
-    cards.forEach(card => {
-        const hasSale = card.querySelector('.sale-badge') || card.querySelector('.product-card__badge--sale');
-        let show = true;
-
-        if (filter === 'sale' && !hasSale) {
-            show = false;
-        }
-
-        card.style.display = show ? '' : 'none';
-        if (show) visibleCount++;
+    cards.forEach((card) => {
+        const hasSale = card.querySelector('.product-card__badge--sale');
+        const shouldShow = filter === 'sale' ? Boolean(hasSale) : true;
+        card.style.display = shouldShow ? '' : 'none';
+        if (shouldShow) visibleCount++;
     });
 
-    document.getElementById('productCount').textContent = visibleCount + ' sản phẩm';
+    if (productCount) {
+        productCount.textContent = visibleCount;
+    }
 }
 
-// Sort products with AJAX
-document.getElementById('sortProducts').addEventListener('change', function() {
-    const value = this.value;
-    const currentUrl = new URL(window.location.href);
-    const grid = document.getElementById('productsGrid');
+if (sortSelect) {
+    sortSelect.addEventListener('change', function() {
+        const currentUrl = new URL(window.location.href);
+        const grid = document.getElementById('productsGrid');
 
-    // Show loading state
-    grid.style.opacity = '0.5';
-    grid.style.pointerEvents = 'none';
-
-    // Fetch sorted products
-    currentUrl.searchParams.set('sort', value);
-
-    fetch(currentUrl.toString(), {
-        headers: {
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
+        if (grid) {
+            grid.style.opacity = '0.5';
+            grid.style.pointerEvents = 'none';
         }
-    })
-    .then(response => response.json())
-    .then(data => {
-        // Update URL without reload
-        window.history.pushState({}, '', currentUrl.toString());
 
-        // Render new products
-        renderProducts(data.products);
+        currentUrl.searchParams.set('sort', this.value);
 
-        // Update count
-        document.getElementById('productCount').textContent = data.products.length + ' sản phẩm';
-    })
-    .catch(err => {
-        console.error('Sort error:', err);
-        // Fallback: reload page
-        window.location.href = currentUrl.toString();
-    })
-    .finally(() => {
-        grid.style.opacity = '1';
-        grid.style.pointerEvents = '';
+        fetch(currentUrl.toString(), {
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+            .then((response) => response.json())
+            .then((data) => {
+                window.history.pushState({}, '', currentUrl.toString());
+                renderProducts(data.products || []);
+                if (productCount) {
+                    productCount.textContent = (data.products || []).length;
+                }
+            })
+            .catch((error) => {
+                console.error('Sort error:', error);
+                window.location.href = currentUrl.toString();
+            })
+            .finally(() => {
+                if (grid) {
+                    grid.style.opacity = '1';
+                    grid.style.pointerEvents = '';
+                }
+            });
     });
-});
+}
 
-// Render products dynamically
 function renderProducts(products) {
     const grid = document.getElementById('productsGrid');
+    if (!grid) return;
 
     if (!products || products.length === 0) {
         grid.innerHTML = `
-            <div class="products-empty">
-                <div class="products-empty__icon">
-                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
-                        <circle cx="11" cy="11" r="8"/>
-                        <path d="M21 21l-4.35-4.35"/>
-                    </svg>
-                </div>
-                <h3 class="products-empty__title">Chưa có sản phẩm</h3>
-                <p class="products-empty__text">Chưa có sản phẩm trong danh mục này.</p>
-                <a href="/" class="products-empty__link">Về trang chủ →</a>
+            <div class="empty-panel" style="grid-column: 1 / -1;">
+                <h3>Chưa có sản phẩm</h3>
+                <p>Thử đổi bộ lọc hoặc quay lại trang sản phẩm để tiếp tục mua sắm.</p>
+                <a href="/products" class="btn btn-primary">Xem tất cả sản phẩm</a>
             </div>
         `;
         return;
     }
 
-    grid.innerHTML = products.map(product => {
-        const slug = product.slug || product.id;
-        const hasSale = product.final_price && product.final_price < product.price;
-        const saleType = product.sale_type;
-        const saleValue = product.sale_value;
-
-        let saleBadge = '';
-        if (saleType) {
-            saleBadge = saleType === 'percentage'
-                ? `<span class="product-badge sale-badge">-${saleValue}%</span>`
-                : `<span class="product-badge sale-badge">SALE</span>`;
-        }
-
-        let imageHtml = '';
-        if (product.primary_image) {
-            imageHtml = `
-                <img class="img-primary" src="${product.primary_image}" alt="${product.name}">
-                <img class="img-secondary" src="${product.primary_image}" alt="${product.name}">
-            `;
-        } else {
-            imageHtml = `
-                <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--gray-100);color:var(--gray-400);">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                        <circle cx="8.5" cy="8.5" r="1.5"/>
-                        <polyline points="21,15 16,10 5,21"/>
-                    </svg>
-                </div>
-            `;
-        }
-
-        let priceHtml = '';
-        if (hasSale) {
-            priceHtml = `
-                <span class="price-original">${product.price.toLocaleString('vi-VN')}đ</span>
-                <span class="price-sale">${product.final_price.toLocaleString('vi-VN')}đ</span>
-            `;
-        } else {
-            priceHtml = `<span class="price-current">${product.price.toLocaleString('vi-VN')}đ</span>`;
-        }
-
-        return `
-            <div class="product-card">
-                <a href="/products/${slug}">
-                    <div class="product-image">
-                        ${saleBadge}
-                        ${imageHtml}
-                        <button class="quick-add-btn" onclick="event.preventDefault(); event.stopPropagation(); addToCart(${product.id})">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-                                <line x1="3" y1="6" x2="21" y2="6"/>
-                                <path d="M16 10a4 4 0 0 1-8 0"/>
-                            </svg>
-                            Thêm vào giỏ
-                        </button>
-                    </div>
-                    <div class="product-info">
-                        <h3 class="product-name">${product.name}</h3>
-                        <div class="product-price">
-                            ${priceHtml}
-                        </div>
-                    </div>
-                </a>
-            </div>
-        `;
-    }).join('');
+    grid.innerHTML = products.map((product) => buildProductCard(product)).join('');
 }
 
-// Set initial sort value from URL
-(function() {
+function buildProductCard(product) {
+    const slug = product.slug || product.id;
+    const price = Number(product.price || 0);
+    const finalPrice = Number(product.final_price || price);
+    const hasDiscount = finalPrice < price;
+    const isNew = product.created_at && (new Date() - new Date(product.created_at)) < 7 * 24 * 60 * 60 * 1000;
+    const colors = Array.isArray(product.variants)
+        ? [...new Set(product.variants.map((variant) => variant.color).filter(Boolean))].slice(0, 3)
+        : [];
+
+    const saleBadge = product.sale_type
+        ? `<span class="product-card__badge product-card__badge--sale">${product.sale_type === 'percentage' ? `-${product.sale_value}%` : 'Sale'}</span>`
+        : '';
+    const stateBadge = product.stock_quantity === 0
+        ? '<span class="product-card__badge product-card__badge--soldout">Hết hàng</span>'
+        : (isNew ? '<span class="product-card__badge product-card__badge--new">Mới</span>' : '');
+    const tagsHtml = colors.length
+        ? `<div class="product-card__tags">${colors.map((color) => `<span class="product-card__tag">${color}</span>`).join('')}</div>`
+        : '';
+    const ratingHtml = product.review_count > 0
+        ? `<span class="product-card__rating">${Number(product.average_rating || 0).toFixed(1)} / 5</span>`
+        : '';
+    const priceHtml = hasDiscount
+        ? `
+            <span class="product-card__price-original">${price.toLocaleString('vi-VN')}đ</span>
+            <span class="product-card__price product-card__price--sale">${finalPrice.toLocaleString('vi-VN')}đ</span>
+        `
+        : `<span class="product-card__price">${price.toLocaleString('vi-VN')}đ</span>`;
+
+    const imageHtml = product.primary_image
+        ? `
+            <img class="img-primary" src="${product.card_image || product.primary_image}" alt="${product.name}">
+            ${product.secondary_image ? `<img class="img-secondary" src="${product.secondary_image}" alt="${product.name}">` : ''}
+        `
+        : `
+            <div class="product-card__image-placeholder">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21,15 16,10 5,21"/>
+                </svg>
+            </div>
+        `;
+
+    return `
+        <article class="product-card">
+            <a href="/products/${slug}" class="product-card__link">
+                <div class="product-card__image">
+                    ${saleBadge}
+                    ${stateBadge}
+                    ${imageHtml}
+                    <button class="product-card__quick-add" onclick="event.preventDefault(); event.stopPropagation(); addToCart(${product.id})" ${product.stock_quantity === 0 ? 'disabled' : ''}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="9" cy="21" r="1"/>
+                            <circle cx="20" cy="21" r="1"/>
+                            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+                        </svg>
+                        Thêm vào giỏ
+                    </button>
+                </div>
+                <div class="product-card__info">
+                    <div class="product-card__meta">
+                        <span class="product-card__collection">${product.category_name || 'WIND OF FALL'}</span>
+                        ${ratingHtml}
+                    </div>
+                    <h3 class="product-card__name">${product.name}</h3>
+                    ${tagsHtml}
+                    <div class="product-card__price-row">
+                        ${priceHtml}
+                    </div>
+                </div>
+            </a>
+        </article>
+    `;
+}
+
+(function setInitialSortValue() {
+    if (!sortSelect) return;
     const urlParams = new URLSearchParams(window.location.search);
     const sort = urlParams.get('sort');
     if (sort) {
-        document.getElementById('sortProducts').value = sort;
+        sortSelect.value = sort;
     }
 })();

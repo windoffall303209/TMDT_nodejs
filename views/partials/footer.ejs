@@ -1,94 +1,98 @@
 </main>
 
 <footer class="footer">
-    <!-- Newsletter Section -->
-    <div class="footer-newsletter" id="newsletter-section">
-        <div class="container">
+    <section class="footer-newsletter" id="newsletter-section">
+        <div class="container footer-newsletter__inner">
             <div class="newsletter-content">
-                <h3>Đăng ký nhận tin khuyến mãi</h3>
-                <p>Nhận thông tin khuyến mãi và sản phẩm mới nhất qua email</p>
+                <p class="newsletter-content__eyebrow">Newsletter</p>
+                <h3>Nhập email để nhận ưu đãi và bộ sưu tập mới sớm hơn</h3>
+                <p>Cập nhật BST mới, voucher độc quyền và gợi ý phối đồ theo mùa.</p>
             </div>
-            <form id="newsletter-form" class="newsletter-form">
-                <input type="email" name="email" id="newsletter-email" placeholder="Nhập email của bạn" required>
-                <button type="submit" id="newsletter-btn">Đăng ký</button>
-            </form>
-            <div id="newsletter-success" class="newsletter-success" style="display: none;">
-                <span>✅</span> Bạn đã đăng ký nhận tin khuyến mãi!
-            </div>
-            <div id="newsletter-error" class="newsletter-error" style="display: none;"></div>
-        </div>
-    </div>
 
-    <!-- Footer Main -->
+            <div class="newsletter-actions">
+                <form id="newsletter-form" class="newsletter-form">
+                    <input type="email" name="email" id="newsletter-email" placeholder="Email của bạn" required>
+                    <button type="submit" id="newsletter-btn">Đăng ký ngay</button>
+                </form>
+                <div id="newsletter-success" class="newsletter-success" style="display: none;">
+                    Bạn đã đăng ký nhận tin khuyến mại thành công.
+                </div>
+                <div id="newsletter-error" class="newsletter-error" style="display: none;"></div>
+                <button type="button" class="newsletter-dismiss" onclick="dismissNewsletterBanner()">Tạm ẩn</button>
+            </div>
+        </div>
+    </section>
+
+    <section class="footer-service-strip">
+        <div class="container footer-service-strip__grid">
+            <div class="footer-service-card">
+                <strong>Free ship 499K</strong>
+                <p>Giao nhanh tại thành phố lớn, theo dõi hành trình đơn hàng rõ ràng.</p>
+            </div>
+            <div class="footer-service-card">
+                <strong>Đổi trả 30 ngày</strong>
+                <p>Hỗ trợ đổi size, đổi màu và hoàn tiền theo chính sách minh bạch.</p>
+            </div>
+            <div class="footer-service-card">
+                <strong>Tư vấn chọn đồ</strong>
+                <p>Hotline và chat luôn sẵn sàng để chốt size và set outfit phù hợp.</p>
+            </div>
+        </div>
+    </section>
+
     <div class="footer-main">
-        <div class="container">
-            <div class="footer-grid">
-                <!-- Brand Column -->
-                <div class="footer-col">
-                    <div class="footer-brand">WIND OF FALL</div>
-                    <p class="footer-brand-desc">Thương hiệu thời trang cao cấp với phong cách tối giản, hiện đại. Chúng tôi mang đến những sản phẩm chất lượng với thiết kế tinh tế.</p>
-                    <div class="social-links">
-                        <a href="#" title="Facebook">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
-                            </svg>
-                        </a>
-                        <a href="#" title="Instagram">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
-                                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
-                                <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
-                            </svg>
-                        </a>
-                        <a href="#" title="Youtube">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/>
-                                <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" fill="#212121"/>
-                            </svg>
-                        </a>
-                    </div>
+        <div class="container footer-grid">
+            <div class="footer-branding">
+                <div class="footer-branding__logo">
+                    <span>WF</span>
+                    <strong>WIND OF FALL</strong>
                 </div>
+                <p class="footer-branding__text">
+                    Thương hiệu thời trang everyday theo tinh thần hiện đại, gọn gàng và dễ mặc.
+                    Chúng tôi ưu tiên chất liệu, phom dáng và trải nghiệm mua sắm mượt mà trên mọi thiết bị.
+                </p>
+                <div class="footer-socials">
+                    <a href="#" title="Facebook">Facebook</a>
+                    <a href="#" title="Instagram">Instagram</a>
+                    <a href="#" title="TikTok">TikTok</a>
+                </div>
+            </div>
 
-                <!-- Quick Links -->
-                <div class="footer-col">
-                    <h4>Về chúng tôi</h4>
-                    <ul>
-                        <li><a href="/about">Giới thiệu</a></li>
-                        <li><a href="/careers">Tuyển dụng</a></li>
-                        <li><a href="/news">Tin tức</a></li>
-                        <li><a href="/stores">Hệ thống cửa hàng</a></li>
-                    </ul>
-                </div>
+            <div class="footer-col">
+                <h4>Mua sắm</h4>
+                <ul>
+                    <li><a href="/products/category/nam">Thời trang nam</a></li>
+                    <li><a href="/products/category/nu">Thời trang nữ</a></li>
+                    <li><a href="/products/category/tre-em">Trẻ em</a></li>
+                    <li><a href="/products?sale=true">Khu sale</a></li>
+                </ul>
+            </div>
 
-                <!-- Policies -->
-                <div class="footer-col">
-                    <h4>Chính sách</h4>
-                    <ul>
-                        <li><a href="/policy/return">Đổi trả & Hoàn tiền</a></li>
-                        <li><a href="/policy/shipping">Vận chuyển</a></li>
-                        <li><a href="/policy/payment">Thanh toán</a></li>
-                        <li><a href="/policy/privacy">Bảo mật thông tin</a></li>
-                    </ul>
-                </div>
+            <div class="footer-col">
+                <h4>Hỗ trợ khách hàng</h4>
+                <ul>
+                    <li><a href="/policy/shipping">Vận chuyển</a></li>
+                    <li><a href="/policy/return">Đổi trả</a></li>
+                    <li><a href="/policy/payment">Thanh toán</a></li>
+                    <li><a href="/policy/privacy">Bảo mật thông tin</a></li>
+                </ul>
+            </div>
 
-                <!-- Contact -->
-                <div class="footer-col">
-                    <h4>Liên hệ</h4>
-                    <ul>
-                        <li><a href="#">123 Nguyễn Huệ, Q.1, TP.HCM</a></li>
-                        <li><a href="tel:1900123456">Hotline: 1900 123 456</a></li>
-                        <li><a href="mailto:info@windoffall.vn">info@windoffall.vn</a></li>
-                        <li><a href="#">8:00 - 22:00 (T2 - CN)</a></li>
-                    </ul>
-                </div>
+            <div class="footer-col">
+                <h4>Liên hệ</h4>
+                <ul>
+                    <li><a href="tel:1900123456">Hotline: 1900 123 456</a></li>
+                    <li><a href="mailto:info@windoffall.vn">info@windoffall.vn</a></li>
+                    <li><a href="#">123 Nguyễn Huệ, Quận 1, TP.HCM</a></li>
+                    <li><a href="#">Mở cửa 8:00 - 22:00 mỗi ngày</a></li>
+                </ul>
             </div>
         </div>
     </div>
 
-    <!-- Footer Bottom -->
     <div class="footer-bottom">
-        <div class="container">
-            <p>&copy; 2024 WIND OF FALL. All rights reserved.</p>
+        <div class="container footer-bottom__inner">
+            <p>&copy; 2026 WIND OF FALL. All rights reserved.</p>
             <div class="payment-methods">
                 <span class="payment-badge">COD</span>
                 <span class="payment-badge">VNPay</span>

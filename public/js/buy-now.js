@@ -1,20 +1,12 @@
-// Buy Now page JavaScript
-// Address functions (loadProvinces, loadDistricts, loadWards, saveNewAddress, 
-// toggleAddressForm, initAddressMap) are loaded from checkout.js
-
-// Track discount state
 let currentDiscount = 0;
 
-/**
- * Apply voucher code
- */
 async function applyVoucher() {
     const codeInput = document.getElementById('voucherCode');
     const messageDiv = document.getElementById('voucherMessage');
     const code = codeInput.value.trim();
 
     if (!code) {
-        messageDiv.innerHTML = '<span style="color: #c62828;">Vui lòng nhập mã giảm giá</span>';
+        messageDiv.innerHTML = '<span style="color: #c6402d;">Vui lòng nhập mã giảm giá</span>';
         return;
     }
 
@@ -39,95 +31,82 @@ async function applyVoucher() {
 
         if (!response.ok || !result.success) {
             currentDiscount = 0;
-            messageDiv.innerHTML = `<span style="color: #c62828;">${result.message || 'Mã giảm giá không hợp lệ'}</span>`;
+            messageDiv.innerHTML = `<span style="color: #c6402d;">${result.message || 'Mã giảm giá không hợp lệ'}</span>`;
             updateTotals();
             return;
         }
 
         currentDiscount = result.discount_amount || 0;
-        messageDiv.innerHTML = `<span style="color: #2e7d32;">${result.message} - Giảm ${currentDiscount.toLocaleString('vi-VN')}đ</span>`;
+        messageDiv.innerHTML = `<span style="color: #247a55;">${result.message} - Giảm ${currentDiscount.toLocaleString('vi-VN')}đ</span>`;
     } catch (error) {
         console.error('Buy now voucher validation error:', error);
         currentDiscount = 0;
-        messageDiv.innerHTML = '<span style="color: #c62828;">Có lỗi xảy ra khi kiểm tra voucher</span>';
+        messageDiv.innerHTML = '<span style="color: #c6402d;">Có lỗi xảy ra khi kiểm tra voucher</span>';
     }
 
     updateTotals();
 }
 
-/**
- * Update total amounts
- */
 function updateTotals() {
     const data = window.buyNowData;
     const subtotal = data.subtotal;
     const shippingFee = data.shippingFee;
-    
-    // Update discount input
+
     document.getElementById('discountInput').value = currentDiscount;
     document.getElementById('discountAmount').textContent = `-${currentDiscount.toLocaleString('vi-VN')}đ`;
-    
-    // Show/hide discount row
+
     const discountRow = document.getElementById('discountRow');
-    discountRow.style.display = currentDiscount > 0 ? 'flex' : 'none';
-    
-    // Calculate final total
+    if (discountRow) {
+        discountRow.style.display = currentDiscount > 0 ? 'flex' : 'none';
+    }
+
     const total = subtotal + shippingFee - currentDiscount;
     document.getElementById('totalAmount').textContent = total.toLocaleString('vi-VN') + 'đ';
 }
 
-/**
- * Initialize buy now page
- */
 function initBuyNow() {
-    // Payment method selection styling
     document.querySelectorAll('input[name="payment_method"]').forEach(radio => {
         radio.addEventListener('change', function() {
-            document.querySelectorAll('.payment-option').forEach(opt => {
-                opt.classList.remove('payment-option--selected');
+            document.querySelectorAll('.payment-option').forEach(option => {
+                option.classList.remove('payment-option--selected');
             });
-            this.closest('label').classList.add('payment-option--selected');
+            this.closest('label')?.classList.add('payment-option--selected');
         });
     });
 
-    // Address selection styling
     document.querySelectorAll('input[name="address_id"]').forEach(radio => {
         radio.addEventListener('change', function() {
             document.querySelectorAll('.address-card').forEach(card => {
                 card.classList.remove('address-card--selected');
             });
-            this.closest('label').classList.add('address-card--selected');
+            this.closest('label')?.classList.add('address-card--selected');
         });
     });
 
-    // Form validation
-    document.getElementById('buyNowForm')?.addEventListener('submit', function(e) {
+    document.getElementById('buyNowForm')?.addEventListener('submit', function(event) {
         const addressSelected = document.querySelector('input[name="address_id"]:checked');
         if (!addressSelected) {
-            e.preventDefault();
+            event.preventDefault();
             showGlobalToast('Vui lòng chọn địa chỉ giao hàng', 'warning');
             return;
         }
-        
-        const btn = document.getElementById('submitBtn');
-        btn.textContent = '⏳ Đang xử lý...';
-        btn.disabled = true;
+
+        const button = document.getElementById('submitBtn');
+        button.textContent = 'Đang xử lý...';
+        button.disabled = true;
     });
-    
-    // Voucher enter key
-    document.getElementById('voucherCode')?.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
+
+    document.getElementById('voucherCode')?.addEventListener('keypress', function(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
             applyVoucher();
         }
     });
-    
-    // Hide discount row initially
+
     const discountRow = document.getElementById('discountRow');
     if (discountRow) {
         discountRow.style.display = 'none';
     }
 }
 
-// Initialize on page load
 document.addEventListener('DOMContentLoaded', initBuyNow);

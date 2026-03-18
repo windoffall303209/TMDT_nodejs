@@ -1,8 +1,8 @@
-// Product Detail page JavaScript
-// Extracted from views/products/detail.ejs
-
 let currentImageIndex = 0;
 let productImages = [];
+let selectedColor = null;
+let selectedSize = null;
+let selectedVariantId = null;
 
 function normalizeImageUrl(imageUrl) {
     if (!imageUrl) return '';
@@ -26,24 +26,16 @@ function showMainImage() {
     const mainImage = getMainImageElement();
     const fallback = getFallbackElement();
 
-    if (mainImage) {
-        mainImage.style.display = 'block';
-    }
-    if (fallback) {
-        fallback.style.display = 'none';
-    }
+    if (mainImage) mainImage.style.display = 'block';
+    if (fallback) fallback.style.display = 'none';
 }
 
 function showGalleryFallback() {
     const mainImage = getMainImageElement();
     const fallback = getFallbackElement();
 
-    if (mainImage) {
-        mainImage.style.display = 'none';
-    }
-    if (fallback) {
-        fallback.style.display = 'flex';
-    }
+    if (mainImage) mainImage.style.display = 'none';
+    if (fallback) fallback.style.display = 'flex';
 }
 
 function scrollActiveThumbIntoView(index) {
@@ -61,15 +53,13 @@ function initProductGallery(images) {
     bindGalleryEvents();
 
     const mainImage = getMainImageElement();
-    if (!mainImage || productImages.length === 0) {
-        return;
-    }
+    if (!mainImage || productImages.length === 0) return;
 
     const currentSrc = normalizeImageUrl(
         mainImage.getAttribute('src') || mainImage.src || window.productInitialImage
     );
 
-    const initialIndex = productImages.findIndex(imageUrl => normalizeImageUrl(imageUrl) === currentSrc);
+    const initialIndex = productImages.findIndex((imageUrl) => normalizeImageUrl(imageUrl) === currentSrc);
     currentImageIndex = initialIndex >= 0 ? initialIndex : 0;
 
     if (initialIndex === -1 && productImages[currentImageIndex]) {
@@ -104,13 +94,13 @@ function selectImage(index, imageUrl) {
     const normalizedTarget = normalizeImageUrl(imageUrl || productImages[index]);
     const resolvedIndex = Number.isInteger(index) && index >= 0 && index < productImages.length
         ? index
-        : productImages.findIndex(url => normalizeImageUrl(url) === normalizedTarget);
+        : productImages.findIndex((url) => normalizeImageUrl(url) === normalizedTarget);
 
     const nextIndex = resolvedIndex >= 0 ? resolvedIndex : 0;
     const nextImageUrl = productImages[nextIndex] || imageUrl;
 
     currentImageIndex = nextIndex;
-    const mainImage = document.getElementById('mainImage');
+    const mainImage = getMainImageElement();
     if (mainImage) {
         if (normalizeImageUrl(mainImage.getAttribute('src') || mainImage.src) !== normalizeImageUrl(nextImageUrl)) {
             mainImage.src = nextImageUrl;
@@ -123,8 +113,9 @@ function selectImage(index, imageUrl) {
 
 function switchGalleryToImage(imageUrl) {
     if (!imageUrl || !productImages.length) return;
+
     const normalizedTarget = normalizeImageUrl(imageUrl);
-    const index = productImages.findIndex(url => normalizeImageUrl(url) === normalizedTarget);
+    const index = productImages.findIndex((url) => normalizeImageUrl(url) === normalizedTarget);
     if (index >= 0) {
         selectImage(index, productImages[index]);
     }
@@ -142,36 +133,20 @@ function nextImage() {
     selectImage(currentImageIndex, productImages[currentImageIndex]);
 }
 
-function buyNow(productId) {
-    window.location.href = '/orders/buy-now/' + productId;
+function setSelectedClass(selector, activeButton) {
+    document.querySelectorAll(selector).forEach((button) => {
+        button.classList.toggle('is-selected', button === activeButton);
+    });
 }
 
-let selectedColor = null;
-let selectedSize = null;
-let selectedVariantId = null;
-
-function selectColor(btn, color) {
-    document.querySelectorAll('.color-btn').forEach(b => {
-        b.style.borderColor = '#ddd';
-        b.style.background = '#fff';
-        b.style.color = '#333';
-    });
-    btn.style.borderColor = '#667eea';
-    btn.style.background = '#f0f2ff';
-    btn.style.color = '#667eea';
+function selectColor(button, color) {
+    setSelectedClass('.color-btn', button);
     selectedColor = color;
     resolveVariant();
 }
 
-function selectSize(btn, size) {
-    document.querySelectorAll('.size-btn').forEach(b => {
-        b.style.borderColor = '#ddd';
-        b.style.background = '#fff';
-        b.style.color = '#333';
-    });
-    btn.style.borderColor = '#667eea';
-    btn.style.background = '#f0f2ff';
-    btn.style.color = '#667eea';
+function selectSize(button, size) {
+    setSelectedClass('.size-btn', button);
     selectedSize = size;
     resolveVariant();
 }
@@ -180,16 +155,18 @@ function resolveVariant() {
     const variants = window.productVariants || [];
     if (variants.length === 0) return;
 
-    const colors = [...new Set(variants.filter(v => v.color).map(v => v.color))];
-    const sizes = [...new Set(variants.filter(v => v.size).map(v => v.size))];
+    const colors = [...new Set(variants.filter((variant) => variant.color).map((variant) => variant.color))];
+    const sizes = [...new Set(variants.filter((variant) => variant.size).map((variant) => variant.size))];
     const hasColors = colors.length > 0;
     const hasSizes = sizes.length > 0;
 
-    const match = variants.find(v => {
-        const colorMatch = !hasColors || v.color === selectedColor;
-        const sizeMatch = !hasSizes || v.size === selectedSize;
+    const match = variants.find((variant) => {
+        const colorMatch = !hasColors || variant.color === selectedColor;
+        const sizeMatch = !hasSizes || variant.size === selectedSize;
         return colorMatch && sizeMatch;
     });
+
+    const stockEl = document.getElementById('variantStock');
 
     if (match) {
         selectedVariantId = match.id;
@@ -200,14 +177,13 @@ function resolveVariant() {
             priceEl.textContent = newPrice.toLocaleString('vi-VN') + 'đ';
         }
 
-        const stockEl = document.getElementById('variantStock');
         if (stockEl) {
             if (match.stock_quantity > 0) {
-                stockEl.textContent = 'Còn ' + match.stock_quantity + ' sản phẩm';
-                stockEl.style.color = '#2e7d32';
+                stockEl.textContent = 'Còn ' + match.stock_quantity + ' sản phẩm có sẵn';
+                stockEl.style.color = '#247a55';
             } else {
                 stockEl.textContent = 'Hết hàng';
-                stockEl.style.color = '#c62828';
+                stockEl.style.color = '#c6402d';
             }
         }
 
@@ -216,8 +192,9 @@ function resolveVariant() {
         }
     } else {
         selectedVariantId = null;
-        const stockEl = document.getElementById('variantStock');
-        if (stockEl) stockEl.textContent = '';
+        if (stockEl) {
+            stockEl.textContent = '';
+        }
     }
 }
 
@@ -236,6 +213,7 @@ function buyNowWithVariant(productId) {
         showNotification('Vui lòng chọn phân loại sản phẩm', 'warning');
         return;
     }
+
     const variantParam = selectedVariantId ? '?variant_id=' + selectedVariantId : '';
     window.location.href = '/orders/buy-now/' + productId + variantParam;
 }
@@ -259,7 +237,7 @@ function bindGalleryEvents() {
         });
     });
 
-    document.querySelectorAll('[data-gallery-nav]').forEach(button => {
+    document.querySelectorAll('[data-gallery-nav]').forEach((button) => {
         if (button.dataset.galleryBound === 'true') return;
 
         button.dataset.galleryBound = 'true';
@@ -276,6 +254,10 @@ function bindGalleryEvents() {
 window.selectImage = selectImage;
 window.prevImage = prevImage;
 window.nextImage = nextImage;
+window.selectColor = selectColor;
+window.selectSize = selectSize;
+window.addToCartWithVariant = addToCartWithVariant;
+window.buyNowWithVariant = buyNowWithVariant;
 
 document.addEventListener('DOMContentLoaded', () => {
     initProductGallery(window.productImageUrls || []);

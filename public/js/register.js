@@ -1,9 +1,3 @@
-/**
- * Register Page JavaScript
- * Handles password toggle and validation
- */
-
-// Toggle password visibility
 function togglePassword(inputId, btn) {
     const input = document.getElementById(inputId);
     const eyeOpen = btn.querySelector('.eye-open');
@@ -20,7 +14,6 @@ function togglePassword(inputId, btn) {
     }
 }
 
-// Check password match
 document.addEventListener('DOMContentLoaded', function() {
     const password = document.getElementById('password');
     const confirmPassword = document.getElementById('confirm_password');
@@ -45,7 +38,6 @@ document.addEventListener('DOMContentLoaded', function() {
     password.addEventListener('input', checkPasswordMatch);
     confirmPassword.addEventListener('input', checkPasswordMatch);
 
-    // Form validation
     document.getElementById('registerForm').addEventListener('submit', function(e) {
         if (password.value !== confirmPassword.value) {
             e.preventDefault();
