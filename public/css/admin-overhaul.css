@@ -88,17 +88,12 @@ body.admin-body .container {
 }
 
 .admin-sidebar__brand-mark {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    display: block;
     width: 48px;
     height: 48px;
     border-radius: 16px;
-    background: linear-gradient(135deg, var(--admin-accent), #f0d174);
-    color: #19150f;
-    font-size: 18px;
-    font-weight: 800;
-    letter-spacing: 0.08em;
+    object-fit: cover;
+    flex-shrink: 0;
 }
 
 .admin-sidebar__brand-copy {
@@ -312,15 +307,12 @@ body.admin-body .container {
 }
 
 .admin-topbar__brand-mark {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    display: block;
     width: 38px;
     height: 38px;
     border-radius: 12px;
-    background: linear-gradient(135deg, var(--admin-accent), #f0d174);
-    color: #19150f;
-    font-weight: 800;
+    object-fit: cover;
+    flex-shrink: 0;
 }
 
 .admin-topbar__brand-copy {
