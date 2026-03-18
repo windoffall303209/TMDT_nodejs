@@ -24,6 +24,18 @@ function showConfirm(message, title = 'Xác nhận', yesText = 'Xác nhận', ye
     });
 }
 
+function changePerPage(limit) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('page', '1');
+    url.searchParams.set('limit', limit);
+    window.location.href = url.toString();
+}
+
+function toggleProductSection(titleElement) {
+    const section = titleElement.closest('.admin-section--collapsible');
+    section?.classList.toggle('is-open');
+}
+
 const variantMediaState = {
     create: { images: [], uploadCounter: 0, productId: null, mainUploads: [] },
     edit: { images: [], uploadCounter: 0, productId: null }
@@ -485,8 +497,8 @@ async function loadProductImages(productId) {
                     <img src="${img.image_url}" alt="" style="width: 100%; height: 120px; object-fit: cover;">
                     ${img.is_primary ? '<span style="position: absolute; top: 5px; left: 5px; background: #667eea; color: white; padding: 2px 6px; font-size: 10px; border-radius: 4px;">Chính</span>' : ''}
                     <div style="position: absolute; bottom: 5px; right: 5px; display: flex; gap: 5px;">
-                        ${!img.is_primary ? `<button onclick="setPrimaryImage(${img.id})" style="padding: 3px 8px; font-size: 10px; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer;">★</button>` : ''}
-                        <button onclick="deleteImage(${img.id})" style="padding: 3px 8px; font-size: 10px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;">×</button>
+                        ${!img.is_primary ? `<button data-image-action="set-primary" data-image-id="${img.id}" style="padding: 3px 8px; font-size: 10px; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer;">★</button>` : ''}
+                        <button data-image-action="delete" data-image-id="${img.id}" style="padding: 3px 8px; font-size: 10px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;">×</button>
                     </div>
                 </div>
             `).join('');
@@ -803,6 +815,81 @@ function initAdminProducts() {
 
     document.getElementById('imageModal')?.addEventListener('click', function (e) {
         if (e.target === this) closeImageModal();
+    });
+    document.getElementById('perpageSelect')?.addEventListener('change', (event) => {
+        changePerPage(event.target.value);
+    });
+
+    document.querySelectorAll('[data-admin-toggle="section"]').forEach((button) => {
+        button.addEventListener('click', () => toggleProductSection(button));
+    });
+
+    document.addEventListener('click', (event) => {
+        const actionButton = event.target.closest('[data-product-action]');
+        if (actionButton) {
+            const action = actionButton.dataset.productAction;
+
+            if (action === 'add-variant') {
+                addVariantRow(actionButton.dataset.productMode);
+                return;
+            }
+
+            if (action === 'open-image-modal') {
+                openImageModal(Number(actionButton.dataset.productId), actionButton.dataset.productName || '');
+                return;
+            }
+
+            if (action === 'open-edit-modal') {
+                openEditModal(
+                    Number(actionButton.dataset.productId),
+                    actionButton.dataset.productName || '',
+                    actionButton.dataset.productCategoryId || null,
+                    Number(actionButton.dataset.productPrice || 0),
+                    Number(actionButton.dataset.productStock || 0),
+                    actionButton.dataset.productDescription || ''
+                );
+                return;
+            }
+
+            if (action === 'delete-product') {
+                deleteProduct(Number(actionButton.dataset.productId));
+                return;
+            }
+
+            if (action === 'close-edit-modal') {
+                closeEditModal();
+                return;
+            }
+
+            if (action === 'close-image-modal') {
+                closeImageModal();
+                return;
+            }
+
+            if (action === 'add-image-url') {
+                addImageByUrl();
+                return;
+            }
+        }
+
+        const imageActionButton = event.target.closest('[data-image-action]');
+        if (!imageActionButton) {
+            return;
+        }
+
+        const imageId = Number(imageActionButton.dataset.imageId);
+        if (!imageId) {
+            return;
+        }
+
+        if (imageActionButton.dataset.imageAction === 'set-primary') {
+            setPrimaryImage(imageId);
+            return;
+        }
+
+        if (imageActionButton.dataset.imageAction === 'delete') {
+            deleteImage(imageId);
+        }
     });
 
     syncCreateMainImageOptions();

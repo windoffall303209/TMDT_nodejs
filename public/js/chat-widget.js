@@ -29,12 +29,12 @@ function updateChatBadge(count) {
     }
 
     if (!count || count <= 0 || chatState.open) {
-        badge.style.display = 'none';
+        badge.hidden = true;
         badge.textContent = '0';
         return;
     }
 
-    badge.style.display = 'flex';
+    badge.hidden = false;
     badge.textContent = String(count);
 }
 
@@ -457,8 +457,8 @@ function toggleChatWidget() {
     chatState.open = !chatState.open;
 
     if (chatState.open) {
-        box.style.display = 'flex';
-        toggleButton.style.display = 'none';
+        box.hidden = false;
+        toggleButton.hidden = true;
 
         if (!chatState.loaded) {
             loadChatHistory();
@@ -472,8 +472,8 @@ function toggleChatWidget() {
         return;
     }
 
-    box.style.display = 'none';
-    toggleButton.style.display = 'flex';
+    box.hidden = true;
+    toggleButton.hidden = false;
     stopChatPolling();
     refreshChatBadge();
 }
@@ -506,6 +506,10 @@ function initChatWidget() {
 
     chatState.initialized = true;
     runChatTaskWhenIdle(() => refreshChatBadge());
+
+    toggleButton.addEventListener('click', toggleChatWidget);
+    document.querySelector('.chat-widget__close')?.addEventListener('click', toggleChatWidget);
+    document.getElementById('chatForm')?.addEventListener('submit', sendChatMessage);
 
     document.addEventListener('visibilitychange', syncChatAfterFocus);
     window.addEventListener('pagehide', stopChatPolling, { passive: true });

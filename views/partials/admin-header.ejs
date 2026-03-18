@@ -23,6 +23,7 @@
         year: 'numeric'
     });
     const isChatPage = currentPage === 'chat';
+    const extraAdminPageStyles = Array.isArray(typeof pageStyles !== 'undefined' ? pageStyles : null) ? pageStyles : [];
 %>
 <head>
     <meta charset="UTF-8">
@@ -36,6 +37,9 @@
     <link rel="stylesheet" href="/css/admin.css">
     <link rel="stylesheet" href="/css/admin-animations.css">
     <link rel="stylesheet" href="/css/admin-overhaul.css">
+    <% extraAdminPageStyles.forEach((href) => { %>
+        <link rel="stylesheet" href="<%= href %>">
+    <% }) %>
 </head>
 
 <body class="admin-body admin-body--<%= currentPage %>">
@@ -206,64 +210,3 @@
 
     <div class="admin-main-wrapper">
         <main class="admin-main-content">
-            <script>
-                (function () {
-                    var savedScrollY = 0;
-
-                    function initAdminMobileMenu() {
-                        var btn = document.getElementById('adminMobileMenuBtn');
-                        var sidebar = document.getElementById('adminSidebar');
-                        var overlay = document.getElementById('adminMobileOverlay');
-
-                        if (!btn || !sidebar) return;
-                        if (btn.dataset.initialized) return;
-                        btn.dataset.initialized = 'true';
-
-                        function openMenu() {
-                            savedScrollY = window.scrollY;
-                            btn.classList.add('active');
-                            sidebar.classList.add('active');
-                            if (overlay) overlay.classList.add('active');
-                            document.body.classList.add('admin-menu-open');
-                            document.body.style.top = '-' + savedScrollY + 'px';
-                        }
-
-                        function closeMenu() {
-                            btn.classList.remove('active');
-                            sidebar.classList.remove('active');
-                            if (overlay) overlay.classList.remove('active');
-                            document.body.classList.remove('admin-menu-open');
-                            document.body.style.top = '';
-                            window.scrollTo(0, savedScrollY);
-                        }
-
-                        function toggleMenu() {
-                            if (sidebar.classList.contains('active')) {
-                                closeMenu();
-                            } else {
-                                openMenu();
-                            }
-                        }
-
-                        btn.addEventListener('click', toggleMenu);
-
-                        if (overlay) {
-                            overlay.addEventListener('click', closeMenu);
-                        }
-
-                        document.addEventListener('keydown', function (e) {
-                            if (e.key === 'Escape') closeMenu();
-                        });
-
-                        window.addEventListener('resize', function () {
-                            if (window.innerWidth > 1100) closeMenu();
-                        });
-                    }
-
-                    if (document.readyState === 'loading') {
-                        document.addEventListener('DOMContentLoaded', initAdminMobileMenu);
-                    } else {
-                        initAdminMobileMenu();
-                    }
-                })();
-            </script>
