@@ -120,12 +120,11 @@ body.admin-body.admin-body--chat {
     height: 100vh;
     min-height: 100vh;
     overflow: hidden;
-    padding: 16px 20px 0;
+    padding: 8px 20px 0;
 }
 
 .admin-page--chat .admin-page__title {
-    flex-shrink: 0;
-    margin-bottom: 12px;
+    display: none;
 }
 
 .admin-chat-page__badge {
@@ -476,6 +475,26 @@ body.admin-body.admin-body--chat {
     opacity: 0.8;
 }
 
+.admin-chat-msg__content {
+    white-space: normal;
+}
+
+.admin-chat-msg__content a {
+    color: #2563eb;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    font-weight: 600;
+    word-break: break-all;
+}
+
+.admin-chat-msg--admin .admin-chat-msg__content a {
+    color: #fff;
+}
+
+.admin-chat-msg--bot .admin-chat-msg__content a {
+    color: #1d4ed8;
+}
+
 .admin-chat-msg__time {
     font-size: 11px;
     opacity: 0.7;
@@ -816,6 +835,73 @@ function renderConversationList() {
     updateTitleUnreadBadge(adminChatState.conversations.filter((conversation) => conversation.unread_count > 0).length);
 }
 
+const ADMIN_CHAT_LINK_PATTERN = /((?:https?:\/\/|www\.)[^\s<]+|\/(?:products|cart|checkout|chat|auth|admin|orders)[^\s<]*)/gi;
+
+function normalizeChatLink(rawValue) {
+    if (!rawValue) {
+        return null;
+    }
+
+    let value = rawValue;
+    let trailing = '';
+
+    while (/[),.!?:;]$/.test(value)) {
+        trailing = value.slice(-1) + trailing;
+        value = value.slice(0, -1);
+    }
+
+    if (!value) {
+        return null;
+    }
+
+    const href = value.startsWith('www.') ? `https://${value}` : value;
+    return { href, text: value, trailing };
+}
+
+function appendLinkedText(container, text) {
+    const value = typeof text === 'string' ? text : '';
+    const lines = value.split(/\r?\n/);
+
+    lines.forEach((line, lineIndex) => {
+        let lastIndex = 0;
+
+        line.replace(ADMIN_CHAT_LINK_PATTERN, (match, _group, offset) => {
+            if (offset > lastIndex) {
+                container.appendChild(document.createTextNode(line.slice(lastIndex, offset)));
+            }
+
+            const normalized = normalizeChatLink(match);
+            if (!normalized) {
+                container.appendChild(document.createTextNode(match));
+            } else {
+                const link = document.createElement('a');
+                link.href = normalized.href;
+                link.textContent = normalized.text;
+                link.target = normalized.href.startsWith('/') ? '_self' : '_blank';
+                if (link.target === '_blank') {
+                    link.rel = 'noopener noreferrer';
+                }
+                container.appendChild(link);
+
+                if (normalized.trailing) {
+                    container.appendChild(document.createTextNode(normalized.trailing));
+                }
+            }
+
+            lastIndex = offset + match.length;
+            return match;
+        });
+
+        if (lastIndex < line.length) {
+            container.appendChild(document.createTextNode(line.slice(lastIndex)));
+        }
+
+        if (lineIndex < lines.length - 1) {
+            container.appendChild(document.createElement('br'));
+        }
+    });
+}
+
 function createMessageElement(message) {
     const wrapper = document.createElement('div');
     wrapper.className = `admin-chat-msg admin-chat-msg--${message.sender_type}`;
@@ -829,7 +915,8 @@ function createMessageElement(message) {
     }
 
     const content = document.createElement('div');
-    content.textContent = message.message;
+    content.className = 'admin-chat-msg__content';
+    appendLinkedText(content, message.message);
     wrapper.appendChild(content);
 
     const time = document.createElement('div');
