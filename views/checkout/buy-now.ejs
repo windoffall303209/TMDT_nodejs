@@ -99,11 +99,13 @@
                             <div class="address-form__grid">
                                 <div>
                                     <label class="address-form__label">Họ tên*</label>
-                                    <input type="text" id="newFullName" placeholder="Nguyễn Văn A" class="address-form__input">
+                                    <input type="text" id="newFullName" placeholder="Nguyễn Văn A" class="address-form__input" minlength="2" autocomplete="name">
+                                    <span id="newFullNameError" class="address-form__error"></span>
                                 </div>
                                 <div>
                                     <label class="address-form__label">Số điện thoại*</label>
-                                    <input type="tel" id="newPhone" placeholder="0901234567" class="address-form__input">
+                                    <input type="tel" id="newPhone" placeholder="0901234567" class="address-form__input" maxlength="10" inputmode="numeric" autocomplete="tel">
+                                    <span id="newPhoneError" class="address-form__error"></span>
                                 </div>
                             </div>
                             <div class="address-form__grid-3">

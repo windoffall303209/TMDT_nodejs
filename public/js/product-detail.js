@@ -7,6 +7,11 @@ const productDetailState = {
     bootstrap: null
 };
 
+function toNumericPrice(value) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+}
+
 function readProductDetailBootstrap() {
     if (productDetailState.bootstrap) {
         return productDetailState.bootstrap;
@@ -20,6 +25,14 @@ function readProductDetailBootstrap() {
 
     try {
         productDetailState.bootstrap = JSON.parse(bootstrapElement.textContent);
+        productDetailState.bootstrap.basePrice = toNumericPrice(productDetailState.bootstrap.basePrice);
+        productDetailState.bootstrap.variants = Array.isArray(productDetailState.bootstrap.variants)
+            ? productDetailState.bootstrap.variants.map((variant) => ({
+                ...variant,
+                additional_price: toNumericPrice(variant.additional_price),
+                stock_quantity: toNumericPrice(variant.stock_quantity)
+            }))
+            : [];
     } catch (error) {
         console.error('Product detail bootstrap parse error:', error);
         productDetailState.bootstrap = {};
@@ -157,7 +170,7 @@ function resolveVariant() {
     if (match) {
         productDetailState.selectedVariantId = match.id;
 
-        const newPrice = (bootstrap.basePrice || 0) + (match.additional_price || 0);
+        const newPrice = bootstrap.basePrice + match.additional_price;
         const priceElement = document.getElementById('productPrice');
         if (priceElement) {
             priceElement.textContent = `${newPrice.toLocaleString('vi-VN')}đ`;

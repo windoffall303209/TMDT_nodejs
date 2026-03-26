@@ -32,8 +32,56 @@ class Product {
         );
     }
 
+    static toNumber(value, fallback = 0) {
+        const numericValue = Number(value);
+        return Number.isFinite(numericValue) ? numericValue : fallback;
+    }
+
+    static normalizeProductNumbers(product) {
+        if (!product || typeof product !== 'object') {
+            return product;
+        }
+
+        if (Object.prototype.hasOwnProperty.call(product, 'price')) {
+            product.price = this.toNumber(product.price);
+        }
+
+        if (Object.prototype.hasOwnProperty.call(product, 'sale_value') && product.sale_value !== null) {
+            product.sale_value = this.toNumber(product.sale_value);
+        }
+
+        if (Object.prototype.hasOwnProperty.call(product, 'stock_quantity') && product.stock_quantity !== null) {
+            product.stock_quantity = Math.max(0, Number.parseInt(product.stock_quantity, 10) || 0);
+        }
+
+        if (Object.prototype.hasOwnProperty.call(product, 'final_price') && product.final_price !== null) {
+            product.final_price = this.toNumber(product.final_price);
+        }
+
+        return product;
+    }
+
+    static normalizeVariantNumbers(variants = []) {
+        variants.forEach((variant) => {
+            if (!variant || typeof variant !== 'object') {
+                return;
+            }
+
+            if (Object.prototype.hasOwnProperty.call(variant, 'additional_price')) {
+                variant.additional_price = this.toNumber(variant.additional_price);
+            }
+
+            if (Object.prototype.hasOwnProperty.call(variant, 'stock_quantity') && variant.stock_quantity !== null) {
+                variant.stock_quantity = Math.max(0, Number.parseInt(variant.stock_quantity, 10) || 0);
+            }
+        });
+
+        return variants;
+    }
+
     static hydrateListingProducts(products = []) {
         products.forEach((product) => {
+            this.normalizeProductNumbers(product);
             product.final_price = this.calculateFinalPrice(product.price, product.sale_type, product.sale_value);
             product.card_image = this.getOptimizedCardImageUrl(product.primary_image);
         });
@@ -177,6 +225,12 @@ class Product {
             )`;
         }
 
+        if (filters.stock_status === 'in_stock') {
+            query += ' AND p.stock_quantity > 0';
+        } else if (filters.stock_status === 'out_of_stock') {
+            query += ' AND p.stock_quantity <= 0';
+        }
+
         const [rows] = await pool.query(query, params);
         return rows[0]?.total || 0;
     }
@@ -224,6 +278,8 @@ class Product {
 
         if (!product) return null;
 
+        this.normalizeProductNumbers(product);
+
         // Lấy tất cả ảnh sản phẩm (ảnh chính lên đầu)
         const [images] = await pool.execute(
             'SELECT * FROM product_images WHERE product_id = ? ORDER BY is_primary DESC, display_order ASC',
@@ -240,7 +296,7 @@ class Product {
              ORDER BY pv.color, pv.size, pv.id`,
             [id]
         );
-        product.variants = variants;
+        product.variants = this.normalizeVariantNumbers(variants);
 
         // Lấy đánh giá đã được duyệt kèm thông tin người dùng
         const [reviews] = await pool.execute(`
@@ -451,21 +507,24 @@ class Product {
      * @returns {number} Giá cuối cùng sau khuyến mãi
      */
     static calculateFinalPrice(originalPrice, saleType, saleValue) {
+        const basePrice = this.toNumber(originalPrice);
+        const normalizedSaleValue = this.toNumber(saleValue);
+
         // Nếu không có khuyến mãi, trả về giá gốc
-        if (!saleType || !saleValue) return originalPrice;
+        if (!saleType || !normalizedSaleValue) return basePrice;
 
         switch (saleType) {
             case 'percentage':
                 // Giảm theo phần trăm: giá * (1 - %/100)
-                return originalPrice * (1 - saleValue / 100);
+                return basePrice * (1 - normalizedSaleValue / 100);
             case 'fixed':
                 // Giảm số tiền cố định, đảm bảo không âm
-                return Math.max(0, originalPrice - saleValue);
+                return Math.max(0, basePrice - normalizedSaleValue);
             case 'bogo':
                 // BOGO được xử lý ở tầng giỏ hàng
-                return originalPrice;
+                return basePrice;
             default:
-                return originalPrice;
+                return basePrice;
         }
     }
 
@@ -719,7 +778,7 @@ class Product {
              ORDER BY pv.color, pv.size, pv.id`,
             [productId]
         );
-        return rows;
+        return this.normalizeVariantNumbers(rows);
     }
 
     static async addVariant(productId, variantData) {

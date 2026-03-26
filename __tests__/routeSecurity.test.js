@@ -28,6 +28,7 @@ jest.mock('../controllers/orderController', () => ({
     createBuyNowOrder: jest.fn(),
     getOrderHistory: jest.fn(),
     orderConfirmation: jest.fn(),
+    vnpayIpn: jest.fn(),
     vnpayReturn: jest.fn(),
     momoReturn: jest.fn(),
     validateVoucher: jest.fn()
