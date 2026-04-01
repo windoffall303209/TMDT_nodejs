@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const productController = require('../controllers/productController');
-const { optionalAuth } = require('../middleware/auth');
+const { optionalAuth, verifyToken } = require('../middleware/auth');
+const { handleReviewMediaUpload } = require('../middleware/reviewUpload');
 const pool = require('../config/database');
 
 // Vietnamese diacritics removal for fuzzy search
@@ -111,6 +112,8 @@ router.get('/suggest', async (req, res) => {
 router.get('/', optionalAuth, productController.getProducts);
 router.get('/search', optionalAuth, productController.searchProducts);
 router.get('/category/:slug', optionalAuth, productController.getProductsByCategory);
+router.post('/:slug/reviews', verifyToken, handleReviewMediaUpload, productController.createProductReview);
+router.post('/:slug/reviews/:reviewId/edit', verifyToken, handleReviewMediaUpload, productController.updateProductReview);
 router.get('/:slug', optionalAuth, productController.getProductDetail);
 
 module.exports = router;

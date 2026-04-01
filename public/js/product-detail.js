@@ -507,16 +507,205 @@ function initQuantitySelector() {
     });
 }
 
-function initDescriptionToggle() {
-    const toggle = document.getElementById('descToggle');
-    const body = document.getElementById('descBody');
+function refreshCollapsibleSection(body) {
+    if (!body || !body.classList.contains('is-open')) return;
+    if (body.dataset.toggleMode === 'display') {
+        body.style.maxHeight = '';
+        return;
+    }
+    body.style.maxHeight = `${body.scrollHeight}px`;
+}
+
+function setCollapsibleSectionState(toggle, body, isOpen) {
+    if (!toggle || !body) return;
+
+    const toggleMode = body.dataset.toggleMode || 'height';
+
+    toggle.classList.toggle('is-open', isOpen);
+    body.classList.toggle('is-open', isOpen);
+    toggle.setAttribute('aria-expanded', String(isOpen));
+
+    if (toggleMode === 'display') {
+        body.style.maxHeight = '';
+        return;
+    }
+
+    body.style.maxHeight = isOpen ? `${body.scrollHeight}px` : '0px';
+}
+
+function initCollapsibleSection(toggleId, bodyId) {
+    const toggle = document.getElementById(toggleId);
+    const body = document.getElementById(bodyId);
 
     if (!toggle || !body) return;
 
+    setCollapsibleSectionState(toggle, body, body.classList.contains('is-open'));
     toggle.addEventListener('click', () => {
-        const isOpen = body.classList.toggle('is-open');
-        toggle.classList.toggle('is-open', isOpen);
+        const isOpen = !body.classList.contains('is-open');
+        setCollapsibleSectionState(toggle, body, isOpen);
     });
+    window.addEventListener('resize', () => refreshCollapsibleSection(body));
+}
+
+function refreshReviewPanels() {
+    ['createReviewPanel', 'reviewEditPanel', 'myReviewPanel', 'reviewBody'].forEach((id) => {
+        refreshCollapsibleSection(document.getElementById(id));
+    });
+}
+
+function clearTransientReviewQueryState() {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has('review')) return;
+
+    url.searchParams.delete('review');
+    const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+    window.history.replaceState({}, document.title, nextUrl);
+}
+
+function updateToggleLabel(toggle, isOpen) {
+    if (!toggle) return;
+    toggle.textContent = isOpen
+        ? (toggle.dataset.closeLabel || toggle.textContent)
+        : (toggle.dataset.openLabel || toggle.textContent);
+}
+
+function bindToggleLabel(toggleId, panelId, afterToggle) {
+    const toggle = document.getElementById(toggleId);
+    const panel = document.getElementById(panelId);
+
+    if (!toggle || !panel) return;
+
+    updateToggleLabel(toggle, panel.classList.contains('is-open'));
+    toggle.addEventListener('click', () => {
+        window.requestAnimationFrame(() => {
+            const isOpen = panel.classList.contains('is-open');
+            updateToggleLabel(toggle, isOpen);
+            if (typeof afterToggle === 'function') {
+                afterToggle(isOpen, toggle, panel);
+            }
+            refreshReviewPanels();
+        });
+    });
+}
+
+function closeToggleSection(toggleId, panelId) {
+    const toggle = document.getElementById(toggleId);
+    const panel = document.getElementById(panelId);
+
+    if (!toggle || !panel) return;
+
+    setCollapsibleSectionState(toggle, panel, false);
+    updateToggleLabel(toggle, false);
+}
+
+function initCreateReviewControls() {
+    initCollapsibleSection('createReviewToggle', 'createReviewPanel');
+    bindToggleLabel('createReviewToggle', 'createReviewPanel');
+}
+
+function initOwnReviewControls() {
+    initCollapsibleSection('myReviewToggle', 'myReviewPanel');
+    initCollapsibleSection('reviewEditToggle', 'reviewEditPanel');
+
+    bindToggleLabel('myReviewToggle', 'myReviewPanel', (isOpen) => {
+        if (!isOpen) {
+            closeToggleSection('reviewEditToggle', 'reviewEditPanel');
+        }
+    });
+    bindToggleLabel('reviewEditToggle', 'reviewEditPanel');
+}
+
+function initReviewMediaInput() {
+    const input = document.getElementById('reviewMediaInput');
+    const preview = document.getElementById('reviewMediaPreview');
+    const meta = document.getElementById('reviewMediaMeta');
+    const reviewBody = document.getElementById('reviewBody');
+
+    if (!input || !preview || !meta) return;
+
+    let objectUrls = [];
+
+    const renderPreview = () => {
+        objectUrls.forEach((url) => URL.revokeObjectURL(url));
+        objectUrls = [];
+        preview.innerHTML = '';
+
+        const files = Array.from(input.files || []);
+        if (files.length === 0) {
+            input.setCustomValidity('');
+            meta.textContent = 'Tối đa 5 ảnh và 1 video cho mỗi review.';
+            meta.dataset.state = 'idle';
+            refreshCollapsibleSection(reviewBody);
+            refreshReviewPanels();
+            return;
+        }
+
+        const counts = files.reduce((result, file) => {
+            if (file.type.startsWith('video/')) {
+                result.videos += 1;
+            } else {
+                result.images += 1;
+            }
+            return result;
+        }, { images: 0, videos: 0 });
+
+        const hasInvalidSelection =
+            files.length > 6 ||
+            counts.images > 5 ||
+            counts.videos > 1;
+
+        if (hasInvalidSelection) {
+            input.setCustomValidity('Bạn chỉ có thể chọn tối đa 5 ảnh và 1 video.');
+            meta.textContent = 'Bạn chỉ có thể chọn tối đa 5 ảnh và 1 video.';
+            meta.dataset.state = 'error';
+        } else {
+            input.setCustomValidity('');
+            meta.textContent = `Đã chọn ${counts.images} ảnh${counts.videos ? ` và ${counts.videos} video` : ''}.`;
+            meta.dataset.state = 'success';
+        }
+
+        files.forEach((file) => {
+            const card = document.createElement('div');
+            card.className = 'product-review-form__preview-card';
+
+            const objectUrl = URL.createObjectURL(file);
+            objectUrls.push(objectUrl);
+
+            let mediaNode;
+            if (file.type.startsWith('video/')) {
+                mediaNode = document.createElement('video');
+                mediaNode.controls = true;
+                mediaNode.preload = 'metadata';
+                mediaNode.className = 'product-review-form__preview-video';
+            } else {
+                mediaNode = document.createElement('img');
+                mediaNode.loading = 'lazy';
+                mediaNode.decoding = 'async';
+                mediaNode.alt = file.name;
+                mediaNode.className = 'product-review-form__preview-image';
+            }
+
+            mediaNode.src = objectUrl;
+            card.appendChild(mediaNode);
+
+            const caption = document.createElement('span');
+            caption.className = 'product-review-form__preview-name';
+            caption.textContent = file.name;
+            card.appendChild(caption);
+
+            preview.appendChild(card);
+        });
+
+        refreshCollapsibleSection(reviewBody);
+        refreshReviewPanels();
+    };
+
+    input.addEventListener('change', renderPreview);
+    renderPreview();
+}
+
+function initDescriptionToggle() {
+    initCollapsibleSection('descToggle', 'descBody');
 }
 
 function initProductDetailPage() {
@@ -524,6 +713,11 @@ function initProductDetailPage() {
     initProductGallery();
     initQuantitySelector();
     initDescriptionToggle();
+    initCollapsibleSection('reviewToggle', 'reviewBody');
+    initCreateReviewControls();
+    initOwnReviewControls();
+    initReviewMediaInput();
+    clearTransientReviewQueryState();
 
     document.querySelectorAll('.variant-btn').forEach((button) => {
         button.addEventListener('click', () => handleVariantButtonClick(button));
