@@ -634,8 +634,10 @@ exports.showBuyNow = async (req, res) => {
             });
         }
 
+        const quantity = parsePositiveInteger(req.query.quantity) || 1;
+
         const selectedVariant = getValidatedVariant(product, variantId);
-        ensureAvailableStock(product, 1, selectedVariant);
+        ensureAvailableStock(product, quantity, selectedVariant);
 
         // Tính giá đã bao gồm variant additional_price
         const unitPrice = calculateUnitPrice(product, selectedVariant);
@@ -647,8 +649,8 @@ exports.showBuyNow = async (req, res) => {
             product_slug: product.slug,
             product_image: product.images && product.images.length > 0 ? product.images[0].image_url : null,
             unit_price: unitPrice,
-            quantity: 1,
-            subtotal: unitPrice,
+            quantity: quantity,
+            subtotal: unitPrice * quantity,
             size: selectedVariant ? selectedVariant.size : null,
             color: selectedVariant ? selectedVariant.color : null
         };
@@ -656,7 +658,7 @@ exports.showBuyNow = async (req, res) => {
         const cart = {
             items: [buyNowItem],
             subtotal: buyNowItem.subtotal,
-            itemCount: 1
+            itemCount: quantity
         };
 
         const vouchers = await getAvailableVouchersForItems(cart.items);

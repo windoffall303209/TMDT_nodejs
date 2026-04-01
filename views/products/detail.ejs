@@ -26,6 +26,22 @@
 
         <div class="product-detail-grid">
             <div class="product-gallery">
+                <% if (product.images && product.images.length > 1) { %>
+                    <div class="product-gallery__thumbs">
+                        <% product.images.forEach((img, index) => { %>
+                            <img
+                                src="<%= img.image_url %>"
+                                alt="<%= product.name %> - <%= index + 1 %>"
+                                class="product-gallery__thumb <%= index === 0 ? 'product-gallery__thumb--active' : '' %>"
+                                data-index="<%= index %>"
+                                data-image-url="<%= img.image_url %>"
+                                loading="lazy"
+                                decoding="async"
+                            >
+                        <% }) %>
+                    </div>
+                <% } %>
+
                 <div class="product-gallery__main">
                     <% if (mainImage) { %>
                         <img
@@ -51,22 +67,6 @@
                         </div>
                     <% } %>
                 </div>
-
-                <% if (product.images && product.images.length > 1) { %>
-                    <div class="product-gallery__thumbs">
-                        <% product.images.forEach((img, index) => { %>
-                            <img
-                                src="<%= img.image_url %>"
-                                alt="<%= product.name %> - <%= index + 1 %>"
-                                class="product-gallery__thumb <%= index === 0 ? 'product-gallery__thumb--active' : '' %>"
-                                data-index="<%= index %>"
-                                data-image-url="<%= img.image_url %>"
-                                loading="lazy"
-                                decoding="async"
-                            >
-                        <% }) %>
-                    </div>
-                <% } %>
             </div>
 
             <div class="product-info">
@@ -93,17 +93,6 @@
                     <% } else { %>
                         <p class="product-info__price-current" id="productPrice"><%= (product.final_price || product.price).toLocaleString('vi-VN') %>đ</p>
                     <% } %>
-                </div>
-
-                <div class="product-info__service-grid">
-                    <div>
-                        <strong>Freeship từ 499K</strong>
-                        <span>Miễn phí vận chuyển cho đơn hàng đủ điều kiện.</span>
-                    </div>
-                    <div>
-                        <strong>COD / VNPay / MoMo</strong>
-                        <span>Hỗ trợ nhiều phương thức thanh toán tiện lợi.</span>
-                    </div>
                 </div>
 
                 <% if (product.variants && product.variants.length > 0) { %>
@@ -134,19 +123,64 @@
                     </div>
                 <% } %>
 
+                <div class="product-info__quantity">
+                    <label>Số lượng</label>
+                    <div class="quantity-selector">
+                        <button type="button" class="quantity-selector__btn" id="qtyMinus" aria-label="Giảm">−</button>
+                        <input type="number" class="quantity-selector__input" id="productQty" value="1" min="1" max="99">
+                        <button type="button" class="quantity-selector__btn" id="qtyPlus" aria-label="Tăng">+</button>
+                    </div>
+                </div>
+
                 <div class="product-info__actions">
                     <button class="btn product-info__action-btn product-info__action-btn--cart" data-product-action="add-to-cart">Thêm vào giỏ hàng</button>
                     <button class="btn btn-accent product-info__action-btn product-info__action-btn--buy" data-product-action="buy-now">Mua ngay</button>
                 </div>
-
-                <% if (product.description) { %>
-                    <div class="product-info__description">
-                        <h3>Mô tả sản phẩm</h3>
-                        <p><%= product.description %></p>
-                    </div>
-                <% } %>
             </div>
         </div>
+
+        <% if (product.description) { %>
+            <section class="product-description-section">
+                <button type="button" class="product-description__toggle" id="descToggle">
+                    <h3>Mô tả sản phẩm</h3>
+                    <span class="product-description__toggle-icon" id="descToggleIcon">▼</span>
+                </button>
+                <div class="product-description__body" id="descBody">
+                    <p><%= product.description %></p>
+                </div>
+            </section>
+        <% } %>
+
+        <section class="product-reviews">
+            <h2 class="product-reviews__title">Đánh giá sản phẩm</h2>
+            <% if (typeof reviews !== 'undefined' && reviews && reviews.length > 0) { %>
+                <div class="product-reviews__summary">
+                    <div>
+                        <div class="product-reviews__score"><%= (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1) %></div>
+                        <div class="product-reviews__stars">★★★★★</div>
+                        <div class="product-reviews__count"><%= reviews.length %> đánh giá</div>
+                    </div>
+                </div>
+                <div class="product-reviews__list">
+                    <% reviews.forEach(review => { %>
+                        <div class="product-review-item">
+                            <div class="product-review-item__header">
+                                <span class="product-review-item__author"><%= review.user_name || 'Người dùng' %></span>
+                                <span class="product-review-item__date"><%= new Date(review.created_at).toLocaleDateString('vi-VN') %></span>
+                            </div>
+                            <div class="product-review-item__stars"><%= '★'.repeat(review.rating) %><%= '☆'.repeat(5 - review.rating) %></div>
+                            <% if (review.comment) { %>
+                                <p class="product-review-item__text"><%= review.comment %></p>
+                            <% } %>
+                        </div>
+                    <% }) %>
+                </div>
+            <% } else { %>
+                <div class="product-reviews__empty">
+                    Chưa có đánh giá nào. Hãy là người đầu tiên đánh giá sản phẩm này!
+                </div>
+            <% } %>
+        </section>
 
         <% if (relatedProducts && relatedProducts.length > 0) { %>
             <section class="related-products">
