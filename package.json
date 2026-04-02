@@ -10,6 +10,7 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "check:inline-views": "node scripts/check-no-inline-view-assets.js",
+    "chat:rag:sync": "node scripts/sync-chat-rag.js",
     "test": "jest --coverage"
   },
   "keywords": [

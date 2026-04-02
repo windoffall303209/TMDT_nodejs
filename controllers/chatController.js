@@ -1,6 +1,7 @@
 const Chat = require('../models/Chat');
 const Product = require('../models/Product');
 const { describeProductFromImage } = require('../services/chatVisionService');
+const { retrieveChatRagContext } = require('../services/chatRagService');
 
 const CHAT_PRODUCT_KEYWORDS = [
     'ao', 'ao thun', 'ao so mi', 'ao polo', 'quan', 'quan jean', 'jeans', 'kaki',
@@ -109,6 +110,17 @@ function buildChatProductContext(title, products = []) {
         const stock = Number(product.stock_quantity || 0);
         const reason = product.chat_reason ? ` | Phu hop: ${product.chat_reason}` : '';
         return `- ${product.name} | Gia: ${price} | Ton kho: ${stock}${reason} | Link: ${getChatProductPath(product)}`;
+    }).join('\n')}`;
+}
+
+function buildChatKnowledgeContext(title, chunks = []) {
+    if (!chunks.length) {
+        return '';
+    }
+
+    return `\n\n${title}:\n${chunks.map((chunk) => {
+        const heading = chunk?.title ? `${chunk.title}: ` : '';
+        return `- ${heading}${chunk.content}`;
     }).join('\n')}`;
 }
 
@@ -479,6 +491,8 @@ function buildChatIntent(userMessage) {
     const categories = detectChatCategories(normalizedMessage);
     const budget = parseChatBudget(normalizedMessage);
     const focusTerms = extractChatTerms(normalizedMessage);
+    const imageGuided = includesChatPhrase(normalizedMessage, 'mo ta tu anh')
+        || includesChatPhrase(normalizedMessage, 'tu khoa tim kiem');
 
     const intent = {
         normalizedMessage,
@@ -486,7 +500,8 @@ function buildChatIntent(userMessage) {
         occasion,
         categories,
         budget,
-        focusTerms
+        focusTerms,
+        imageGuided
     };
 
     intent.searchQueries = buildChatSearchQueries(intent, userMessage);
@@ -535,7 +550,8 @@ function buildChatIntentFromContext(messages = [], userMessage = '') {
         focusTerms: mergeChatFocusTerms(
             currentIntent.focusTerms,
             getLastChatIntentValue(priorCustomerIntents, (intent) => intent.focusTerms) || []
-        )
+        ),
+        imageGuided: currentIntent.imageGuided || Boolean(getLastChatIntentValue(priorCustomerIntents, (intent) => intent.imageGuided))
     };
 
     mergedIntent.searchQueries = buildChatSearchQueries(mergedIntent, userMessage);
@@ -599,14 +615,51 @@ async function collectChatCandidateProducts(intent, userMessage) {
     ]);
 }
 
+function getChatProductText(product, options = {}) {
+    const fields = [
+        product?.name,
+        product?.category_name,
+        product?.category_slug,
+        product?.sku
+    ];
+
+    if (!options.strictCategory) {
+        fields.splice(1, 0, product?.description);
+    }
+
+    return normalizeChatText(fields.filter(Boolean).join(' '));
+}
+
+function getChatCategoryKeywords(category, options = {}) {
+    if (!options.strict || category.generic) {
+        return category.keywords;
+    }
+
+    return Array.from(new Set([
+        category.searchPhrase,
+        ...category.keywords.filter((keyword) => keyword.includes(' ') || keyword.length >= 6)
+    ]));
+}
+
+function getChatMatchedCategories(product, intent, options = {}) {
+    const productText = getChatProductText(product, {
+        strictCategory: Boolean(options.strict)
+    });
+    return intent.categories.filter((category) =>
+        getChatCategoryKeywords(category, options).some((keyword) => includesChatPhrase(productText, keyword))
+    );
+}
+
+function hasChatStrictCategoryIntent(intent) {
+    return Array.isArray(intent?.categories) && intent.categories.some((category) => !category.generic);
+}
+
+function hasChatStrictCategoryMatch(product, intent) {
+    return getChatMatchedCategories(product, intent, { strict: true }).some((category) => !category.generic);
+}
+
 function scoreChatCandidate(product, intent) {
-    const productText = normalizeChatText([
-        product.name,
-        product.description,
-        product.category_name,
-        product.category_slug,
-        product.sku
-    ].filter(Boolean).join(' '));
+    const productText = getChatProductText(product);
     const finalPrice = Number(product.final_price || product.price || 0);
     const soldCount = Number(product.sold_count || 0);
     const stock = Number(product.stock_quantity || 0);
@@ -619,14 +672,12 @@ function scoreChatCandidate(product, intent) {
         score -= 60;
     }
 
-    const matchedCategory = intent.categories.find((category) =>
-        category.keywords.some((keyword) => includesChatPhrase(productText, keyword))
-    );
+    const matchedCategory = getChatMatchedCategories(product, intent)[0] || null;
     if (matchedCategory) {
         score += 28;
         reasons.push(`h\u1ee3p ki\u1ec3u ${matchedCategory.label}`);
     } else if (intent.categories.length) {
-        score -= 12;
+        score -= intent.imageGuided && hasChatStrictCategoryIntent(intent) ? 40 : 12;
     }
 
     if (intent.gender) {
@@ -764,6 +815,20 @@ async function getChatSuggestedProducts(userMessage, messages = []) {
         const stockProducts = rankedProducts.filter((product) => Number(product.stock_quantity || 0) > 0);
         const genderSafeProducts = stockProducts.filter((product) => getChatAudienceMatch(product, intent));
         const fallbackGenderSafeProducts = rankedProducts.filter((product) => getChatAudienceMatch(product, intent));
+        const strictCategoryStockProducts = genderSafeProducts.filter((product) => hasChatStrictCategoryMatch(product, intent));
+        const strictCategoryFallbackProducts = fallbackGenderSafeProducts.filter((product) => hasChatStrictCategoryMatch(product, intent));
+
+        if (strictCategoryStockProducts.length) {
+            return strictCategoryStockProducts.slice(0, 6);
+        }
+
+        if (strictCategoryFallbackProducts.length) {
+            return strictCategoryFallbackProducts.slice(0, 6);
+        }
+
+        if (intent.imageGuided && hasChatStrictCategoryIntent(intent)) {
+            return [];
+        }
 
         if (genderSafeProducts.length) {
             return genderSafeProducts.slice(0, 6);
@@ -783,8 +848,27 @@ async function getChatSuggestedProducts(userMessage, messages = []) {
 async function buildEnhancedChatSystemPrompt(messages, userMessage) {
     let featuredContext = '';
     const intent = buildChatIntentFromContext(messages, userMessage);
-    const suggestedProducts = await getChatSuggestedProducts(userMessage, messages);
-    const shouldAskClarifyingQuestion = !canChatDirectlySuggestProducts(intent);
+    const canSuggestProducts = shouldChatSuggestProducts(intent);
+    const ragContext = await retrieveChatRagContext(userMessage, {
+        productLimit: 6,
+        knowledgeLimit: 4
+    }).catch((error) => {
+        console.error('Chat RAG retrieval error:', error);
+        return { products: [], knowledge: [] };
+    });
+    const ragSuggestedProducts = canSuggestProducts
+        ? dedupeChatProducts(
+            (ragContext.products || []).filter((product) =>
+                !hasChatStrictCategoryIntent(intent) || hasChatStrictCategoryMatch(product, intent)
+            )
+        )
+        : [];
+    const suggestedProducts = canSuggestProducts
+        ? (ragSuggestedProducts.length
+            ? ragSuggestedProducts
+            : await getChatSuggestedProducts(userMessage, messages))
+        : [];
+    const shouldAskClarifyingQuestion = canSuggestProducts && !canChatDirectlySuggestProducts(intent);
 
     if (!shouldAskClarifyingQuestion) {
         try {
@@ -802,6 +886,10 @@ async function buildEnhancedChatSystemPrompt(messages, userMessage) {
         'San pham nen goi y cho nhu cau hien tai',
         suggestedProducts
     );
+    const knowledgeContext = buildChatKnowledgeContext(
+        'Nguon thong tin uu tien de tra loi',
+        ragContext.knowledge || []
+    );
 
     const prompt = `Ban la tro ly ban hang AI cua cua hang thoi trang "WIND OF FALL".
 Nhiem vu: tu van san pham, ho tro mua hang va giai dap cau hoi co ban ve don hang.
@@ -813,13 +901,15 @@ Quy tac:
 - Neu gioi thieu san pham cu the, chi dung dung ten san pham co trong ngu canh
 - Khong can liet ke link raw hay bullet link, he thong se tu render card san pham khi co goi y
 - Neu khach hoi co ho tro tim san pham bang hinh anh hay khong, khang dinh la co va moi khach gui anh truc tiep trong khung chat
+- Neu trong noi dung co cum "Mo ta tu anh" hoac "Tu khoa tim kiem", nghia la he thong da phan tich anh xong; khong duoc yeu cau khach gui anh lai
+- Voi tim kiem bang anh, chi nen goi y cac san pham cung loai hoac rat gan; neu catalog khong co mau gan, noi ro la shop chua co mau phu hop thay vi dua ra san pham khong lien quan
 - Neu khach moi noi chung chung ma chua noi ro loai san pham, khong goi y san pham hay link ngay; hay hoi 1 cau lam ro ngan gon ve kieu do, phong cach hoac ngan sach
 - Neu khach can ho tro sau hon, noi ro admin se ho tro them
 
 Thong tin cua hang:
 - Chuyen thoi trang nam nu
 - Ho tro thanh toan: COD, VNPay, MoMo
-- Giao hang toan quoc${buildChatIntentSummary(intent)}${featuredContext}${suggestedContext}`;
+- Giao hang toan quoc${knowledgeContext}${buildChatIntentSummary(intent)}${featuredContext}${suggestedContext}`;
 
     return {
         prompt,
@@ -918,8 +1008,28 @@ function finalizeChatReply(reply, suggestedProducts = [], options = {}) {
     const fallbackReply = options.fallbackReply
         || 'Xin lỗi, tôi chưa thể xử lý yêu cầu này lúc này. Admin sẽ hỗ trợ bạn thêm.';
 
+    const normalizedReply = normalizeChatText(baseReply);
+    const shouldOverrideImageReply = options.imageAnalysis && (
+        !baseReply ||
+        !suggestedProducts.length ||
+        includesChatPhrase(normalizedReply, 'ho tro tim san pham bang hinh anh') ||
+        includesChatPhrase(normalizedReply, 'gui hinh anh') ||
+        includesChatPhrase(normalizedReply, 'gui anh truc tiep')
+    );
+
+    if (shouldOverrideImageReply) {
+        if (suggestedProducts.length) {
+            return options.imageAnalysis.matchSummary
+                || 'Dua tren anh ban gui, minh da loc cac mau gan nhat hien co ngay ben duoi de ban de so sanh.';
+        }
+
+        if (options.imageAnalysis?.description) {
+            return `Dua tren anh ban gui, minh nhan ra day la ${options.imageAnalysis.description.toLowerCase()}. Hien shop chua co mau that su gan trong catalog, nen minh khong muon goi y sai cho ban.`;
+        }
+    }
+
     if (!baseReply) {
-        if (options.imageAnalysis?.matchSummary) {
+        if (options.imageAnalysis?.matchSummary && suggestedProducts.length) {
             return options.imageAnalysis.matchSummary;
         }
 

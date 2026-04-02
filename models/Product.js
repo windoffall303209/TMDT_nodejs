@@ -348,6 +348,44 @@ class Product {
         return rows[0]?.total || 0;
     }
 
+    static async getByIds(ids = []) {
+        const normalizedIds = Array.from(new Set(
+            (Array.isArray(ids) ? ids : [])
+                .map((id) => Number.parseInt(id, 10))
+                .filter((id) => Number.isInteger(id) && id > 0)
+        ));
+
+        if (!normalizedIds.length) {
+            return [];
+        }
+
+        const placeholders = normalizedIds.map(() => '?').join(', ');
+        const [rows] = await pool.query(
+            `SELECT p.*,
+                    c.name as category_name,
+                    c.slug as category_slug,
+                    (SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = TRUE LIMIT 1) as primary_image,
+                    (SELECT COUNT(*) FROM product_images WHERE product_id = p.id) as image_count,
+                    s.type as sale_type,
+                    s.value as sale_value,
+                    s.name as sale_name
+             FROM products p
+             LEFT JOIN categories c ON p.category_id = c.id
+             LEFT JOIN sales s ON p.sale_id = s.id AND s.is_active = TRUE
+                AND NOW() BETWEEN s.start_date AND s.end_date
+             WHERE p.is_active = TRUE
+               AND p.id IN (${placeholders})`,
+            normalizedIds
+        );
+
+        const hydratedRows = this.hydrateListingProducts(rows);
+        const productMap = new Map(hydratedRows.map((product) => [product.id, product]));
+
+        return normalizedIds
+            .map((id) => productMap.get(id))
+            .filter(Boolean);
+    }
+
     // =============================================================================
     // TÌM SẢN PHẨM THEO ID - FIND BY ID
     // =============================================================================
