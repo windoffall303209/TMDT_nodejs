@@ -489,12 +489,12 @@
 
 .home-products-grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 16px;
 }
 
 .home-products-grid--featured {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .home-editorial__grid {
@@ -609,10 +609,13 @@
     }
 
     .category-showcase,
-    .home-products-grid,
-    .home-products-grid--featured,
     .home-services__grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .home-products-grid,
+    .home-products-grid--featured {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 }
 

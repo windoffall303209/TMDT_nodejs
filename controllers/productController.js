@@ -268,7 +268,7 @@ exports.getHomePage = async (req, res) => {
         });
 
         // Lấy 8 sản phẩm mới nhất
-        const newProducts = await Product.getNewProducts(8).catch(err => {
+        const newProducts = await Product.getNewProducts(10).catch(err => {
             console.error('New products error:', err);
             // Dữ liệu mẫu fallback
             return [
@@ -280,7 +280,7 @@ exports.getHomePage = async (req, res) => {
         });
 
         // Lấy 8 sản phẩm bán chạy nhất
-        const bestSellers = await Product.getBestSellers(8).catch(err => {
+        const bestSellers = await Product.getBestSellers(10).catch(err => {
             console.error('Best sellers error:', err);
             // Dữ liệu mẫu fallback
             return [
