@@ -3,6 +3,7 @@ const Chat = require('../models/Chat');
 const Product = require('../models/Product');
 const { describeProductFromImage } = require('../services/chatVisionService');
 const { retrieveChatRagContext } = require('../services/chatRagService');
+const productVisualEmbeddingService = require('../services/productVisualEmbeddingService');
 
 const CHAT_PRODUCT_KEYWORDS = [
     'ao', 'ao thun', 'ao so mi', 'ao polo', 'quan', 'quan jean', 'jeans', 'kaki',
@@ -125,9 +126,18 @@ function buildChatProductContext(title, products = []) {
 
     return `\n\n${title}:\n${products.map((product) => {
         const price = formatChatCurrency(product.final_price || product.price);
+        const originalPrice = Number(product.price || 0);
+        const finalPrice = Number(product.final_price || product.price || 0);
+        const priceStr = (finalPrice < originalPrice)
+            ? `${formatChatCurrency(finalPrice)} (giam tu ${formatChatCurrency(originalPrice)})`
+            : formatChatCurrency(finalPrice);
         const stock = Number(product.stock_quantity || 0);
+        const colors = String(product.variant_colors || '').trim();
+        const sizes = String(product.variant_sizes || '').trim();
         const reason = product.chat_reason ? ` | Phu hop: ${product.chat_reason}` : '';
-        return `- ${product.name} | Gia: ${price} | Ton kho: ${stock}${reason} | Link: ${getChatProductPath(product)}`;
+        const colorStr = colors ? ` | Mau: ${colors}` : '';
+        const sizeStr = sizes ? ` | Size: ${sizes}` : '';
+        return `- ${product.name} | Gia: ${priceStr} | Ton kho: ${stock}${colorStr}${sizeStr}${reason} | Link: ${getChatProductPath(product)}`;
     }).join('\n')}`;
 }
 
@@ -389,7 +399,7 @@ function parseChatBudget(normalizedMessage) {
         return null;
     }
 
-    const rangeMatch = normalizedMessage.match(/(\d+(?:[.,]\d+)?)\s*(trieu|tr|m|k|nghin|ngan)?\s*(?:-|den|toi)\s*(\d+(?:[.,]\d+)?)\s*(trieu|tr|m|k|nghin|ngan)?/);
+    const rangeMatch = normalizedMessage.match(/(\d+(?:[.,]\d+)?)\s*(trieu|tr|m|k|nghin|ngan)?\s*(?:->|–|-|den|toi|tới|đến)\s*(\d+(?:[.,]\d+)?)\s*(trieu|tr|m|k|nghin|ngan)?/);
     if (rangeMatch) {
         const first = parseChatMoneyAmount(rangeMatch[1], rangeMatch[2]);
         const second = parseChatMoneyAmount(rangeMatch[3], rangeMatch[4] || rangeMatch[2]);
@@ -473,7 +483,7 @@ function detectChatColors(normalizedMessage) {
 
 function getChatRequestedProductLimit(userMessage, fallbackLimit = 6) {
     const normalizedMessage = normalizeChatText(userMessage);
-    const requestPattern = /\b(?:goi y|de xuat|tu van|chon|liet ke|show)\b/;
+    const requestPattern = /\b(?:goi y|de xuat|tu van|chon|liet ke|show|tim|tim kiem|xem|cho)\b/;
     const quantityPattern = /\b(\d{1,2})\s+(?:san pham|mau|ao|quan|dam|vay|set|item|mon)\b/;
     const match = normalizedMessage.match(quantityPattern);
 
@@ -680,69 +690,67 @@ function buildChatIntentSummary(intent) {
 
 async function collectChatCandidateProducts(intent, userMessage, options = {}) {
     const desiredLimit = Number.parseInt(options.limit, 10) || 6;
-    const searchLimit = Math.max(12, Math.min(30, desiredLimit * 3));
-    const broadLimit = Math.max(18, Math.min(36, desiredLimit * 4));
+    const fetchLimit = Math.max(30, desiredLimit * 5);
+
+    const chatSearchBase = { accent_sensitive: false };
+    const budgetParams = intent.budget
+        ? {
+            min_price: intent.budget.minPrice || undefined,
+            max_price: intent.budget.maxPrice || undefined,
+            use_final_price: true
+        }
+        : {};
+
     const searchQueries = intent.searchQueries.slice(0, 3);
-    const searchTasks = searchQueries.map((query) =>
-        Product.findAll({
-            search: query,
+    const specificQuery = searchQueries[0] || '';
+    const broaderQueries = searchQueries.slice(1);
+
+    // Query cụ thể nhất trước (vd "ao nu tre vai")
+    const specificProducts = specificQuery
+        ? await Product.findAll({
+            search: specificQuery,
+            ...chatSearchBase,
+            ...budgetParams,
             sort_by: 'sold_count',
             sort_order: 'DESC',
-            limit: searchLimit
+            limit: fetchLimit
         }).catch(() => [])
-    );
-    const broadCatalogTasks = [];
+        : [];
 
-    if (intent.gender || intent.colors.length || intent.budget || intent.occasion) {
-        broadCatalogTasks.push(
+    // Chỉ query rộng hơn nếu query cụ thể không đủ kết quả
+    let broaderProducts = [];
+    if (specificProducts.length < desiredLimit * 2 && broaderQueries.length) {
+        const broaderTasks = broaderQueries.map((query) =>
             Product.findAll({
+                search: query,
+                ...chatSearchBase,
+                ...budgetParams,
                 sort_by: 'sold_count',
                 sort_order: 'DESC',
-                limit: broadLimit
+                limit: fetchLimit
             }).catch(() => [])
         );
-        broadCatalogTasks.push(
-            Product.findAll({
-                sort_by: 'created_at',
-                sort_order: 'DESC',
-                limit: broadLimit
-            }).catch(() => [])
-        );
-
-        if (intent.budget?.minPrice || intent.budget?.maxPrice) {
-            broadCatalogTasks.push(
-                Product.findAll({
-                    min_price: intent.budget.minPrice || undefined,
-                    max_price: intent.budget.maxPrice || undefined,
-                    sort_by: 'sold_count',
-                    sort_order: 'DESC',
-                    limit: broadLimit
-                }).catch(() => [])
-            );
-        }
+        const broaderBuckets = await Promise.all(broaderTasks);
+        broaderProducts = broaderBuckets.flat();
     }
 
-    const [searchBuckets, broadCatalogBuckets, bestSellers, featuredProducts] = await Promise.all([
-        Promise.all(searchTasks),
-        Promise.all(broadCatalogTasks),
-        Product.getBestSellers(10).catch(() => []),
-        Product.getFeaturedProducts(8).catch(() => [])
-    ]);
-
-    let fuzzyProducts = [];
-    if (searchBuckets.flat().length < 5) {
-        const fuzzyBuckets = await Promise.all(
-            searchQueries.slice(0, 2).map((query) => Product.search(query || userMessage, searchLimit).catch(() => []))
-        );
-        fuzzyProducts = fuzzyBuckets.flat();
+    // Fallback không lọc giá khi budget hẹp quá
+    let nobudgetProducts = [];
+    const allProducts = dedupeChatProducts([...specificProducts, ...broaderProducts]);
+    if (allProducts.length < desiredLimit && intent.budget) {
+        nobudgetProducts = await Product.findAll({
+            search: specificQuery || String(userMessage || '').trim(),
+            ...chatSearchBase,
+            sort_by: 'sold_count',
+            sort_order: 'DESC',
+            limit: fetchLimit
+        }).catch(() => []);
     }
 
     return dedupeChatProducts([
-        ...searchBuckets.flat(),
-        ...broadCatalogBuckets.flat(),
-        ...fuzzyProducts,
-        ...featuredProducts,
-        ...bestSellers
+        ...specificProducts,
+        ...broaderProducts,
+        ...nobudgetProducts
     ]);
 }
 
@@ -867,10 +875,19 @@ function scoreChatCandidate(product, intent) {
         }
     }
 
+    const totalFocusTerms = intent.focusTerms.length;
     const termMatches = intent.focusTerms.reduce((count, term) => (
         includesChatPhrase(productText, term) ? count + 1 : count
     ), 0);
-    score += Math.min(termMatches * 4, 16);
+    const nameText = normalizeChatText((product?.name || '') + ' ' + (product?.category_name || ''));
+    const nameTermMatches = intent.focusTerms.reduce((count, term) => (
+        includesChatPhrase(nameText, term) ? count + 1 : count
+    ), 0);
+    score += nameTermMatches * 15;
+    score += Math.min((termMatches - nameTermMatches) * 3, 12);
+    if (totalFocusTerms > 0 && nameTermMatches === 0) {
+        score -= 30;
+    }
 
     if (product.sale_type) {
         score += 4;
@@ -974,11 +991,66 @@ function matchesChatBudget(product, intent) {
     return true;
 }
 
+function fuseVisualAndTextImageProducts(visualProducts, textProducts, intent, maxItems) {
+    const cap = Math.max(Number(maxItems) || 6, 1);
+    const tScores = new Map();
+    textProducts.forEach((p, i) => {
+        const denom = Math.max(textProducts.length, 1);
+        tScores.set(p.id, 1 - (i / denom) * 0.9);
+    });
+    const vMap = new Map(visualProducts.map((p) => [p.id, p]));
+    const ids = new Set([...vMap.keys(), ...textProducts.map((p) => p.id)]);
+
+    const merged = [];
+    ids.forEach((id) => {
+        const vp = vMap.get(id);
+        const tp = textProducts.find((p) => p.id === id);
+        const product = vp || tp;
+        if (!product) {
+            return;
+        }
+
+        const v = vp ? Math.max(0, Math.min(1, Number(vp.visual_similarity || 0))) : 0;
+        const t = tScores.has(id) ? tScores.get(id) : 0;
+        let combined;
+        if (v > 0 && t > 0) {
+            combined = 0.55 * v + 0.45 * t;
+        } else if (v > 0) {
+            combined = v * 0.98;
+        } else {
+            combined = t * 0.72;
+        }
+
+        const chat_score = 40 + combined * 58;
+        const ranking = scoreChatCandidate(product, intent);
+        const chat_reason = v > 0.34
+            ? 'gan ve hinh anh va tim kiem'
+            : v > 0
+                ? 'tuong dong hinh anh'
+                : ranking.reason;
+
+        merged.push({
+            ...product,
+            chat_score,
+            chat_reason
+        });
+    });
+
+    return merged.sort((left, right) => right.chat_score - left.chat_score).slice(0, cap * 2);
+}
+
 function selectChatSuggestedProducts(products = [], intent, options = {}) {
     const maxItems = Number.parseInt(options.limit, 10) || 6;
     const ignoreBudget = Boolean(options.ignoreBudget);
+    const usePresetScores = Boolean(options.usePresetScores);
     const rankedProducts = dedupeChatProducts(products)
         .map((product) => {
+            if (usePresetScores && typeof product.chat_score === 'number') {
+                return {
+                    ...product,
+                    chat_reason: product.chat_reason || 'goi y da ket hop'
+                };
+            }
             const ranking = scoreChatCandidate(product, intent);
             return {
                 ...product,
@@ -1018,6 +1090,16 @@ function selectChatSuggestedProducts(products = [], intent, options = {}) {
         }
     }
 
+    if (intent?.focusTerms?.length > 0 && !options.skipFocusTermFilter) {
+        const focusMatched = candidates.filter((product) => {
+            const nameText = normalizeChatText((product?.name || '') + ' ' + (product?.category_name || ''));
+            return intent.focusTerms.some((term) => includesChatPhrase(nameText, term));
+        });
+        if (focusMatched.length >= Math.min(maxItems, 2)) {
+            candidates = focusMatched;
+        }
+    }
+
     if (!ignoreBudget && intent?.budget) {
         candidates = candidates.filter((product) => matchesChatBudget(product, intent));
         if (!candidates.length) {
@@ -1045,12 +1127,14 @@ async function getChatSuggestedProducts(userMessage, messages = [], options = {}
     }
 }
 
-async function buildEnhancedChatSystemPrompt(messages, userMessage) {
+async function buildEnhancedChatSystemPrompt(messages, userMessage, flowOptions = {}) {
     let featuredContext = '';
     const intent = buildChatIntentFromContext(messages, userMessage);
     const desiredProductLimit = getChatRequestedProductLimit(userMessage, 6);
     const hasProductIntent = shouldChatSuggestProducts(intent);
     const canDirectlySuggest = hasProductIntent && canChatDirectlySuggestProducts(intent);
+    const visualImageUrl = flowOptions.visualImageUrl || null;
+
     const ragContext = await retrieveChatRagContext(userMessage, {
         productLimit: desiredProductLimit,
         knowledgeLimit: 4
@@ -1066,25 +1150,69 @@ async function buildEnhancedChatSystemPrompt(messages, userMessage) {
         : [];
     let imageReferenceProducts = [];
 
-    if (intent.imageGuided && canDirectlySuggest) {
-        const imageCandidateProducts = dedupeChatProducts([
-            ...(ragContext.products || []),
-            ...(await collectChatCandidateProducts(intent, userMessage, { limit: desiredProductLimit }).catch(() => []))
-        ]);
-
-        imageReferenceProducts = selectChatSuggestedProducts(imageCandidateProducts, intent, {
-            limit: 2,
-            ignoreBudget: true
-        });
+    let visualFromEmbeddings = [];
+    if (
+        intent.imageGuided
+        && canDirectlySuggest
+        && visualImageUrl
+        && productVisualEmbeddingService.hasVisualEmbeddingCredentials()
+    ) {
+        visualFromEmbeddings = await productVisualEmbeddingService
+            .searchSimilarProductsByImageUrl(visualImageUrl, desiredProductLimit * 3)
+            .catch((err) => {
+                console.error('Visual embedding search error:', err.message || err);
+                return [];
+            });
     }
 
-    const suggestedProducts = intent.imageGuided
-        ? dedupeChatProducts([
+    if (intent.imageGuided && canDirectlySuggest) {
+        if (visualFromEmbeddings.length) {
+            imageReferenceProducts = selectChatSuggestedProducts(visualFromEmbeddings, intent, {
+                limit: 2,
+                ignoreBudget: true,
+                skipFocusTermFilter: true
+            });
+        } else {
+            const imageCandidateProducts = dedupeChatProducts([
+                ...(ragContext.products || []),
+                ...(await collectChatCandidateProducts(intent, userMessage, { limit: desiredProductLimit }).catch(() => []))
+            ]);
+
+            imageReferenceProducts = selectChatSuggestedProducts(imageCandidateProducts, intent, {
+                limit: 2,
+                ignoreBudget: true
+            });
+        }
+    }
+
+    let suggestedProducts;
+    if (intent.imageGuided && canDirectlySuggest && visualFromEmbeddings.length) {
+        const textPool = dedupeChatProducts([
+            ...(ragContext.products || []),
+            ...ragSuggestedProducts,
+            ...searchSuggestedProducts,
+            ...(await collectChatCandidateProducts(intent, userMessage, { limit: desiredProductLimit }).catch(() => []))
+        ]);
+        const fused = fuseVisualAndTextImageProducts(
+            visualFromEmbeddings,
+            textPool,
+            intent,
+            desiredProductLimit
+        );
+        suggestedProducts = selectChatSuggestedProducts(fused, intent, {
+            limit: desiredProductLimit,
+            ignoreBudget: true,
+            usePresetScores: true,
+            skipFocusTermFilter: true
+        });
+    } else if (intent.imageGuided) {
+        suggestedProducts = dedupeChatProducts([
             ...imageReferenceProducts,
             ...ragSuggestedProducts,
             ...searchSuggestedProducts
-        ]).slice(0, desiredProductLimit)
-        : selectChatSuggestedProducts(
+        ]).slice(0, desiredProductLimit);
+    } else {
+        suggestedProducts = selectChatSuggestedProducts(
             dedupeChatProducts([
                 ...ragSuggestedProducts,
                 ...searchSuggestedProducts
@@ -1092,6 +1220,7 @@ async function buildEnhancedChatSystemPrompt(messages, userMessage) {
             intent,
             { limit: desiredProductLimit }
         );
+    }
     const shouldAskClarifyingQuestion = hasProductIntent && !canDirectlySuggest;
 
     if (!hasProductIntent && !shouldAskClarifyingQuestion) {
@@ -1281,11 +1410,22 @@ function finalizeChatReply(reply, suggestedProducts = [], options = {}) {
     return baseReply;
 }
 
+function getFirstChatImageUrlFromAttachments(attachments = []) {
+    const list = Array.isArray(attachments) ? attachments : [];
+    const img = list.find((item) => (item.mediaType || item.media_type) === 'image');
+    return img?.mediaUrl || img?.media_url || null;
+}
+
 async function callEnhancedAI(messages, userMessage, options = {}) {
     const provider = process.env.AI_PROVIDER || 'openai';
     const hasOpenAI = Boolean(process.env.OPENAI_API_KEY);
     const hasGemini = Boolean(process.env.GEMINI_API_KEY);
-    const { prompt, suggestedProducts, imageReferenceProducts } = await buildEnhancedChatSystemPrompt(messages, userMessage);
+    const visualImageUrl = getFirstChatImageUrlFromAttachments(options.attachments);
+    const { prompt, suggestedProducts, imageReferenceProducts } = await buildEnhancedChatSystemPrompt(
+        messages,
+        userMessage,
+        { visualImageUrl }
+    );
     const fallbackReply = options.fallbackReply
         || (options.attachments?.length ? buildMediaOnlyFallbackReply(options.attachments) : null)
         || 'Xin lỗi, tôi chưa thể xử lý yêu cầu này lúc này. Admin sẽ hỗ trợ bạn thêm.';

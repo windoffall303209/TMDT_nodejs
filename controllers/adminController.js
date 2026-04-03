@@ -30,6 +30,8 @@ const {
     importProductsFromWorkbook
 } = require('../services/productBulkImportService');
 const upload = require('../middleware/upload');
+const { scheduleProductVisualEmbeddingSync } = require('../services/productVisualEmbeddingService');
+const ProductImageEmbedding = require('../models/ProductImageEmbedding');
 
 function parseSelectedProductIds(body) {
     const rawValues = body.product_ids ?? body['product_ids[]'] ?? [];
@@ -788,6 +790,8 @@ exports.createProduct = async (req, res) => {
 
         await syncVariants(product.id, parsedVariants, imageKeyMap);
 
+        scheduleProductVisualEmbeddingSync(product.id);
+
         res.redirect('/admin/products');
     } catch (error) {
         console.error('Create product error:', error);
@@ -840,6 +844,8 @@ exports.updateProduct = async (req, res) => {
         if (parsedVariants !== null) {
             await syncVariants(id, parsedVariants, imageKeyMap);
         }
+
+        scheduleProductVisualEmbeddingSync(id);
 
         res.json({ success: true, message: 'Cáº­p nháº­t sáº£n pháº©m thÃ nh cÃ´ng' });
     } catch (error) {
@@ -1498,6 +1504,8 @@ exports.addProductImageUrl = async (req, res) => {
             [productId, image_url, is_primary || false]
         );
 
+        scheduleProductVisualEmbeddingSync(productId);
+
         res.json({ success: true, message: 'Image added' });
     } catch (error) {
         res.status(400).json({ message: error.message });
@@ -1538,6 +1546,8 @@ exports.uploadProductImage = async (req, res) => {
             displayOrder += 1;
         }
 
+        scheduleProductVisualEmbeddingSync(productId);
+
         res.json({
             success: true,
             message: files.length > 1 ? `ÄÃ£ táº£i lÃªn ${files.length} áº£nh` : 'ÄÃ£ táº£i lÃªn áº£nh'
@@ -1561,8 +1571,18 @@ exports.uploadProductImage = async (req, res) => {
 exports.deleteProductImage = async (req, res) => {
     try {
         const pool = require('../config/database');
-        // XÃ³a áº£nh tá»« database
+        const [rows] = await pool.execute(
+            'SELECT product_id, is_primary FROM product_images WHERE id = ? LIMIT 1',
+            [req.params.imageId]
+        );
+        const row = rows[0];
         await pool.execute('DELETE FROM product_images WHERE id = ?', [req.params.imageId]);
+        if (row?.is_primary) {
+            await ProductImageEmbedding.deleteByProductId(row.product_id);
+        }
+        if (row?.product_id) {
+            scheduleProductVisualEmbeddingSync(row.product_id);
+        }
         res.json({ success: true, message: 'Image deleted' });
     } catch (error) {
         res.status(400).json({ message: error.message });
@@ -1610,6 +1630,8 @@ exports.setPrimaryImage = async (req, res) => {
             'UPDATE product_images SET is_primary = TRUE WHERE id = ?',
             [imageId]
         );
+
+        scheduleProductVisualEmbeddingSync(productId);
 
         res.json({ success: true, message: 'Primary image set' });
     } catch (error) {
