@@ -1,0 +1,77 @@
+<%- include('../partials/header', { pageStyles: ['/css/checkout.css', '/css/orders.css'] }) %>
+
+<section class="momo-payment-page page-shell">
+    <div class="container">
+        <div class="page-intro momo-payment-intro">
+            <p class="page-intro__eyebrow">Thanh toán</p>
+            <h1 class="page-intro__title">Quét mã MoMo để hoàn tất đơn hàng.</h1>
+            <p class="page-intro__text">
+                Mã đơn <strong><%= order.order_code %></strong> đang chờ thanh toán. Sau khi giao dịch hoàn tất, trạng thái đơn sẽ được cập nhật tự động.
+            </p>
+        </div>
+
+        <div class="momo-payment-layout">
+            <section class="momo-payment-card">
+                <div class="momo-payment-card__frame">
+                    <% if (payment.qrCodeDataUrl) { %>
+                        <img src="<%= payment.qrCodeDataUrl %>" alt="QR thanh toán MoMo" class="momo-payment-card__qr">
+                    <% } else { %>
+                        <div class="momo-payment-card__placeholder">MoMo</div>
+                    <% } %>
+                </div>
+                <div class="momo-payment-card__content">
+                    <span class="momo-payment-card__badge">MoMo</span>
+                    <h2>Thanh toán trong ứng dụng hoặc bằng trình duyệt</h2>
+                    <p>
+                        Quét QR bằng ứng dụng MoMo hoặc mở liên kết thanh toán để tiếp tục. Liên kết sẽ dẫn trực tiếp tới cổng thanh toán đã tạo cho đơn hàng này.
+                    </p>
+                    <div class="momo-payment-card__actions">
+                        <a href="<%= payment.paymentUrl %>" class="btn btn-primary">Mở liên kết thanh toán</a>
+                        <% if (payment.deeplink) { %>
+                            <a href="<%= payment.deeplink %>" class="btn btn-secondary">Mở app MoMo</a>
+                        <% } %>
+                    </div>
+                </div>
+            </section>
+
+            <aside class="momo-payment-side">
+                <section class="order-summary">
+                    <h3 class="order-summary__title">Chi tiết thanh toán</h3>
+                    <div class="order-summary__prices">
+                        <div class="order-summary__row">
+                            <span class="order-summary__label">Mã đơn</span>
+                            <span class="order-summary__value"><%= order.order_code %></span>
+                        </div>
+                        <div class="order-summary__row">
+                            <span class="order-summary__label">Phương thức</span>
+                            <span class="order-summary__value">Ví MoMo</span>
+                        </div>
+                        <div class="order-summary__row">
+                            <span class="order-summary__label">Trạng thái</span>
+                            <span class="order-summary__value"><%= order.payment_status === 'paid' ? 'Đã thanh toán' : 'Chờ thanh toán' %></span>
+                        </div>
+                        <div class="order-summary__total">
+                            <span class="order-summary__total-label">Tổng cần thanh toán</span>
+                            <span class="order-summary__total-value"><%= Number(order.final_amount || 0).toLocaleString('vi-VN') %>đ</span>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="checkout-section">
+                    <div class="checkout-section__heading">
+                        <div>
+                            <h3 class="checkout-section__title">Sau khi quét mã</h3>
+                            <p class="checkout-section__copy">Bạn có thể quay lại màn xác nhận hoặc theo dõi đơn hàng bất cứ lúc nào.</p>
+                        </div>
+                    </div>
+                    <div class="momo-payment-side__actions">
+                        <a href="/orders/<%= order.order_code %>/confirmation" class="btn btn-secondary">Xem xác nhận đơn</a>
+                        <a href="/orders/<%= order.order_code %>/tracking" class="btn btn-secondary">Theo dõi đơn hàng</a>
+                    </div>
+                </section>
+            </aside>
+        </div>
+    </div>
+</section>
+
+<%- include('../partials/footer') %>

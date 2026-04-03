@@ -31,3 +31,6 @@ build/
 # Temporary files
 *.tmp
 *.temp
+
+# Design
+DESIGN.md

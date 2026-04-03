@@ -1,0 +1,35 @@
+<%- include('../partials/header', { pageStyles: ['/css/policy.css'] }) %>
+
+<section class="policy-page page-shell">
+    <div class="container">
+        <div class="policy-hero">
+            <p class="policy-hero__eyebrow"><%= policy.eyebrow %></p>
+            <h1 class="policy-hero__title"><%= policy.title %></h1>
+            <p class="policy-hero__copy"><%= policy.intro %></p>
+        </div>
+
+        <div class="policy-layout">
+            <aside class="policy-summary">
+                <span class="policy-summary__label">Grounded Luxury</span>
+                <p>
+                    Mọi chính sách được trình bày theo hướng rõ ràng, đủ ngắn để đọc nhanh nhưng vẫn giữ được cảm giác chỉn chu của một storefront cao cấp.
+                </p>
+                <a href="/products" class="btn btn-primary">Tiếp tục mua sắm</a>
+            </aside>
+
+            <div class="policy-sections">
+                <% policy.sections.forEach((section, index) => { %>
+                    <article class="policy-section">
+                        <span class="policy-section__index">0<%= index + 1 %></span>
+                        <div>
+                            <h2 class="policy-section__title"><%= section.title %></h2>
+                            <p class="policy-section__body"><%= section.body %></p>
+                        </div>
+                    </article>
+                <% }) %>
+            </div>
+        </div>
+    </div>
+</section>
+
+<%- include('../partials/footer') %>

@@ -1,0 +1,232 @@
+:root {
+    --admin-primary: #361f1a;
+    --admin-primary-light: #4e342e;
+    --admin-secondary: #6e5a4b;
+    --admin-accent: #361f1a;
+    --admin-accent-hover: #4e342e;
+    --admin-success: #286b33;
+    --admin-warning: #8b6334;
+    --admin-danger: #ba1a1a;
+    --admin-info: #5f6f86;
+    --admin-bg: #fff9ea;
+    --admin-card-bg: rgba(255, 252, 245, 0.92);
+    --admin-text-primary: #1e1c0e;
+    --admin-text-secondary: #685f53;
+    --admin-text-muted: rgba(104, 95, 83, 0.62);
+    --admin-border: rgba(212, 195, 191, 0.2);
+    --admin-border-dark: rgba(78, 52, 46, 0.16);
+    --admin-shadow-sm: 0 12px 32px rgba(78, 52, 46, 0.08);
+    --admin-shadow: 0 18px 46px rgba(78, 52, 46, 0.1);
+    --admin-shadow-md: 0 24px 58px rgba(78, 52, 46, 0.12);
+    --admin-shadow-lg: 0 32px 72px rgba(78, 52, 46, 0.16);
+}
+
+body.admin-body {
+    font-family: 'Inter', sans-serif;
+    background:
+        radial-gradient(circle at top left, rgba(40, 107, 51, 0.06), transparent 20%),
+        radial-gradient(circle at top right, rgba(54, 31, 26, 0.06), transparent 24%),
+        linear-gradient(180deg, #fffaf0 0%, #fff9ea 44%, #f6eedb 100%);
+    color: var(--admin-text-primary);
+}
+
+body.admin-body::before {
+    display: none;
+}
+
+.admin-sidebar,
+.admin-topbar,
+.admin-shell-bar,
+.admin-page-header,
+.stat-card,
+.admin-section,
+.admin-toolbar,
+.admin-table-wrapper,
+.admin-empty,
+.quick-action,
+.order-detail-header,
+.admin-modal__content,
+.banner-card,
+.admin-chat-layout,
+.back-link,
+.admin-footer__inner {
+    border: 0;
+    box-shadow: var(--admin-shadow-sm);
+}
+
+.admin-sidebar {
+    background:
+        radial-gradient(circle at top left, rgba(40, 107, 51, 0.08), transparent 24%),
+        linear-gradient(180deg, rgba(255, 252, 245, 0.98) 0%, rgba(244, 236, 218, 0.98) 100%);
+    box-shadow: 24px 0 42px rgba(78, 52, 46, 0.08);
+}
+
+.admin-sidebar::after {
+    border-color: rgba(212, 195, 191, 0.18);
+}
+
+.admin-sidebar__brand-copy strong,
+.admin-page-header__left h1,
+.order-detail-header h1,
+.admin-section__title,
+.admin-toolbar__title,
+.admin-empty__title {
+    font-family: 'Manrope', sans-serif;
+    letter-spacing: -0.04em;
+}
+
+.admin-sidebar__nav a,
+.admin-sidebar__link,
+.admin-topbar__actions a,
+.admin-topbar__actions button,
+.admin-topbar__toggle,
+.back-link {
+    background: rgba(255, 250, 239, 0.74);
+    box-shadow: inset 0 0 0 1px rgba(212, 195, 191, 0.18);
+}
+
+.admin-sidebar__nav a.active,
+.admin-btn--primary,
+.admin-pagination__btn--active,
+.order-tab.active {
+    background: linear-gradient(135deg, var(--admin-primary) 0%, var(--admin-primary-light) 100%);
+    color: #fffdf7;
+    box-shadow: var(--admin-shadow-sm);
+}
+
+.admin-btn,
+.admin-pagination__btn,
+.admin-topbar__actions a,
+.admin-topbar__actions button,
+.admin-topbar__toggle,
+.back-link {
+    border-radius: 999px;
+}
+
+.admin-btn--ghost,
+.admin-toolbar,
+.admin-shell-bar,
+.admin-table-wrapper,
+.admin-empty,
+.admin-section,
+.quick-action,
+.back-link {
+    background: rgba(255, 252, 245, 0.82);
+    backdrop-filter: blur(16px);
+}
+
+.admin-page-header,
+.order-detail-header,
+.stat-card,
+.admin-section,
+.admin-empty {
+    background:
+        radial-gradient(circle at top right, rgba(40, 107, 51, 0.06), transparent 24%),
+        linear-gradient(180deg, rgba(255, 254, 249, 0.96), rgba(244, 236, 218, 0.94));
+}
+
+.stat-card__icon,
+.quick-action__icon,
+.admin-sidebar__profile-avatar {
+    background: rgba(40, 107, 51, 0.12);
+    color: var(--admin-success);
+}
+
+.admin-table thead {
+    background: rgba(233, 226, 204, 0.82);
+}
+
+.admin-table tbody tr:hover {
+    background: rgba(244, 236, 218, 0.72);
+}
+
+.admin-table__badge--pending {
+    background: rgba(139, 99, 52, 0.12);
+    color: var(--admin-warning);
+}
+
+.admin-table__badge--processing,
+.admin-table__badge--secondary {
+    background: rgba(95, 111, 134, 0.12);
+    color: var(--admin-info);
+}
+
+.admin-table__badge--shipped {
+    background: rgba(78, 52, 46, 0.12);
+    color: var(--admin-primary-light);
+}
+
+.admin-table__badge--delivered {
+    background: rgba(40, 107, 51, 0.12);
+    color: var(--admin-success);
+}
+
+.admin-table__badge--cancelled {
+    background: rgba(186, 26, 26, 0.08);
+    color: var(--admin-danger);
+}
+
+.admin-form__input,
+.admin-form__select,
+.admin-form__textarea,
+.admin-product-checklist__search,
+.order-status-select,
+body.admin-body .admin-page.admin-page--chat #adminReplyInput {
+    border: 0;
+    background: rgba(250, 244, 221, 0.92);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.admin-form__input:focus,
+.admin-form__select:focus,
+.admin-form__textarea:focus,
+.admin-product-checklist__search:focus,
+.order-status-select:focus,
+body.admin-body .admin-page.admin-page--chat #adminReplyInput:focus {
+    border: 0;
+    box-shadow: 0 0 0 4px rgba(54, 31, 26, 0.08);
+}
+
+body.admin-body .order-tabs {
+    background: rgba(255, 252, 245, 0.82);
+    box-shadow: inset 0 0 0 1px rgba(212, 195, 191, 0.18);
+}
+
+body.admin-body .order-tab {
+    background: rgba(244, 236, 218, 0.76);
+}
+
+body.admin-body .admin-page.admin-page--chat .admin-chat-layout {
+    background: rgba(255, 252, 245, 0.88);
+}
+
+body.admin-body .admin-page.admin-page--chat .admin-chat-list {
+    border-right: 0;
+    box-shadow: inset -1px 0 0 rgba(212, 195, 191, 0.18);
+}
+
+body.admin-body .admin-page.admin-page--chat .admin-chat-list__item {
+    border-bottom: 0;
+}
+
+body.admin-body .admin-page.admin-page--chat .admin-chat-list__item:hover,
+body.admin-body .admin-page.admin-page--chat .admin-chat-list__item.is-active {
+    background: rgba(244, 236, 218, 0.72);
+}
+
+.admin-footer__inner {
+    background: linear-gradient(135deg, var(--admin-primary) 0%, var(--admin-primary-light) 100%);
+    color: rgba(255, 255, 255, 0.78);
+}
+
+.admin-footer__inner strong {
+    color: #fffdf7;
+}
+
+@media (max-width: 1100px) {
+    .admin-main-wrapper,
+    .admin-footer {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+}

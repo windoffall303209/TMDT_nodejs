@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="/css/style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <% extraPageStyles.forEach((href) => { %>
         <link rel="stylesheet" href="<%= href %>">
     <% }) %>
@@ -29,13 +29,24 @@
 %>
 
 <header class="header">
+    <!-- Announcement bar (replaces popup banner) -->
+    <div class="top-banner" id="announcementBar">
+        <div class="container top-banner__inner">
+            <span class="top-banner__message">Freeship toàn quốc cho đơn từ 499K · Đổi trả miễn phí 30 ngày</span>
+            <div class="top-banner__badges">
+                <span>Hotline: 1900 123 456</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main header row: Logo | Search | Actions -->
     <div class="header-main">
         <div class="container header-main__inner">
             <a href="/" class="header-brand" aria-label="WIND OF FALL">
                 <img src="/favicon.png" alt="WIND OF FALL" class="header-brand__mark">
                 <span class="header-brand__text">
                     <strong>WIND OF FALL</strong>
-                    <small>Thời trang mặc đẹp mỗi ngày</small>
+                    <small>Thời trang mỗi ngày</small>
                 </span>
             </a>
 
@@ -90,7 +101,7 @@
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                         </svg>
-                        <span>Đăng nhập / Đăng ký</span>
+                        <span>Đăng nhập</span>
                     </a>
                     <a href="/cart" class="icon-btn cart-btn <%= isCartPage ? 'icon-btn--active' : '' %>" title="Giỏ hàng">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -111,6 +122,7 @@
         </div>
     </div>
 
+    <!-- Navigation bar -->
     <div class="header-nav">
         <div class="container header-nav__inner">
             <nav class="main-nav">
@@ -119,17 +131,17 @@
                     <a href="/products/category/<%= headerCategory.slug %>" class="<%= categorySlug === headerCategory.slug ? 'active' : '' %>"><%= headerCategory.name %></a>
                 <% }) %>
                 <a href="/products" class="<%= currentPath === '/products' ? 'active' : '' %>">Tất cả</a>
-                <a href="/products?sale=true" class="sale-link <%= isSalePageActive ? 'active' : '' %>">Sale tới 50%</a>
+                <a href="/products?sale=true" class="sale-link <%= isSalePageActive ? 'active' : '' %>">Sale</a>
             </nav>
             <div class="header-nav__promo">
-                <span>Hàng mới lên kệ mỗi Thứ 3 và Thứ 6</span>
+                <span>Mới lên kệ mỗi Thứ 3 & Thứ 6</span>
             </div>
         </div>
     </div>
 
     <div class="container mobile-header-search">
         <form action="/products/search" method="GET">
-            <input type="text" name="q" placeholder="Tìm sản phẩm yêu thích..." required>
+            <input type="text" name="q" placeholder="Tìm sản phẩm..." required>
             <button type="submit" aria-label="Tìm kiếm">
                 <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
                     <path d="M9 17A8 8 0 1 0 9 1a8 8 0 0 0 0 16zM18 18l-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -144,15 +156,15 @@
 <nav class="mobile-nav" id="mobileNav">
     <div class="mobile-nav__header">
         <div>
-            <span class="mobile-nav__eyebrow">WIND OF FALL</span>
-            <strong class="mobile-nav__logo">Tìm outfit cho cả gia đình</strong>
+            <span class="mobile-nav__eyebrow">Menu</span>
+            <strong class="mobile-nav__logo">WIND OF FALL</strong>
         </div>
         <button class="mobile-nav__close" id="mobileNavClose" aria-label="Đóng menu">&times;</button>
     </div>
 
     <div class="mobile-nav__search">
         <form action="/products/search" method="GET">
-            <input type="text" name="q" placeholder="Tìm áo, váy, quần..." required>
+            <input type="text" name="q" placeholder="Tìm sản phẩm..." required>
             <button type="submit" aria-label="Tìm kiếm">
                 <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
                     <path d="M9 17A8 8 0 1 0 9 1a8 8 0 0 0 0 16zM18 18l-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -167,7 +179,7 @@
             <a href="/products/category/<%= headerCategory.slug %>" class="<%= categorySlug === headerCategory.slug ? 'active' : '' %>"><%= headerCategory.name %></a>
         <% }) %>
         <a href="/products">Tất cả sản phẩm</a>
-        <a href="/products?sale=true" class="sale-link <%= isSalePageActive ? 'active' : '' %>">Khu sale</a>
+        <a href="/products?sale=true" class="sale-link <%= isSalePageActive ? 'active' : '' %>">Sale</a>
     </div>
 
     <div class="mobile-nav__actions">
@@ -189,7 +201,7 @@
     </div>
 
     <div class="mobile-nav__footer">
-        <p>Hỗ trợ tư vấn set đồ 1:1 qua hotline 1900 123 456</p>
+        <p>Hotline: 1900 123 456</p>
     </div>
 </nav>
 

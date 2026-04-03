@@ -1,0 +1,101 @@
+/* ================================================================
+   POLICY — Clean Atelier
+   ================================================================ */
+
+.policy-page {
+    padding-top: var(--space-8);
+}
+
+.policy-hero {
+    display: grid;
+    gap: var(--space-3);
+    max-width: 760px;
+    margin-bottom: var(--space-8);
+}
+
+.policy-hero__eyebrow {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.policy-hero__title {
+    font-family: var(--font-display);
+    font-size: clamp(var(--text-4xl), 7vw, var(--text-hero));
+    line-height: 0.98;
+    letter-spacing: -0.04em;
+}
+
+.policy-hero__copy {
+    max-width: 600px;
+    color: var(--text-soft);
+    font-size: var(--text-lg);
+}
+
+.policy-layout {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    gap: var(--space-6);
+}
+
+.policy-summary,
+.policy-section {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    padding: var(--space-6);
+}
+
+.policy-summary {
+    position: sticky;
+    top: calc(var(--header-h) + var(--space-6));
+    align-self: start;
+    display: grid;
+    gap: var(--space-4);
+}
+
+.policy-summary__label,
+.policy-section__index {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.policy-sections {
+    display: grid;
+    gap: var(--space-4);
+}
+
+.policy-section {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: var(--space-4);
+    align-items: start;
+}
+
+.policy-section__title {
+    margin-bottom: var(--space-2);
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+}
+
+.policy-section__body {
+    color: var(--text-soft);
+    font-size: var(--text-sm);
+    line-height: 1.7;
+}
+
+@media (max-width: 900px) {
+    .policy-layout { grid-template-columns: 1fr; }
+    .policy-summary { position: static; }
+}
+
+@media (max-width: 640px) {
+    .policy-section { grid-template-columns: 1fr; }
+}
