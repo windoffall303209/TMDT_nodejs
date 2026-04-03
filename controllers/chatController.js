@@ -2,6 +2,7 @@ const Chat = require('../models/Chat');
 const Product = require('../models/Product');
 const { describeProductFromImage } = require('../services/chatVisionService');
 const { retrieveChatRagContext } = require('../services/chatRagService');
+const { generateChatCommerceReply } = require('../services/chatCommerceFlowService');
 
 const CHAT_PRODUCT_KEYWORDS = [
     'ao', 'ao thun', 'ao so mi', 'ao polo', 'quan', 'quan jean', 'jeans', 'kaki',
@@ -1719,5 +1720,83 @@ exports.adminGetConversations = async (req, res) => {
     } catch (error) {
         console.error('Admin get conversations error:', error);
         return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// Override customer chat flow with deterministic stateful commerce logic.
+exports.sendMessage = async (req, res) => {
+    try {
+        const message = normalizeMessage(req.body.message);
+        const uploadedMedia = Array.isArray(req.uploadedChatMedia) ? req.uploadedChatMedia : [];
+
+        if (!message && !uploadedMedia.length) {
+            return res.status(400).json({ success: false, message: 'Tin nháº¯n hoáº·c media khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng' });
+        }
+
+        const userId = req.user ? req.user.id : null;
+        const sessionId = req.sessionID;
+        const guestName = resolveGuestName(req);
+        const customerMessageMetadata = buildChatMessageMetadata({ attachments: uploadedMedia });
+        const customerMessageType = buildChatMessageType(message, { attachments: uploadedMedia });
+
+        const conversation = await Chat.findOrCreateConversation(userId, sessionId, guestName);
+        const previousMessages = await Chat.getMessages(conversation.id, 20);
+        const customerMessage = await Chat.addMessage(
+            conversation.id,
+            'customer',
+            userId,
+            message,
+            {
+                messageType: customerMessageType,
+                metadata: customerMessageMetadata
+            }
+        );
+
+        if (conversation.handling_mode === 'manual') {
+            const hasAdminMessage = previousMessages.some((item) => item.sender_type === 'admin');
+
+            return res.json({
+                success: true,
+                conversationId: conversation.id,
+                customerMessage,
+                manualMode: true,
+                notice: hasAdminMessage
+                    ? null
+                    : 'Tin nháº¯n cá»§a báº¡n Ä‘Ã£ Ä‘Æ°á»£c chuyá»ƒn cho admin. Vui lÃ²ng chá» pháº£n há»“i.'
+            });
+        }
+
+        const aiContext = await buildCustomerAiContext(message, uploadedMedia);
+        const commerceReply = await generateChatCommerceReply({
+            rawUserMessage: message,
+            effectiveUserMessage: aiContext.effectiveMessage,
+            previousMessages,
+            conversationState: conversation.conversation_state || Chat.getDefaultConversationState(),
+            attachments: uploadedMedia
+        });
+
+        await Chat.updateConversationState(conversation.id, commerceReply.conversationState);
+
+        const botMessage = await Chat.addMessage(
+            conversation.id,
+            'bot',
+            null,
+            commerceReply.text,
+            {
+                messageType: buildChatMessageType(commerceReply.text, { products: commerceReply.products }),
+                metadata: buildChatMessageMetadata({ products: commerceReply.products })
+            }
+        );
+
+        return res.json({
+            success: true,
+            conversationId: conversation.id,
+            customerMessage,
+            botMessage,
+            manualMode: false
+        });
+    } catch (error) {
+        console.error('Chat send error:', error);
+        return res.status(500).json({ success: false, message: 'Lá»—i gá»­i tin nháº¯n' });
     }
 };

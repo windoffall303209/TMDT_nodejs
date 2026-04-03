@@ -348,6 +348,11 @@ class Product {
         return rows[0]?.total || 0;
     }
 
+    static async countAllRecords() {
+        const [rows] = await pool.query('SELECT COUNT(*) AS total FROM products');
+        return rows[0]?.total || 0;
+    }
+
     static async getByIds(ids = []) {
         const normalizedIds = Array.from(new Set(
             (Array.isArray(ids) ? ids : [])
@@ -384,6 +389,37 @@ class Product {
         return normalizedIds
             .map((id) => productMap.get(id))
             .filter(Boolean);
+    }
+
+    static async getActiveChatCatalog() {
+        const [rows] = await pool.query(
+            `SELECT p.*,
+                    c.name as category_name,
+                    c.slug as category_slug,
+                    (SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = TRUE LIMIT 1) as primary_image,
+                    (SELECT COUNT(*) FROM product_images WHERE product_id = p.id) as image_count,
+                    s.type as sale_type,
+                    s.value as sale_value,
+                    s.name as sale_name,
+                    (
+                        SELECT GROUP_CONCAT(DISTINCT NULLIF(TRIM(pv.color), '') ORDER BY pv.color SEPARATOR ', ')
+                        FROM product_variants pv
+                        WHERE pv.product_id = p.id
+                    ) as variant_colors,
+                    (
+                        SELECT GROUP_CONCAT(DISTINCT NULLIF(TRIM(pv.size), '') ORDER BY pv.size SEPARATOR ', ')
+                        FROM product_variants pv
+                        WHERE pv.product_id = p.id
+                    ) as variant_sizes
+             FROM products p
+             LEFT JOIN categories c ON p.category_id = c.id
+             LEFT JOIN sales s ON p.sale_id = s.id AND s.is_active = TRUE
+                AND NOW() BETWEEN s.start_date AND s.end_date
+             WHERE p.is_active = TRUE
+             ORDER BY p.created_at DESC, p.id DESC`
+        );
+
+        return this.hydrateListingProducts(rows);
     }
 
     // =============================================================================
@@ -1014,6 +1050,58 @@ class Product {
     static async delete(id) {
         const query = 'UPDATE products SET is_active = FALSE WHERE id = ?';
         await pool.execute(query, [id]);
+    }
+
+    static async deleteAll() {
+        const query = 'UPDATE products SET is_active = FALSE WHERE is_active = TRUE';
+        const [result] = await pool.execute(query);
+        return Number(result?.affectedRows || 0);
+    }
+
+    static async deleteAllPermanently() {
+        const connection = await pool.getConnection();
+
+        try {
+            await connection.beginTransaction();
+
+            const [[summary]] = await connection.query(`
+                SELECT
+                    COUNT(*) AS total_products,
+                    SUM(CASE WHEN order_refs.product_id IS NOT NULL THEN 1 ELSE 0 END) AS blocked_products
+                FROM products p
+                LEFT JOIN (
+                    SELECT DISTINCT product_id
+                    FROM order_items
+                ) order_refs ON order_refs.product_id = p.id
+            `);
+
+            const [deleteResult] = await connection.query(`
+                DELETE p
+                FROM products p
+                LEFT JOIN (
+                    SELECT DISTINCT product_id
+                    FROM order_items
+                ) order_refs ON order_refs.product_id = p.id
+                WHERE order_refs.product_id IS NULL
+            `);
+
+            await connection.commit();
+
+            const totalProducts = Number(summary?.total_products || 0);
+            const blockedProducts = Number(summary?.blocked_products || 0);
+            const deletedProducts = Number(deleteResult?.affectedRows || 0);
+
+            return {
+                totalProducts,
+                deletedProducts,
+                blockedProducts
+            };
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            connection.release();
+        }
     }
 
     // =============================================================================

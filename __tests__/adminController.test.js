@@ -1,4 +1,4 @@
-process.env.NODE_ENV = 'test';
+﻿process.env.NODE_ENV = 'test';
 
 jest.mock('../models/Order', () => ({
     getStatistics: jest.fn(),
@@ -7,7 +7,10 @@ jest.mock('../models/Order', () => ({
 
 jest.mock('../models/Product', () => ({
     findAll: jest.fn(),
-    count: jest.fn()
+    count: jest.fn(),
+    countAllRecords: jest.fn(),
+    deleteAll: jest.fn(),
+    deleteAllPermanently: jest.fn()
 }));
 
 jest.mock('../models/User', () => ({
@@ -63,10 +66,18 @@ jest.mock('../services/adminProductVariantService', () => ({
     validateVariants: jest.fn()
 }));
 
+jest.mock('../services/productBulkImportService', () => ({
+    createProductImportTemplateBuffer: jest.fn(() => Buffer.from('template')),
+    exportProductsToWorkbookBuffer: jest.fn(() => Promise.resolve(Buffer.from('export'))),
+    importProductsFromWorkbook: jest.fn()
+}));
+
 jest.mock('../middleware/upload', () => ({}));
 
 const Category = require('../models/Category');
+const Product = require('../models/Product');
 const adminController = require('../controllers/adminController');
+const productBulkImportService = require('../services/productBulkImportService');
 
 function createRes() {
     const res = {};
@@ -177,7 +188,7 @@ describe('adminController category management', () => {
         expect(res.status).toHaveBeenCalledWith(400);
         expect(res.json).toHaveBeenCalledWith({
             success: false,
-            message: 'Không thể tạo vòng lặp danh mục cha-con'
+            message: 'KhÃ´ng thá»ƒ táº¡o vÃ²ng láº·p danh má»¥c cha-con'
         });
         expect(Category.update).not.toHaveBeenCalled();
     });
@@ -193,8 +204,119 @@ describe('adminController category management', () => {
         expect(res.status).toHaveBeenCalledWith(400);
         expect(res.json).toHaveBeenCalledWith({
             success: false,
-            message: 'Không thể xóa: danh mục đang có 3 sản phẩm và 0 danh mục con'
+            message: 'KhÃ´ng thá»ƒ xÃ³a: danh má»¥c Ä‘ang cÃ³ 3 sáº£n pháº©m vÃ  0 danh má»¥c con'
         });
         expect(Category.delete).not.toHaveBeenCalled();
     });
 });
+
+describe('adminController bulk product import', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it('streams the import template workbook', async () => {
+        const req = {};
+        const res = createRes();
+        res.setHeader = jest.fn();
+        res.send = jest.fn();
+
+        await adminController.downloadProductImportTemplate(req, res);
+
+        expect(productBulkImportService.createProductImportTemplateBuffer).toHaveBeenCalled();
+        expect(res.setHeader).toHaveBeenCalledWith(
+            'Content-Type',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        );
+        expect(res.send).toHaveBeenCalledWith(Buffer.from('template'));
+    });
+
+    it('streams the current product export workbook', async () => {
+        const req = { query: { search: 'croptop' } };
+        const res = createRes();
+        res.setHeader = jest.fn();
+        res.send = jest.fn();
+
+        await adminController.exportProducts(req, res);
+
+        expect(productBulkImportService.exportProductsToWorkbookBuffer).toHaveBeenCalledWith({
+            search: 'croptop'
+        });
+        expect(res.setHeader).toHaveBeenCalledWith(
+            'Content-Type',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        );
+        expect(res.send).toHaveBeenCalledWith(Buffer.from('export'));
+    });
+
+    it('stores import summary in session and redirects back to products', async () => {
+        productBulkImportService.importProductsFromWorkbook.mockResolvedValue({
+            totalProducts: 2,
+            createdCount: 2,
+            failedCount: 0,
+            createdProducts: [],
+            errors: []
+        });
+
+        const req = {
+            files: {
+                import_file: [{ path: 'C:/temp/products.xlsx' }],
+                images_zip: [{ path: 'C:/temp/images.zip' }]
+            },
+            session: {}
+        };
+        const res = createRes();
+
+        await adminController.importProducts(req, res);
+
+        expect(productBulkImportService.importProductsFromWorkbook).toHaveBeenCalledWith({
+            workbookPath: 'C:/temp/products.xlsx',
+            zipPath: 'C:/temp/images.zip'
+        });
+        expect(req.session.adminProductImportResult).toEqual(expect.objectContaining({
+            totalProducts: 2,
+            createdCount: 2
+        }));
+        expect(res.redirect).toHaveBeenCalledWith('/admin/products?notice=Da+import+thanh+cong+2+san+pham.&notice_type=success');
+    });
+
+    it('captures import errors in session when workbook is missing', async () => {
+        const req = {
+            files: {},
+            session: {}
+        };
+        const res = createRes();
+
+        await adminController.importProducts(req, res);
+
+        expect(req.session.adminProductImportResult).toEqual(expect.objectContaining({
+            createdCount: 0,
+            errors: [expect.objectContaining({
+                message: 'Vui lÃ²ng táº£i lÃªn file Excel (.xlsx hoáº·c .xls).'
+            })]
+        }));
+        expect(res.redirect).toHaveBeenCalledWith('/admin/products');
+    });
+
+    it('hard deletes all deletable active products and reports blocked items', async () => {
+        Product.deleteAllPermanently.mockResolvedValue({
+            totalProducts: 18,
+            deletedProducts: 14,
+            blockedProducts: 4
+        });
+
+        const req = {};
+        const res = createRes();
+
+        await adminController.deleteAllProducts(req, res);
+
+        expect(Product.deleteAllPermanently).toHaveBeenCalled();
+        expect(res.json).toHaveBeenCalledWith({
+            success: true,
+            deletedCount: 14,
+            blockedCount: 4,
+            message: 'Da xoa vinh vien 14 san pham. Con 4 san pham khong the xoa vi da nam trong lich su don hang.'
+        });
+    });
+});
+

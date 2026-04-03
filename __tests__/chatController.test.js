@@ -3,14 +3,22 @@ process.env.NODE_ENV = 'test';
 jest.mock('../models/Chat', () => ({
     findOrCreateConversation: jest.fn(),
     getMessages: jest.fn(),
-    addMessage: jest.fn()
+    addMessage: jest.fn(),
+    updateConversationState: jest.fn(),
+    getDefaultConversationState: jest.fn(() => ({
+        intent: 'unknown',
+        gender: null,
+        category: null,
+        color: null,
+        price_range: null,
+        sku: null,
+        allow_recommendation: false,
+        confirmed: false
+    }))
 }));
 
 jest.mock('../models/Product', () => ({
-    findAll: jest.fn(),
-    search: jest.fn(),
-    getBestSellers: jest.fn(),
-    getFeaturedProducts: jest.fn(),
+    getActiveChatCatalog: jest.fn(),
     getOptimizedCardImageUrl: jest.fn((value) => value)
 }));
 
@@ -28,7 +36,6 @@ jest.mock('../services/chatRagService', () => ({
 const Chat = require('../models/Chat');
 const Product = require('../models/Product');
 const { describeProductFromImage } = require('../services/chatVisionService');
-const { retrieveChatRagContext } = require('../services/chatRagService');
 const chatController = require('../controllers/chatController');
 
 function createRes() {
@@ -38,20 +45,41 @@ function createRes() {
     return res;
 }
 
-describe('chatController.sendMessage product cards', () => {
-    const originalOpenAIKey = process.env.OPENAI_API_KEY;
-    const originalGeminiKey = process.env.GEMINI_API_KEY;
-    const originalFetch = global.fetch;
+function buildConversationState(overrides = {}) {
+    return {
+        intent: 'unknown',
+        gender: null,
+        category: null,
+        color: null,
+        price_range: null,
+        sku: null,
+        allow_recommendation: false,
+        confirmed: false,
+        ...overrides
+    };
+}
 
+function buildProduct(overrides = {}) {
+    return {
+        id: 1,
+        slug: 'ao-polo-nam-vang',
+        name: 'Ao Polo Nam Vang',
+        description: 'Ao polo nam mau vang',
+        category_name: 'Ao Polo',
+        category_slug: 'ao-polo',
+        variant_colors: 'vang',
+        price: 369000,
+        final_price: 369000,
+        sold_count: 20,
+        stock_quantity: 5,
+        primary_image: 'https://example.com/ao-polo-nam-vang.jpg',
+        ...overrides
+    };
+}
+
+describe('chatController.sendMessage stateful commerce flow', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        delete process.env.OPENAI_API_KEY;
-        delete process.env.GEMINI_API_KEY;
-
-        Chat.findOrCreateConversation.mockResolvedValue({
-            id: 21,
-            handling_mode: 'ai'
-        });
 
         Chat.addMessage.mockImplementation(async (conversationId, senderType, senderId, message, options = {}) => ({
             id: senderType === 'customer' ? 301 : 302,
@@ -63,37 +91,20 @@ describe('chatController.sendMessage product cards', () => {
             message_metadata: options.metadata || null
         }));
 
-        Product.findAll.mockResolvedValue([
-            {
-                id: 101,
-                slug: 'dam-midi-nu',
-                name: 'Dam Midi Nu',
-                description: 'Dam midi danh cho nu mac di choi',
-                category_name: 'Dam',
-                category_slug: 'dam',
-                primary_image: 'https://example.com/dam-midi.jpg',
-                price: 450000,
-                final_price: 450000,
-                sold_count: 24,
-                stock_quantity: 8
-            }
-        ]);
-        Product.search.mockResolvedValue([]);
-        Product.getBestSellers.mockResolvedValue([]);
-        Product.getFeaturedProducts.mockResolvedValue([]);
-    });
-
-    afterAll(() => {
-        process.env.OPENAI_API_KEY = originalOpenAIKey;
-        process.env.GEMINI_API_KEY = originalGeminiKey;
-        global.fetch = originalFetch;
-    });
-
-    it('keeps vague gender-only requests as text without product cards', async () => {
+        Chat.updateConversationState.mockResolvedValue(null);
         Chat.getMessages.mockResolvedValue([]);
+        Product.getActiveChatCatalog.mockResolvedValue([]);
+    });
+
+    it('does not recommend products immediately for a browse-style request', async () => {
+        Chat.findOrCreateConversation.mockResolvedValue({
+            id: 21,
+            handling_mode: 'ai',
+            conversation_state: buildConversationState()
+        });
 
         const req = {
-            body: { message: 'toi can tim cac san pham danh cho nu' },
+            body: { message: 'toi can ao polo nam mau vang' },
             uploadedChatMedia: [],
             user: null,
             sessionID: 'guest-session'
@@ -103,224 +114,181 @@ describe('chatController.sendMessage product cards', () => {
         await chatController.sendMessage(req, res);
 
         const botCall = Chat.addMessage.mock.calls[1];
+        expect(botCall[3]).toContain('Bạn muốn mình gợi ý sản phẩm luôn không');
+        expect(botCall[4].messageType).toBe('text');
+        expect(botCall[4].metadata).toBeNull();
+        expect(Chat.updateConversationState).toHaveBeenCalledWith(
+            21,
+            expect.objectContaining({
+                intent: 'browse',
+                gender: 'male',
+                category: 'shirt-polo',
+                color: 'yellow',
+                allow_recommendation: false
+            })
+        );
+    });
+
+    it('does not confuse the verb "tim" with the color purple', async () => {
+        Chat.findOrCreateConversation.mockResolvedValue({
+            id: 21,
+            handling_mode: 'ai',
+            conversation_state: buildConversationState()
+        });
+
+        const req = {
+            body: { message: 'minh can tim san pham cho tre em' },
+            uploadedChatMedia: [],
+            user: null,
+            sessionID: 'guest-session'
+        };
+        const res = createRes();
+
+        await chatController.sendMessage(req, res);
+
+        const botCall = Chat.addMessage.mock.calls[1];
+        expect(botCall[3]).not.toContain('mau tim');
+        expect(botCall[3]).toContain('trẻ em');
+        expect(Chat.updateConversationState).toHaveBeenCalledWith(
+            21,
+            expect.objectContaining({
+                gender: 'kids',
+                color: null,
+                allow_recommendation: false
+            })
+        );
+    });
+
+    it('does not confuse "do nam" with the color red', async () => {
+        Chat.findOrCreateConversation.mockResolvedValue({
+            id: 21,
+            handling_mode: 'ai',
+            conversation_state: buildConversationState()
+        });
+
+        const req = {
+            body: { message: 'toi can do nam' },
+            uploadedChatMedia: [],
+            user: null,
+            sessionID: 'guest-session'
+        };
+        const res = createRes();
+
+        await chatController.sendMessage(req, res);
+
+        const botCall = Chat.addMessage.mock.calls[1];
+        expect(botCall[3]).not.toContain('mau Ä‘á»');
+        expect(Chat.updateConversationState).toHaveBeenCalledWith(
+            21,
+            expect.objectContaining({
+                gender: 'male',
+                color: null,
+                allow_recommendation: false
+            })
+        );
+    });
+
+    it('respects "chưa cần gợi ý" and keeps recommendations off on the next turn', async () => {
+        Chat.findOrCreateConversation
+            .mockResolvedValueOnce({
+                id: 21,
+                handling_mode: 'ai',
+                conversation_state: buildConversationState({
+                    intent: 'want_product',
+                    gender: 'male',
+                    category: 'shirt-polo',
+                    allow_recommendation: true,
+                    confirmed: true
+                })
+            })
+            .mockResolvedValueOnce({
+                id: 21,
+                handling_mode: 'ai',
+                conversation_state: buildConversationState({
+                    intent: 'ask_info',
+                    gender: 'male',
+                    category: 'shirt-polo',
+                    allow_recommendation: false,
+                    confirmed: false
+                })
+            });
+
+        const firstReq = {
+            body: { message: 'chua can goi y' },
+            uploadedChatMedia: [],
+            user: null,
+            sessionID: 'guest-session'
+        };
+        const firstRes = createRes();
+
+        await chatController.sendMessage(firstReq, firstRes);
+
+        let botCall = Chat.addMessage.mock.calls[1];
+        expect(botCall[4].messageType).toBe('text');
+        expect(botCall[4].metadata).toBeNull();
+        expect(Chat.updateConversationState).toHaveBeenCalledWith(
+            21,
+            expect.objectContaining({
+                allow_recommendation: false,
+                confirmed: false
+            })
+        );
+
+        Chat.getMessages.mockResolvedValueOnce([
+            { sender_type: 'customer', message: 'chua can goi y' }
+        ]);
+
+        const secondReq = {
+            body: { message: 'toi can mau vang' },
+            uploadedChatMedia: [],
+            user: null,
+            sessionID: 'guest-session'
+        };
+        const secondRes = createRes();
+
+        await chatController.sendMessage(secondReq, secondRes);
+
+        botCall = Chat.addMessage.mock.calls[3];
+        expect(botCall[3]).toContain('Bạn muốn mình gợi ý sản phẩm luôn không');
         expect(botCall[4].messageType).toBe('text');
         expect(botCall[4].metadata).toBeNull();
     });
 
-    it('returns product cards when the follow-up message adds budget to an existing gender intent', async () => {
-        Chat.getMessages.mockResolvedValue([
-            {
-                sender_type: 'customer',
-                message: 'toi can tim cac san pham danh cho nu'
-            }
-        ]);
-
-        const req = {
-            body: { message: 'tren 300k va duoi 500k' },
-            uploadedChatMedia: [],
-            user: null,
-            sessionID: 'guest-session'
-        };
-        const res = createRes();
-
-        await chatController.sendMessage(req, res);
-
-        const botCall = Chat.addMessage.mock.calls[1];
-        expect(botCall[4].messageType).toBe('product_cards');
-        expect(botCall[4].metadata).toEqual(expect.objectContaining({
-            products: [
-                expect.objectContaining({
-                    name: 'Dam Midi Nu',
-                    url: '/products/dam-midi-nu',
-                    final_price: 450000
-                })
-            ]
-        }));
-    });
-
-    it('understands shorthand budget ranges without the k suffix', async () => {
-        Chat.getMessages.mockResolvedValue([
-            {
-                sender_type: 'customer',
-                message: 'tim cho toi cac san pham danh cho nu'
-            }
-        ]);
-
-        const req = {
-            body: { message: 'toi can cac san pham danh cho nu o shop cua ban trong khoang gia 300-500' },
-            uploadedChatMedia: [],
-            user: null,
-            sessionID: 'guest-session'
-        };
-        const res = createRes();
-
-        await chatController.sendMessage(req, res);
-
-        const botCall = Chat.addMessage.mock.calls[1];
-        expect(botCall[4].messageType).toBe('product_cards');
-        expect(botCall[4].metadata).toEqual(expect.objectContaining({
-            products: [
-                expect.objectContaining({
-                    name: 'Dam Midi Nu',
-                    final_price: 450000
-                })
-            ]
-        }));
-    });
-
-    it('filters out male and kids products from RAG results when the user asks for women products', async () => {
-        retrieveChatRagContext.mockResolvedValueOnce({
-            products: [
-                {
-                    id: 201,
-                    slug: 'ao-hoodie-basic-nam',
-                    name: 'Ao Hoodie Basic Nam',
-                    description: 'Ao hoodie basic danh cho nam',
-                    category_name: 'Nam',
-                    category_slug: 'nam',
-                    primary_image: 'https://example.com/hoodie-nam.jpg',
-                    price: 550000,
-                    final_price: 550000,
-                    sold_count: 80,
-                    stock_quantity: 6
-                },
-                {
-                    id: 202,
-                    slug: 'bo-do-be-trai',
-                    name: 'Bo Do Be Trai',
-                    description: 'Do tre em cho be trai',
-                    category_name: 'Tre Em',
-                    category_slug: 'tre-em',
-                    primary_image: 'https://example.com/be-trai.jpg',
-                    price: 320000,
-                    final_price: 320000,
-                    sold_count: 90,
-                    stock_quantity: 9
-                },
-                {
-                    id: 203,
-                    slug: 'dam-midi-nu',
-                    name: 'Dam Midi Nu',
-                    description: 'Dam midi danh cho nu mac di choi',
-                    category_name: 'Dam',
-                    category_slug: 'dam',
-                    primary_image: 'https://example.com/dam-midi.jpg',
-                    price: 450000,
-                    final_price: 450000,
-                    sold_count: 12,
-                    stock_quantity: 8
-                }
-            ],
-            knowledge: []
+    it('returns product cards only after an explicit recommendation request', async () => {
+        Chat.findOrCreateConversation.mockResolvedValue({
+            id: 21,
+            handling_mode: 'ai',
+            conversation_state: buildConversationState({
+                intent: 'browse',
+                gender: 'male',
+                category: 'shirt-polo',
+                color: 'yellow'
+            })
         });
-        Chat.getMessages.mockResolvedValue([
-            {
-                sender_type: 'customer',
-                message: 'xin chao'
-            }
+        Product.getActiveChatCatalog.mockResolvedValue([
+            buildProduct(),
+            buildProduct({
+                id: 2,
+                slug: 'ao-polo-nam-xam',
+                name: 'Ao Polo Nam Xam',
+                description: 'Ao polo nam mau xam',
+                variant_colors: 'xam',
+                primary_image: 'https://example.com/ao-polo-nam-xam.jpg'
+            }),
+            buildProduct({
+                id: 3,
+                slug: 'quan-kaki-kid-vang',
+                name: 'Quan Kaki Kid Vang',
+                description: 'Quan kaki tre em mau vang',
+                category_name: 'Quan',
+                category_slug: 'quan',
+                variant_colors: 'vang',
+                primary_image: 'https://example.com/quan-kaki-kid-vang.jpg'
+            })
         ]);
 
         const req = {
-            body: { message: 'toi can ban de xuat cho toi cac san pham danh cho nu trong khoang 300-500' },
-            uploadedChatMedia: [],
-            user: null,
-            sessionID: 'guest-session'
-        };
-        const res = createRes();
-
-        await chatController.sendMessage(req, res);
-
-        const botCall = Chat.addMessage.mock.calls[1];
-        expect(botCall[4].messageType).toBe('product_cards');
-        expect(botCall[4].metadata.products).toHaveLength(1);
-        expect(botCall[4].metadata.products[0]).toEqual(expect.objectContaining({
-            name: 'Dam Midi Nu',
-            url: '/products/dam-midi-nu',
-            final_price: 450000
-        }));
-    });
-
-    it('pulls additional women products from the broader catalog when search only finds part of the range', async () => {
-        retrieveChatRagContext.mockResolvedValueOnce({
-            products: [],
-            knowledge: []
-        });
-        Product.getBestSellers.mockResolvedValueOnce([]);
-        Product.getFeaturedProducts.mockResolvedValueOnce([]);
-        Product.findAll.mockImplementation(async (filters = {}) => {
-            if (filters.search) {
-                return [
-                    {
-                        id: 301,
-                        slug: 'ao-kieu-cong-so',
-                        name: 'Ao Kieu Cong So',
-                        description: 'Ao nu cong so',
-                        category_name: 'Nu',
-                        category_slug: 'nu',
-                        primary_image: 'https://example.com/ao-kieu-cong-so.jpg',
-                        price: 350000,
-                        final_price: 350000,
-                        sold_count: 10,
-                        stock_quantity: 9
-                    },
-                    {
-                        id: 302,
-                        slug: 'ao-cardigan-nu',
-                        name: 'Ao Cardigan Nu',
-                        description: 'Ao cardigan nu',
-                        category_name: 'Nu',
-                        category_slug: 'nu',
-                        primary_image: 'https://example.com/ao-cardigan-nu.jpg',
-                        price: 490000,
-                        final_price: 490000,
-                        sold_count: 8,
-                        stock_quantity: 8
-                    }
-                ];
-            }
-
-            if (filters.sort_by === 'created_at') {
-                return [
-                    {
-                        id: 303,
-                        slug: 'vay-cong-so',
-                        name: 'Vay Cong So',
-                        description: 'Vay nu cong so',
-                        category_name: 'Nu',
-                        category_slug: 'nu',
-                        primary_image: 'https://example.com/vay-cong-so.jpg',
-                        price: 420000,
-                        final_price: 420000,
-                        sold_count: 5,
-                        stock_quantity: 7
-                    },
-                    {
-                        id: 304,
-                        slug: 'vay-midi-xoe',
-                        name: 'Vay Midi Xoe',
-                        description: 'Vay midi nu',
-                        category_name: 'Nu',
-                        category_slug: 'nu',
-                        primary_image: 'https://example.com/vay-midi-xoe.jpg',
-                        price: 480000,
-                        final_price: 480000,
-                        sold_count: 4,
-                        stock_quantity: 6
-                    }
-                ];
-            }
-
-            return [];
-        });
-        Chat.getMessages.mockResolvedValue([
-            {
-                sender_type: 'customer',
-                message: 'xin chao'
-            }
-        ]);
-
-        const req = {
-            body: { message: 'tim cho toi 5 san pham danh cho nu trong khoang 300-500, neu ko du 5 san pham thi co the de xuat san pham gan khoang gia nay' },
+            body: { message: 'co mau nao khong?' },
             uploadedChatMedia: [],
             user: null,
             sessionID: 'guest-session'
@@ -332,75 +300,129 @@ describe('chatController.sendMessage product cards', () => {
         const botCall = Chat.addMessage.mock.calls[1];
         expect(botCall[4].messageType).toBe('product_cards');
         expect(botCall[4].metadata.products).toEqual([
-            expect.objectContaining({ name: 'Ao Kieu Cong So', final_price: 350000 }),
-            expect.objectContaining({ name: 'Ao Cardigan Nu', final_price: 490000 }),
-            expect.objectContaining({ name: 'Vay Cong So', final_price: 420000 }),
-            expect.objectContaining({ name: 'Vay Midi Xoe', final_price: 480000 })
+            expect.objectContaining({
+                name: 'Ao Polo Nam Vang',
+                url: '/products/ao-polo-nam-vang',
+                final_price: 369000
+            })
+        ]);
+        expect(Chat.updateConversationState).toHaveBeenCalledWith(
+            21,
+            expect.objectContaining({
+                intent: 'want_product',
+                allow_recommendation: true,
+                confirmed: true
+            })
+        );
+    });
+
+    it('never mixes kids products into a men request', async () => {
+        Chat.findOrCreateConversation.mockResolvedValue({
+            id: 21,
+            handling_mode: 'ai',
+            conversation_state: buildConversationState()
+        });
+        Product.getActiveChatCatalog.mockResolvedValue([
+            buildProduct(),
+            buildProduct({
+                id: 11,
+                slug: 'quan-kaki-kid',
+                name: 'Quan Kaki Kid',
+                description: 'Quan kaki tre em co ban',
+                category_name: 'Quan',
+                category_slug: 'quan',
+                variant_colors: 'xam',
+                primary_image: 'https://example.com/quan-kaki-kid.jpg'
+            }),
+            buildProduct({
+                id: 12,
+                slug: 'dam-midi-nu',
+                name: 'Dam Midi Nu',
+                description: 'Dam midi nu di choi',
+                category_name: 'Dam',
+                category_slug: 'dam',
+                variant_colors: 'do',
+                primary_image: 'https://example.com/dam-midi-nu.jpg'
+            })
+        ]);
+
+        const req = {
+            body: { message: 'goi y san pham nam' },
+            uploadedChatMedia: [],
+            user: null,
+            sessionID: 'guest-session'
+        };
+        const res = createRes();
+
+        await chatController.sendMessage(req, res);
+
+        const botCall = Chat.addMessage.mock.calls[1];
+        expect(botCall[4].messageType).toBe('product_cards');
+        expect(botCall[4].metadata.products).toEqual([
+            expect.objectContaining({
+                name: 'Ao Polo Nam Vang'
+            })
         ]);
     });
 
-    it('keeps the closest image match even when it falls slightly outside the remembered budget', async () => {
-        process.env.OPENAI_API_KEY = 'test-openai-key';
-        global.fetch = jest.fn().mockResolvedValue({
-            ok: true,
-            json: async () => ({
-                choices: [
-                    {
-                        message: {
-                            content: 'Hien shop chua co mau that su gan trong catalog, nen minh khong muon goi y sai cho ban.'
-                        }
-                    }
-                ]
-            })
+    it('answers availability correctly without recommending when the user only asks for information', async () => {
+        Chat.findOrCreateConversation.mockResolvedValue({
+            id: 21,
+            handling_mode: 'ai',
+            conversation_state: buildConversationState()
         });
-        describeProductFromImage.mockResolvedValueOnce({
-            description: 'Ao croptop trang tay ngan co V',
-            searchQuery: 'ao croptop nu',
-            matchSummary: 'Dua tren anh ban gui, minh da loc cac mau gan nhat hien co ngay ben duoi de ban de so sanh.'
-        });
-        retrieveChatRagContext.mockResolvedValueOnce({
-            products: [],
-            knowledge: []
-        });
-        Product.findAll.mockImplementation(async (filters = {}) => {
-            if (filters.search) {
-                return [
-                    {
-                        id: 401,
-                        slug: 'ao-croptop-nu',
-                        name: 'Ao Croptop Nu',
-                        description: 'Ao croptop nu toi gian',
-                        category_name: 'Nu',
-                        category_slug: 'nu',
-                        primary_image: 'https://example.com/ao-croptop-nu.jpg',
-                        price: 280000,
-                        final_price: 280000,
-                        sold_count: 16,
-                        stock_quantity: 6
-                    },
-                    {
-                        id: 402,
-                        slug: 'ao-cardigan-nu',
-                        name: 'Ao Cardigan Nu',
-                        description: 'Ao cardigan nu',
-                        category_name: 'Nu',
-                        category_slug: 'nu',
-                        primary_image: 'https://example.com/ao-cardigan-nu.jpg',
-                        price: 490000,
-                        final_price: 490000,
-                        sold_count: 9,
-                        stock_quantity: 7
-                    }
-                ];
-            }
+        Product.getActiveChatCatalog.mockResolvedValue([
+            buildProduct()
+        ]);
 
-            return [];
+        const req = {
+            body: { message: 'co ao polo nam mau vang khong' },
+            uploadedChatMedia: [],
+            user: null,
+            sessionID: 'guest-session'
+        };
+        const res = createRes();
+
+        await chatController.sendMessage(req, res);
+
+        const botCall = Chat.addMessage.mock.calls[1];
+        expect(botCall[3]).toContain('hiện có 1');
+        expect(botCall[4].messageType).toBe('text');
+        expect(botCall[4].metadata).toBeNull();
+    });
+
+    it('uses image analysis as a strict recommendation input instead of guessing unrelated products', async () => {
+        describeProductFromImage.mockResolvedValueOnce({
+            description: 'Ao polo nu mau vang',
+            searchQuery: 'ao polo nu vang',
+            matchSummary: 'Dua tren anh ban gui, minh da loc duoc cac mau gan nhat trong catalog.'
         });
-        Chat.getMessages.mockResolvedValue([
-            {
-                sender_type: 'customer',
-                message: 'tim cho toi cac san pham danh cho nu trong khoang 300-500'
-            }
+        Chat.findOrCreateConversation.mockResolvedValue({
+            id: 21,
+            handling_mode: 'ai',
+            conversation_state: buildConversationState()
+        });
+        Product.getActiveChatCatalog.mockResolvedValue([
+            buildProduct({
+                id: 21,
+                slug: 'ao-polo-nu-vang',
+                name: 'Ao Polo Nu Vang',
+                description: 'Ao polo nu mau vang',
+                category_name: 'Ao Polo',
+                category_slug: 'ao-polo',
+                variant_colors: 'vang',
+                primary_image: 'https://example.com/ao-polo-nu-vang.jpg'
+            }),
+            buildProduct({
+                id: 22,
+                slug: 'ao-polo-nam-vang',
+                name: 'Ao Polo Nam Vang',
+                description: 'Ao polo nam mau vang',
+                category_name: 'Ao Polo',
+                category_slug: 'ao-polo',
+                variant_colors: 'vang',
+                primary_image: 'https://example.com/ao-polo-nam-vang.jpg'
+            })
         ]);
 
         const req = {
@@ -408,7 +430,7 @@ describe('chatController.sendMessage product cards', () => {
             uploadedChatMedia: [
                 {
                     mediaType: 'image',
-                    mediaUrl: 'https://example.com/croptop-reference.jpg'
+                    mediaUrl: 'https://example.com/reference.jpg'
                 }
             ],
             user: null,
@@ -419,12 +441,11 @@ describe('chatController.sendMessage product cards', () => {
         await chatController.sendMessage(req, res);
 
         const botCall = Chat.addMessage.mock.calls[1];
-        expect(botCall[3]).toBe('Dua tren anh ban gui, minh da loc cac mau gan nhat hien co ngay ben duoi de ban de so sanh.');
         expect(botCall[4].messageType).toBe('product_cards');
-        expect(botCall[4].metadata.products).toHaveLength(1);
-        expect(botCall[4].metadata.products[0]).toEqual(expect.objectContaining({
-            name: 'Ao Croptop Nu',
-            final_price: 280000
-        }));
+        expect(botCall[4].metadata.products).toEqual([
+            expect.objectContaining({
+                name: 'Ao Polo Nu Vang'
+            })
+        ]);
     });
 });

@@ -1,10 +1,10 @@
-// Admin Products page JavaScript
+﻿// Admin Products page JavaScript
 
 function showToast(message, type = 'success') {
     if (typeof showGlobalToast === 'function') showGlobalToast(message, type);
 }
 
-function showConfirm(message, title = 'Xác nhận', yesText = 'Xác nhận', yesColor = '#f44336') {
+function showConfirm(message, title = 'XÃ¡c nháº­n', yesText = 'XÃ¡c nháº­n', yesColor = '#f44336') {
     return new Promise((resolve) => {
         const modal = document.getElementById('confirmModal');
         document.getElementById('confirmTitle').textContent = title;
@@ -92,7 +92,7 @@ async function getPreviewUrl(file) {
 function buildExistingImageOption(image) {
     return {
         value: `existing:${image.id}`,
-        label: `Ảnh #${image.id}${image.is_primary ? ' (chính)' : ''}`,
+        label: `áº¢nh #${image.id}${image.is_primary ? ' (chÃ­nh)' : ''}`,
         previewUrl: image.image_url,
         imageId: image.id,
         kind: 'existing',
@@ -104,7 +104,7 @@ function buildMainImageOption(upload, index) {
     const file = upload.file;
     return {
         value: `main:${index}`,
-        label: `Ảnh tải lên: ${file.name}`,
+        label: `áº¢nh táº£i lÃªn: ${file.name}`,
         previewUrl: upload.previewUrl,
         kind: 'main',
         fileName: file.name
@@ -114,7 +114,7 @@ function buildMainImageOption(upload, index) {
 function buildUploadedImageOption(token, file, previewUrl) {
     return {
         value: `upload:${token}`,
-        label: `Ảnh variant: ${file.name}`,
+        label: `áº¢nh variant: ${file.name}`,
         previewUrl,
         kind: 'upload',
         token,
@@ -279,7 +279,7 @@ function syncCreateMainImageOptions() {
 
 function getImageOptionsHtml(mode, selectedValue = '') {
     const state = getModeState(mode);
-    const baseOption = '<option value="">-- Ảnh variant --</option>';
+    const baseOption = '<option value="">-- áº¢nh variant --</option>';
     const options = state.images.map(image => {
         const selected = image.value === selectedValue ? 'selected' : '';
         return `<option value="${image.value}" ${selected}>${image.label}</option>`;
@@ -452,7 +452,7 @@ function closeEditModal() {
 }
 
 async function deleteProduct(productId) {
-    const confirmed = await showConfirm('Bạn có chắc muốn xóa sản phẩm này?', 'Xóa Sản Phẩm', 'Xóa', '#f44336');
+    const confirmed = await showConfirm('Báº¡n cÃ³ cháº¯c muá»‘n xÃ³a sáº£n pháº©m nÃ y?', 'XÃ³a Sáº£n Pháº©m', 'XÃ³a', '#f44336');
     if (!confirmed) return;
 
     try {
@@ -461,14 +461,47 @@ async function deleteProduct(productId) {
             credentials: 'same-origin'
         });
         if (response.ok) {
-            showToast('Xóa sản phẩm thành công!', 'success');
+            showToast('XÃ³a sáº£n pháº©m thÃ nh cÃ´ng!', 'success');
             setTimeout(() => location.reload(), 1500);
         } else {
             const result = await response.json();
-            showToast('Lỗi xóa sản phẩm: ' + (result.message || 'Unknown error'), 'error');
+            showToast('Lá»—i xÃ³a sáº£n pháº©m: ' + (result.message || 'Unknown error'), 'error');
         }
     } catch (error) {
-        showToast('Lỗi: ' + error.message, 'error');
+        showToast('Lá»—i: ' + error.message, 'error');
+    }
+}
+
+async function deleteAllProducts(totalProductCount = 0) {
+    if (Number(totalProductCount) <= 0) {
+        showToast('Khong co san pham nao trong database de xoa.', 'warning');
+        return;
+    }
+
+    const confirmed = await showConfirm(
+        `Ban sap xoa vinh vien ${totalProductCount} san pham trong database. Ca san pham dang hien thi lan san pham dang an deu se bi xoa. Anh, bien the, review, wishlist va cart items lien quan se bi xoa theo. San pham da xuat hien trong lich su don hang se khong the xoa.`,
+        'Xoa Vinh Vien Tat Ca San Pham',
+        'Xoa vinh vien',
+        '#dc2626'
+    );
+
+    if (!confirmed) return;
+
+    try {
+        const response = await fetch('/admin/products/delete-all', {
+            method: 'POST',
+            credentials: 'same-origin'
+        });
+        const result = await response.json();
+
+        if (response.ok) {
+            showToast(result.message || 'Da xoa vinh vien san pham.', result.blockedCount > 0 ? 'warning' : 'success');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showToast(result.message || 'Khong the xoa toan bo san pham.', 'error');
+        }
+    } catch (error) {
+        showToast('Loi: ' + error.message, 'error');
     }
 }
 
@@ -485,7 +518,7 @@ function closeImageModal() {
 
 async function loadProductImages(productId) {
     const grid = document.getElementById('imagesGrid');
-    grid.innerHTML = '<p style="color: #999;">Đang tải...</p>';
+    grid.innerHTML = '<p style="color: #999;">Äang táº£i...</p>';
 
     try {
         const response = await fetch(`/admin/products/${productId}/images`, { credentials: 'same-origin' });
@@ -495,27 +528,27 @@ async function loadProductImages(productId) {
             grid.innerHTML = data.images.map(img => `
                 <div style="position: relative; border: 2px solid ${img.is_primary ? '#667eea' : '#eee'}; border-radius: 8px; overflow: hidden;">
                     <img src="${img.image_url}" alt="" style="width: 100%; height: 120px; object-fit: cover;">
-                    ${img.is_primary ? '<span style="position: absolute; top: 5px; left: 5px; background: #667eea; color: white; padding: 2px 6px; font-size: 10px; border-radius: 4px;">Chính</span>' : ''}
+                    ${img.is_primary ? '<span style="position: absolute; top: 5px; left: 5px; background: #667eea; color: white; padding: 2px 6px; font-size: 10px; border-radius: 4px;">ChÃ­nh</span>' : ''}
                     <div style="position: absolute; bottom: 5px; right: 5px; display: flex; gap: 5px;">
-                        ${!img.is_primary ? `<button data-image-action="set-primary" data-image-id="${img.id}" style="padding: 3px 8px; font-size: 10px; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer;">★</button>` : ''}
-                        <button data-image-action="delete" data-image-id="${img.id}" style="padding: 3px 8px; font-size: 10px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;">×</button>
+                        ${!img.is_primary ? `<button data-image-action="set-primary" data-image-id="${img.id}" style="padding: 3px 8px; font-size: 10px; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer;">â˜…</button>` : ''}
+                        <button data-image-action="delete" data-image-id="${img.id}" style="padding: 3px 8px; font-size: 10px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;">Ã—</button>
                     </div>
                 </div>
             `).join('');
         } else {
-            grid.innerHTML = '<p style="color: #999;">Chưa có ảnh nào</p>';
+            grid.innerHTML = '<p style="color: #999;">ChÆ°a cÃ³ áº£nh nÃ o</p>';
         }
     } catch (error) {
-        grid.innerHTML = '<p style="color: #f44336;">Lỗi tải ảnh</p>';
+        grid.innerHTML = '<p style="color: #f44336;">Lá»—i táº£i áº£nh</p>';
     }
 }
 
 async function deleteImage(imageId) {
     const confirmed = await window.showGlobalConfirm({
-        title: 'Xóa ảnh sản phẩm',
-        message: 'Bạn có chắc muốn xóa ảnh này không?',
-        confirmText: 'Xóa ảnh',
-        cancelText: 'Giữ lại',
+        title: 'XÃ³a áº£nh sáº£n pháº©m',
+        message: 'Báº¡n cÃ³ cháº¯c muá»‘n xÃ³a áº£nh nÃ y khÃ´ng?',
+        confirmText: 'XÃ³a áº£nh',
+        cancelText: 'Giá»¯ láº¡i',
         tone: 'danger'
     });
 
@@ -530,13 +563,13 @@ async function deleteImage(imageId) {
         });
 
         if (response.ok) {
-            showGlobalToast('Đã xóa ảnh!', 'success');
+            showGlobalToast('ÄÃ£ xÃ³a áº£nh!', 'success');
             await loadProductImages(productId);
         } else {
-            showGlobalToast('Lỗi xóa ảnh', 'error');
+            showGlobalToast('Lá»—i xÃ³a áº£nh', 'error');
         }
     } catch (error) {
-        showGlobalToast('Lỗi: ' + error.message, 'error');
+        showGlobalToast('Lá»—i: ' + error.message, 'error');
     }
 }
 
@@ -550,20 +583,20 @@ async function setPrimaryImage(imageId) {
         });
 
         if (response.ok) {
-            showGlobalToast('Đã đặt làm ảnh chính!', 'success');
+            showGlobalToast('ÄÃ£ Ä‘áº·t lÃ m áº£nh chÃ­nh!', 'success');
             await loadProductImages(productId);
         } else {
-            showGlobalToast('Lỗi đặt ảnh chính', 'error');
+            showGlobalToast('Lá»—i Ä‘áº·t áº£nh chÃ­nh', 'error');
         }
     } catch (error) {
-        showGlobalToast('Lỗi: ' + error.message, 'error');
+        showGlobalToast('Lá»—i: ' + error.message, 'error');
     }
 }
 
 async function addImageByUrl() {
     const url = document.getElementById('newImageUrl').value;
     if (!url) {
-        showGlobalToast('Vui lòng nhập URL ảnh', 'warning');
+        showGlobalToast('Vui lÃ²ng nháº­p URL áº£nh', 'warning');
         return;
     }
 
@@ -579,14 +612,14 @@ async function addImageByUrl() {
         });
 
         if (response.ok) {
-            showGlobalToast('Đã thêm ảnh!', 'success');
+            showGlobalToast('ÄÃ£ thÃªm áº£nh!', 'success');
             document.getElementById('newImageUrl').value = '';
             await loadProductImages(productId);
         } else {
-            showGlobalToast('Lỗi thêm ảnh', 'error');
+            showGlobalToast('Lá»—i thÃªm áº£nh', 'error');
         }
     } catch (error) {
-        showGlobalToast('Lỗi: ' + error.message, 'error');
+        showGlobalToast('Lá»—i: ' + error.message, 'error');
     }
 }
 
@@ -599,7 +632,7 @@ function addVariantRow(mode, data = {}) {
         <div class="variant-row__field variant-row__field--size">
             <span class="variant-row__label">Size</span>
             <select class="variant-size">
-                <option value="" ${!data.size ? 'selected' : ''}>Chọn size</option>
+                <option value="" ${!data.size ? 'selected' : ''}>Chá»n size</option>
                 <option value="S" ${data.size === 'S' ? 'selected' : ''}>S</option>
                 <option value="M" ${data.size === 'M' ? 'selected' : ''}>M</option>
                 <option value="L" ${data.size === 'L' ? 'selected' : ''}>L</option>
@@ -609,47 +642,47 @@ function addVariantRow(mode, data = {}) {
             </select>
         </div>
         <div class="variant-row__field variant-row__field--color">
-            <span class="variant-row__label">Màu sắc</span>
+            <span class="variant-row__label">MÃ u sáº¯c</span>
             <select class="variant-color">
-                <option value="" ${!data.color ? 'selected' : ''}>Chọn màu</option>
-                <option value="Đen" ${data.color === 'Đen' ? 'selected' : ''}>Đen</option>
-                <option value="Trắng" ${data.color === 'Trắng' ? 'selected' : ''}>Trắng</option>
-                <option value="Đỏ" ${data.color === 'Đỏ' ? 'selected' : ''}>Đỏ</option>
-                <option value="Xanh dương" ${data.color === 'Xanh dương' ? 'selected' : ''}>Xanh dương</option>
-                <option value="Xanh lá" ${data.color === 'Xanh lá' ? 'selected' : ''}>Xanh lá</option>
-                <option value="Vàng" ${data.color === 'Vàng' ? 'selected' : ''}>Vàng</option>
-                <option value="Hồng" ${data.color === 'Hồng' ? 'selected' : ''}>Hồng</option>
-                <option value="Tím" ${data.color === 'Tím' ? 'selected' : ''}>Tím</option>
+                <option value="" ${!data.color ? 'selected' : ''}>Chá»n mÃ u</option>
+                <option value="Äen" ${data.color === 'Äen' ? 'selected' : ''}>Äen</option>
+                <option value="Tráº¯ng" ${data.color === 'Tráº¯ng' ? 'selected' : ''}>Tráº¯ng</option>
+                <option value="Äá»" ${data.color === 'Äá»' ? 'selected' : ''}>Äá»</option>
+                <option value="Xanh dÆ°Æ¡ng" ${data.color === 'Xanh dÆ°Æ¡ng' ? 'selected' : ''}>Xanh dÆ°Æ¡ng</option>
+                <option value="Xanh lÃ¡" ${data.color === 'Xanh lÃ¡' ? 'selected' : ''}>Xanh lÃ¡</option>
+                <option value="VÃ ng" ${data.color === 'VÃ ng' ? 'selected' : ''}>VÃ ng</option>
+                <option value="Há»“ng" ${data.color === 'Há»“ng' ? 'selected' : ''}>Há»“ng</option>
+                <option value="TÃ­m" ${data.color === 'TÃ­m' ? 'selected' : ''}>TÃ­m</option>
                 <option value="Cam" ${data.color === 'Cam' ? 'selected' : ''}>Cam</option>
-                <option value="Nâu" ${data.color === 'Nâu' ? 'selected' : ''}>Nâu</option>
-                <option value="Xám" ${data.color === 'Xám' ? 'selected' : ''}>Xám</option>
+                <option value="NÃ¢u" ${data.color === 'NÃ¢u' ? 'selected' : ''}>NÃ¢u</option>
+                <option value="XÃ¡m" ${data.color === 'XÃ¡m' ? 'selected' : ''}>XÃ¡m</option>
                 <option value="Be" ${data.color === 'Be' ? 'selected' : ''}>Be</option>
                 <option value="Kem" ${data.color === 'Kem' ? 'selected' : ''}>Kem</option>
             </select>
         </div>
         <div class="variant-row__field variant-row__field--price">
-            <span class="variant-row__label">Giá cộng thêm</span>
+            <span class="variant-row__label">GiÃ¡ cá»™ng thÃªm</span>
             <input type="number" placeholder="0" value="${data.additional_price || 0}" class="variant-price" min="0">
         </div>
         <div class="variant-row__field variant-row__field--stock">
-            <span class="variant-row__label">Tồn kho</span>
+            <span class="variant-row__label">Tá»“n kho</span>
             <input type="number" placeholder="0" value="${data.stock_quantity || 0}" class="variant-stock" min="0">
         </div>
         <div class="variant-row__field variant-row__field--sku">
             <span class="variant-row__label">SKU</span>
             <div style="display:flex; gap:4px; align-items:center;">
-                <input type="text" placeholder="Mã SKU" value="${data.sku || ''}" class="variant-sku" style="flex:1;">
-                <button type="button" class="variant-auto-sku-btn" title="Tự động tạo mã SKU" style="min-width:32px; height:32px; border:1px solid #ccc; border-radius:8px; background:#f8f8f8; cursor:pointer; font-size:14px;">⚡</button>
+                <input type="text" placeholder="MÃ£ SKU" value="${data.sku || ''}" class="variant-sku" style="flex:1;">
+                <button type="button" class="variant-auto-sku-btn" title="Tá»± Ä‘á»™ng táº¡o mÃ£ SKU" style="min-width:32px; height:32px; border:1px solid #ccc; border-radius:8px; background:#f8f8f8; cursor:pointer; font-size:14px;">âš¡</button>
             </div>
         </div>
         <div class="variant-row__field variant-row__field--image">
-            <span class="variant-row__label">Ảnh biến thể</span>
+            <span class="variant-row__label">áº¢nh biáº¿n thá»ƒ</span>
             <select class="variant-image-select">
                 ${getImageOptionsHtml(mode, data.image_id ? `existing:${data.image_id}` : '')}
             </select>
         </div>
         <div class="variant-row__field variant-row__field--upload">
-            <span class="variant-row__label">Tải ảnh mới</span>
+            <span class="variant-row__label">Táº£i áº£nh má»›i</span>
             <input type="file" class="variant-image-file" accept="image/*">
         </div>
         <div class="variant-row__field variant-row__field--preview">
@@ -673,26 +706,26 @@ function addVariantRow(mode, data = {}) {
         const size = row.querySelector('.variant-size')?.value || '';
         const color = row.querySelector('.variant-color')?.value || '';
 
-        // Lấy SKU sản phẩm chính hoặc tạo prefix từ danh mục
+        // Láº¥y SKU sáº£n pháº©m chÃ­nh hoáº·c táº¡o prefix tá»« danh má»¥c
         let prefix = '';
         if (mode === 'create') {
             prefix = document.getElementById('createSkuInput')?.value?.trim() || '';
         }
         if (!prefix) {
-            // Fallback: lấy từ danh mục
+            // Fallback: láº¥y tá»« danh má»¥c
             const catSelect = mode === 'create'
                 ? document.querySelector('#createProductForm select[name="category_id"]')
                 : document.getElementById('editCategoryId');
             const catName = catSelect?.options[catSelect.selectedIndex]?.text || '';
             prefix = catName.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z]/g, '').substring(0, 3).toUpperCase() || 'PRD';
-            // Thêm random
+            // ThÃªm random
             const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
             let rand = '';
             for (let i = 0; i < 4; i++) rand += chars.charAt(Math.floor(Math.random() * chars.length));
             prefix = prefix + '-' + rand;
         }
 
-        // Tạo suffix từ size + color
+        // Táº¡o suffix tá»« size + color
         const sizePart = size ? size.replace(/\s/g, '').substring(0, 3).toUpperCase() : '';
         const colorPart = color
             ? color.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z]/g, '').substring(0, 3).toUpperCase()
@@ -811,13 +844,13 @@ function initAdminProducts() {
 
             const result = await response.json();
             if (response.ok) {
-                showToast('Cập nhật sản phẩm thành công!', 'success');
+                showToast('Cáº­p nháº­t sáº£n pháº©m thÃ nh cÃ´ng!', 'success');
                 setTimeout(() => location.reload(), 1500);
             } else {
-                showToast('Lỗi: ' + (result.message || 'Không thể cập nhật sản phẩm'), 'error');
+                showToast('Lá»—i: ' + (result.message || 'KhÃ´ng thá»ƒ cáº­p nháº­t sáº£n pháº©m'), 'error');
             }
         } catch (error) {
-            showToast('Lỗi: ' + error.message, 'error');
+            showToast('Lá»—i: ' + error.message, 'error');
         }
     });
 
@@ -830,7 +863,7 @@ function initAdminProducts() {
 
         const files = Array.from(imageModalFileInput?.files || []);
         if (files.length === 0) {
-            showGlobalToast('Vui lòng chọn ít nhất 1 ảnh', 'warning');
+            showGlobalToast('Vui lÃ²ng chá»n Ã­t nháº¥t 1 áº£nh', 'warning');
             return;
         }
 
@@ -849,14 +882,14 @@ function initAdminProducts() {
 
             const result = await response.json();
             if (response.ok) {
-                showGlobalToast(result.message || 'Đã tải lên ảnh!', 'success');
+                showGlobalToast(result.message || 'ÄÃ£ táº£i lÃªn áº£nh!', 'success');
                 imageModalFileInput.value = '';
                 await loadProductImages(productId);
             } else {
-                showGlobalToast(result.message || 'Lỗi tải lên ảnh', 'error');
+                showGlobalToast(result.message || 'Lá»—i táº£i lÃªn áº£nh', 'error');
             }
         } catch (error) {
-            showGlobalToast('Lỗi: ' + error.message, 'error');
+            showGlobalToast('Lá»—i: ' + error.message, 'error');
         }
     });
 
@@ -900,6 +933,11 @@ function initAdminProducts() {
 
             if (action === 'delete-product') {
                 deleteProduct(Number(actionButton.dataset.productId));
+                return;
+            }
+
+            if (action === 'delete-all-products') {
+                deleteAllProducts(Number(actionButton.dataset.totalProductCount || 0));
                 return;
             }
 
@@ -949,19 +987,19 @@ function initAdminProducts() {
     function generateSku() {
         if (!autoSkuCheckbox?.checked) return;
 
-        // Lấy tên danh mục đã chọn
+        // Láº¥y tÃªn danh má»¥c Ä‘Ã£ chá»n
         const selectedOption = categorySelect?.options[categorySelect.selectedIndex];
         const categoryName = selectedOption?.text || '';
 
-        // Tạo viết tắt từ tên danh mục (lấy 3 chữ cái đầu, chuyển thành uppercase không dấu)
+        // Táº¡o viáº¿t táº¯t tá»« tÃªn danh má»¥c (láº¥y 3 chá»¯ cÃ¡i Ä‘áº§u, chuyá»ƒn thÃ nh uppercase khÃ´ng dáº¥u)
         const abbr = categoryName
-            .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // bỏ dấu
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // bá» dáº¥u
             .replace(/[^a-zA-Z\s]/g, '')
             .trim()
             .substring(0, 3)
             .toUpperCase() || 'PRD';
 
-        // Random 4 ký tự alphanumeric
+        // Random 4 kÃ½ tá»± alphanumeric
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         let randomPart = '';
         for (let i = 0; i < 4; i++) {
@@ -985,7 +1023,7 @@ function initAdminProducts() {
             }
         });
 
-        // Khi thay đổi danh mục => cập nhật lại SKU nếu đang ở chế độ tự động
+        // Khi thay Ä‘á»•i danh má»¥c => cáº­p nháº­t láº¡i SKU náº¿u Ä‘ang á»Ÿ cháº¿ Ä‘á»™ tá»± Ä‘á»™ng
         categorySelect?.addEventListener('change', generateSku);
     }
 
@@ -993,3 +1031,4 @@ function initAdminProducts() {
 }
 
 document.addEventListener('DOMContentLoaded', initAdminProducts);
+
