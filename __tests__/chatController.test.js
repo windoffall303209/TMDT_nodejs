@@ -10,6 +10,7 @@ jest.mock('../models/Chat', () => ({
         gender: null,
         category: null,
         color: null,
+        profile: null,
         price_range: null,
         sku: null,
         allow_recommendation: false,
@@ -51,6 +52,7 @@ function buildConversationState(overrides = {}) {
         gender: null,
         category: null,
         color: null,
+        profile: null,
         price_range: null,
         sku: null,
         allow_recommendation: false,
@@ -114,7 +116,7 @@ describe('chatController.sendMessage stateful commerce flow', () => {
         await chatController.sendMessage(req, res);
 
         const botCall = Chat.addMessage.mock.calls[1];
-        expect(botCall[3]).toContain('Bạn muốn mình gợi ý sản phẩm luôn không');
+        expect(botCall[3]).toContain('áo polo nam màu vàng');
         expect(botCall[4].messageType).toBe('text');
         expect(botCall[4].metadata).toBeNull();
         expect(Chat.updateConversationState).toHaveBeenCalledWith(
@@ -177,13 +179,190 @@ describe('chatController.sendMessage stateful commerce flow', () => {
         await chatController.sendMessage(req, res);
 
         const botCall = Chat.addMessage.mock.calls[1];
-        expect(botCall[3]).not.toContain('mau Ä‘á»');
+        expect(botCall[3]).not.toContain('màu đỏ');
         expect(Chat.updateConversationState).toHaveBeenCalledWith(
             21,
             expect.objectContaining({
                 gender: 'male',
                 color: null,
                 allow_recommendation: false
+            })
+        );
+    });
+
+    it('uses chat history to keep context for follow-up advice requests', async () => {
+        Chat.findOrCreateConversation.mockResolvedValue({
+            id: 21,
+            handling_mode: 'ai',
+            conversation_state: buildConversationState()
+        });
+        Chat.getMessages.mockResolvedValue([
+            { sender_type: 'customer', message: 'toi can tu van san pham nam' },
+            { sender_type: 'bot', message: 'Ban muon xem nhom nao?' },
+            { sender_type: 'customer', message: 'ao mau vang' }
+        ]);
+
+        const req = {
+            body: { message: 'minh can them loi khuyen' },
+            uploadedChatMedia: [],
+            user: null,
+            sessionID: 'guest-session'
+        };
+        const res = createRes();
+
+        await chatController.sendMessage(req, res);
+
+        const botCall = Chat.addMessage.mock.calls[1];
+        expect(botCall[3]).toContain('áo nam màu vàng');
+        expect(botCall[3]).not.toContain('Mình có thể giúp bạn lọc sản phẩm');
+        expect(botCall[4].messageType).toBe('text');
+    });
+
+    it('rebuilds context from history before recommending products', async () => {
+        Chat.findOrCreateConversation.mockResolvedValue({
+            id: 21,
+            handling_mode: 'ai',
+            conversation_state: buildConversationState()
+        });
+        Chat.getMessages.mockResolvedValue([
+            { sender_type: 'customer', message: 'toi can tu van san pham nam' },
+            { sender_type: 'customer', message: 'ao mau vang' }
+        ]);
+        Product.getActiveChatCatalog.mockResolvedValue([
+            buildProduct(),
+            buildProduct({
+                id: 5,
+                slug: 'quan-jeans-nam-xanh',
+                name: 'Quan Jeans Nam Xanh',
+                description: 'Quan jeans nam mau xanh',
+                category_name: 'Quan Jeans',
+                category_slug: 'quan-jeans',
+                variant_colors: 'xanh duong',
+                primary_image: 'https://example.com/quan-jeans-nam-xanh.jpg'
+            }),
+            buildProduct({
+                id: 6,
+                slug: 'ao-so-mi-nu-vang',
+                name: 'Ao So Mi Nu Vang',
+                description: 'Ao so mi nu mau vang',
+                category_name: 'Ao So Mi',
+                category_slug: 'ao-so-mi',
+                variant_colors: 'vang',
+                primary_image: 'https://example.com/ao-so-mi-nu-vang.jpg'
+            })
+        ]);
+
+        const req = {
+            body: { message: 'cho minh xem mau' },
+            uploadedChatMedia: [],
+            user: null,
+            sessionID: 'guest-session'
+        };
+        const res = createRes();
+
+        await chatController.sendMessage(req, res);
+
+        const botCall = Chat.addMessage.mock.calls[1];
+        expect(botCall[4].messageType).toBe('product_cards');
+        expect(botCall[4].metadata.products).toEqual([
+            expect.objectContaining({
+                name: 'Ao Polo Nam Vang'
+            })
+        ]);
+    });
+
+    it('treats body-profile clarification as a new soft preference instead of repeating the old category', async () => {
+        Chat.findOrCreateConversation.mockResolvedValue({
+            id: 21,
+            handling_mode: 'ai',
+            conversation_state: buildConversationState({
+                gender: 'female',
+                category: 'shirt'
+            })
+        });
+
+        const req = {
+            body: { message: 'y la toi can san pham danh cho nu co kieu dang nguoi cao' },
+            uploadedChatMedia: [],
+            user: null,
+            sessionID: 'guest-session'
+        };
+        const res = createRes();
+
+        await chatController.sendMessage(req, res);
+
+        const botCall = Chat.addMessage.mock.calls[1];
+        expect(botCall[3]).toContain('người cao');
+        expect(botCall[3]).toContain('đồ nữ');
+        expect(botCall[3]).not.toContain('áo nữ');
+        expect(Chat.updateConversationState).toHaveBeenCalledWith(
+            21,
+            expect.objectContaining({
+                gender: 'female',
+                category: null,
+                profile: 'tall'
+            })
+        );
+    });
+
+    it('uses body-profile preference to rank closer recommendations when the user asks naturally', async () => {
+        Chat.findOrCreateConversation.mockResolvedValue({
+            id: 21,
+            handling_mode: 'ai',
+            conversation_state: buildConversationState({
+                gender: 'female',
+                profile: 'tall'
+            })
+        });
+        Product.getActiveChatCatalog.mockResolvedValue([
+            buildProduct({
+                id: 31,
+                slug: 'vay-midi-nu',
+                name: 'Vay Midi Nu Dang Suong',
+                description: 'Vay midi nu dang suong ton dang cho nguoi cao',
+                category_name: 'Vay',
+                category_slug: 'vay',
+                variant_colors: 'den',
+                primary_image: 'https://example.com/vay-midi-nu.jpg'
+            }),
+            buildProduct({
+                id: 32,
+                slug: 'ao-croptop-nu',
+                name: 'Ao Croptop Nu',
+                description: 'Ao croptop nu mac di choi',
+                category_name: 'Ao',
+                category_slug: 'ao',
+                variant_colors: 'trang',
+                primary_image: 'https://example.com/ao-croptop-nu.jpg'
+            }),
+            buildProduct({
+                id: 33,
+                slug: 'quan-jeans-nam',
+                name: 'Quan Jeans Nam',
+                description: 'Quan jeans nam form dung',
+                category_name: 'Quan Jeans',
+                category_slug: 'quan-jeans',
+                variant_colors: 'xanh duong',
+                primary_image: 'https://example.com/quan-jeans-nam.jpg'
+            })
+        ]);
+
+        const req = {
+            body: { message: 'cho minh xem mau' },
+            uploadedChatMedia: [],
+            user: null,
+            sessionID: 'guest-session'
+        };
+        const res = createRes();
+
+        await chatController.sendMessage(req, res);
+
+        const botCall = Chat.addMessage.mock.calls[1];
+        expect(botCall[4].messageType).toBe('product_cards');
+        expect(botCall[3]).toContain('người cao');
+        expect(botCall[4].metadata.products[0]).toEqual(
+            expect.objectContaining({
+                name: 'Vay Midi Nu Dang Suong'
             })
         );
     });
@@ -249,7 +428,7 @@ describe('chatController.sendMessage stateful commerce flow', () => {
         await chatController.sendMessage(secondReq, secondRes);
 
         botCall = Chat.addMessage.mock.calls[3];
-        expect(botCall[3]).toContain('Bạn muốn mình gợi ý sản phẩm luôn không');
+        expect(botCall[3]).toContain('màu vàng');
         expect(botCall[4].messageType).toBe('text');
         expect(botCall[4].metadata).toBeNull();
     });

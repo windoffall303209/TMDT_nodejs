@@ -503,7 +503,6 @@ CREATE TABLE chat_conversations (
     guest_name VARCHAR(100) DEFAULT 'Khách',
     status ENUM('active', 'closed') DEFAULT 'active',
     handling_mode ENUM('ai', 'manual') DEFAULT 'ai',
-    conversation_state LONGTEXT DEFAULT NULL,
     last_message_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

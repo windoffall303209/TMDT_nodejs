@@ -1,8 +1,8 @@
+
 const Chat = require('../models/Chat');
 const Product = require('../models/Product');
 const { describeProductFromImage } = require('../services/chatVisionService');
 const { retrieveChatRagContext } = require('../services/chatRagService');
-const { generateChatCommerceReply } = require('../services/chatCommerceFlowService');
 
 const CHAT_PRODUCT_KEYWORDS = [
     'ao', 'ao thun', 'ao so mi', 'ao polo', 'quan', 'quan jean', 'jeans', 'kaki',
@@ -56,12 +56,27 @@ const CHAT_CATEGORY_RULES = [
     { id: 'skirt', family: 'dress', generic: false, label: 'v\u00e1y', searchPhrase: 'vay', keywords: ['vay', 'chan vay', 'skirt'] }
 ];
 
+const CHAT_COLOR_RULES = [
+    { id: 'yellow', label: 'v\u00e0ng', searchPhrase: 'vang', keywords: ['mau vang', 'vang', 'yellow'] },
+    { id: 'black', label: '\u0111en', searchPhrase: 'den', keywords: ['mau den', 'den', 'black'] },
+    { id: 'white', label: 'tr\u1eafng', searchPhrase: 'trang', keywords: ['mau trang', 'trang', 'white'] },
+    { id: 'blue', label: 'xanh', searchPhrase: 'xanh', keywords: ['mau xanh', 'xanh', 'xanh duong', 'xanh bien', 'blue'] },
+    { id: 'green', label: 'xanh l\u00e1', searchPhrase: 'xanh la', keywords: ['mau xanh la', 'xanh la', 'xanh reu', 'green'] },
+    { id: 'pink', label: 'h\u1ed3ng', searchPhrase: 'hong', keywords: ['mau hong', 'hong', 'pink'] },
+    { id: 'gray', label: 'x\u00e1m', searchPhrase: 'xam', keywords: ['mau xam', 'xam', 'ghi', 'gray', 'grey'] },
+    { id: 'brown', label: 'n\u00e2u', searchPhrase: 'nau', keywords: ['mau nau', 'nau', 'brown'] },
+    { id: 'beige', label: 'be/kem', searchPhrase: 'kem', keywords: ['mau kem', 'kem', 'be', 'beige', 'cream'] },
+    { id: 'orange', label: 'cam', searchPhrase: 'cam', keywords: ['mau cam', 'cam', 'orange'] },
+    { id: 'red', label: '\u0111\u1ecf', searchPhrase: 'do', keywords: ['mau do', 'ao do', 'quan do', 'vay do', 'dam do', 'red'] },
+    { id: 'purple', label: 't\u00edm', searchPhrase: 'tim', keywords: ['mau tim', 'ao tim', 'quan tim', 'vay tim', 'dam tim', 'purple'] }
+];
+
 const CHAT_STOP_WORDS = new Set([
     'shop', 'minh', 'toi', 'cho', 'voi', 'can', 'muon', 'tim', 'goi', 'y', 'giup',
     'tu', 'van', 'san', 'pham', 'loai', 'cua', 'nay', 'kia', 'dep', 'mac', 'mua',
     'mot', 'nhung', 'dang', 'roi', 'nhe', 'a', 'ah', 'ha', 'nua', 'tam', 'khoang',
     'duoi', 'tren', 'tu', 'den', 'ban', 'de', 'xuat', 'cac', 'trong', 'gia',
-    'neu', 'ko', 'khong', 'du', 'thi', 'co', 'the'
+    'neu', 'ko', 'khong', 'du', 'thi', 'co', 'the', 'chiec', 'danh', 'item', 'top'
 ]);
 
 const CHAT_GREETING_TOKENS = new Set([
@@ -446,6 +461,47 @@ function extractChatTerms(normalizedMessage) {
         );
 }
 
+function detectChatColors(normalizedMessage) {
+    if (!normalizedMessage) {
+        return [];
+    }
+
+    return CHAT_COLOR_RULES.filter((color) =>
+        color.keywords.some((keyword) => includesChatPhrase(normalizedMessage, keyword))
+    );
+}
+
+function getChatRequestedProductLimit(userMessage, fallbackLimit = 6) {
+    const normalizedMessage = normalizeChatText(userMessage);
+    const requestPattern = /\b(?:goi y|de xuat|tu van|chon|liet ke|show)\b/;
+    const quantityPattern = /\b(\d{1,2})\s+(?:san pham|mau|ao|quan|dam|vay|set|item|mon)\b/;
+    const match = normalizedMessage.match(quantityPattern);
+
+    if (!match || !requestPattern.test(normalizedMessage)) {
+        return fallbackLimit;
+    }
+
+    return Math.max(1, Math.min(10, Number.parseInt(match[1], 10) || fallbackLimit));
+}
+
+function getChatMatchedColors(product, intent) {
+    if (!Array.isArray(intent?.colors) || !intent.colors.length) {
+        return [];
+    }
+
+    const productColorText = normalizeChatText([
+        product?.variant_colors,
+        product?.name,
+        product?.description
+    ].filter(Boolean).join(' '));
+
+    return intent.colors.filter((color) => includesChatPhrase(productColorText, color.searchPhrase));
+}
+
+function hasChatColorMatch(product, intent) {
+    return getChatMatchedColors(product, intent).length > 0;
+}
+
 function buildChatSearchQueries(intent, userMessage) {
     const queries = [];
     const compactTokens = [];
@@ -454,6 +510,7 @@ function buildChatSearchQueries(intent, userMessage) {
     if (intent.gender) {
         compactTokens.push(intent.gender.searchPhrase);
     }
+    intent.colors.forEach((color) => compactTokens.push(color.searchPhrase));
     if (intent.occasion) {
         compactTokens.push(intent.occasion.searchPhrase);
     }
@@ -467,6 +524,10 @@ function buildChatSearchQueries(intent, userMessage) {
 
     if (intent.categories[0] && intent.gender) {
         queries.push(`${intent.categories[0].searchPhrase} ${intent.gender.searchPhrase}`.trim());
+    }
+
+    if (intent.categories[0] && intent.colors[0]) {
+        queries.push(`${intent.categories[0].searchPhrase} ${intent.colors[0].searchPhrase}`.trim());
     }
 
     if (typeof userMessage === 'string' && userMessage.trim()) {
@@ -497,6 +558,7 @@ function buildChatIntent(userMessage) {
     const gender = detectChatRule(normalizedMessage, CHAT_GENDER_RULES);
     const occasion = detectChatRule(normalizedMessage, CHAT_OCCASION_RULES);
     const categories = detectChatCategories(normalizedMessage);
+    const colors = detectChatColors(normalizedMessage);
     const budget = parseChatBudget(normalizedMessage);
     const focusTerms = extractChatTerms(normalizedMessage);
     const imageGuided = includesChatPhrase(normalizedMessage, 'mo ta tu anh')
@@ -507,6 +569,7 @@ function buildChatIntent(userMessage) {
         gender,
         occasion,
         categories,
+        colors,
         budget,
         focusTerms,
         imageGuided
@@ -554,6 +617,9 @@ function buildChatIntentFromContext(messages = [], userMessage = '') {
         categories: currentIntent.categories.length
             ? currentIntent.categories
             : (getLastChatIntentValue(priorCustomerIntents, (intent) => intent.categories) || []),
+        colors: currentIntent.colors.length
+            ? currentIntent.colors
+            : (getLastChatIntentValue(priorCustomerIntents, (intent) => intent.colors) || []),
         budget: currentIntent.budget || getLastChatIntentValue(priorCustomerIntents, (intent) => intent.budget),
         focusTerms: mergeChatFocusTerms(
             currentIntent.focusTerms,
@@ -599,6 +665,9 @@ function buildChatIntentSummary(intent) {
     if (intent.categories.length) {
         parts.push(`loai san pham: ${intent.categories.map((item) => item.label).join(', ')}`);
     }
+    if (intent.colors.length) {
+        parts.push(`mau uu tien: ${intent.colors.map((item) => item.label).join(', ')}`);
+    }
     if (intent.occasion) {
         parts.push(`muc dich mac: ${intent.occasion.label}`);
     }
@@ -609,31 +678,34 @@ function buildChatIntentSummary(intent) {
     return parts.length ? `\n\nNhu cau khach hien tai:\n- ${parts.join('\n- ')}` : '';
 }
 
-async function collectChatCandidateProducts(intent, userMessage) {
+async function collectChatCandidateProducts(intent, userMessage, options = {}) {
+    const desiredLimit = Number.parseInt(options.limit, 10) || 6;
+    const searchLimit = Math.max(12, Math.min(30, desiredLimit * 3));
+    const broadLimit = Math.max(18, Math.min(36, desiredLimit * 4));
     const searchQueries = intent.searchQueries.slice(0, 3);
     const searchTasks = searchQueries.map((query) =>
         Product.findAll({
             search: query,
             sort_by: 'sold_count',
             sort_order: 'DESC',
-            limit: 12
+            limit: searchLimit
         }).catch(() => [])
     );
     const broadCatalogTasks = [];
 
-    if (intent.gender || intent.budget || intent.occasion) {
+    if (intent.gender || intent.colors.length || intent.budget || intent.occasion) {
         broadCatalogTasks.push(
             Product.findAll({
                 sort_by: 'sold_count',
                 sort_order: 'DESC',
-                limit: 24
+                limit: broadLimit
             }).catch(() => [])
         );
         broadCatalogTasks.push(
             Product.findAll({
                 sort_by: 'created_at',
                 sort_order: 'DESC',
-                limit: 24
+                limit: broadLimit
             }).catch(() => [])
         );
 
@@ -644,7 +716,7 @@ async function collectChatCandidateProducts(intent, userMessage) {
                     max_price: intent.budget.maxPrice || undefined,
                     sort_by: 'sold_count',
                     sort_order: 'DESC',
-                    limit: 24
+                    limit: broadLimit
                 }).catch(() => [])
             );
         }
@@ -660,7 +732,7 @@ async function collectChatCandidateProducts(intent, userMessage) {
     let fuzzyProducts = [];
     if (searchBuckets.flat().length < 5) {
         const fuzzyBuckets = await Promise.all(
-            searchQueries.slice(0, 2).map((query) => Product.search(query || userMessage, 8).catch(() => []))
+            searchQueries.slice(0, 2).map((query) => Product.search(query || userMessage, searchLimit).catch(() => []))
         );
         fuzzyProducts = fuzzyBuckets.flat();
     }
@@ -677,6 +749,8 @@ async function collectChatCandidateProducts(intent, userMessage) {
 function getChatProductText(product, options = {}) {
     const fields = [
         product?.name,
+        product?.variant_colors,
+        product?.variant_sizes,
         product?.category_name,
         product?.category_slug,
         product?.sku
@@ -760,6 +834,14 @@ function scoreChatCandidate(product, intent) {
             score += 10;
             reasons.push(`h\u1ee3p ${intent.occasion.label}`);
         }
+    }
+
+    const matchedColors = getChatMatchedColors(product, intent);
+    if (matchedColors.length) {
+        score += 24;
+        reasons.push(`c\u00f3 m\u00e0u ${matchedColors.map((color) => color.label).join(', ')}`);
+    } else if (intent.colors.length) {
+        score -= 28;
     }
 
     if (intent.budget && finalPrice > 0) {
@@ -851,6 +933,14 @@ function getChatAudienceMatch(product, intent) {
     return audience === intent.gender.id || (intent.gender.id === 'kids' && audience === 'kids');
 }
 
+function matchesChatColors(product, intent) {
+    if (!Array.isArray(intent?.colors) || !intent.colors.length) {
+        return true;
+    }
+
+    return hasChatColorMatch(product, intent);
+}
+
 function matchesChatBudget(product, intent) {
     if (!intent?.budget) {
         return true;
@@ -921,6 +1011,13 @@ function selectChatSuggestedProducts(products = [], intent, options = {}) {
         }
     }
 
+    if (intent?.colors?.length) {
+        candidates = candidates.filter((product) => matchesChatColors(product, intent));
+        if (!candidates.length) {
+            return [];
+        }
+    }
+
     if (!ignoreBudget && intent?.budget) {
         candidates = candidates.filter((product) => matchesChatBudget(product, intent));
         if (!candidates.length) {
@@ -931,16 +1028,17 @@ function selectChatSuggestedProducts(products = [], intent, options = {}) {
     return candidates.slice(0, maxItems);
 }
 
-async function getChatSuggestedProducts(userMessage, messages = []) {
+async function getChatSuggestedProducts(userMessage, messages = [], options = {}) {
     const intent = buildChatIntentFromContext(messages, userMessage);
+    const desiredLimit = Number.parseInt(options.limit, 10) || 6;
 
     if (!shouldChatSuggestProducts(intent) || !canChatDirectlySuggestProducts(intent)) {
         return [];
     }
 
     try {
-        const candidates = await collectChatCandidateProducts(intent, userMessage);
-        return selectChatSuggestedProducts(candidates, intent, { limit: 6 });
+        const candidates = await collectChatCandidateProducts(intent, userMessage, { limit: desiredLimit });
+        return selectChatSuggestedProducts(candidates, intent, { limit: desiredLimit });
     } catch (error) {
         console.error('Chat suggestion lookup error:', error);
         return [];
@@ -950,29 +1048,28 @@ async function getChatSuggestedProducts(userMessage, messages = []) {
 async function buildEnhancedChatSystemPrompt(messages, userMessage) {
     let featuredContext = '';
     const intent = buildChatIntentFromContext(messages, userMessage);
+    const desiredProductLimit = getChatRequestedProductLimit(userMessage, 6);
     const hasProductIntent = shouldChatSuggestProducts(intent);
     const canDirectlySuggest = hasProductIntent && canChatDirectlySuggestProducts(intent);
     const ragContext = await retrieveChatRagContext(userMessage, {
-        productLimit: 6,
+        productLimit: desiredProductLimit,
         knowledgeLimit: 4
     }).catch((error) => {
         console.error('Chat RAG retrieval error:', error);
         return { products: [], knowledge: [] };
     });
     const ragSuggestedProducts = canDirectlySuggest
-        ? selectChatSuggestedProducts(ragContext.products || [], intent, { limit: 6 })
+        ? selectChatSuggestedProducts(ragContext.products || [], intent, { limit: desiredProductLimit })
         : [];
     const searchSuggestedProducts = canDirectlySuggest
-        ? (ragSuggestedProducts.length
-            ? ragSuggestedProducts
-            : await getChatSuggestedProducts(userMessage, messages))
+        ? await getChatSuggestedProducts(userMessage, messages, { limit: desiredProductLimit })
         : [];
     let imageReferenceProducts = [];
 
     if (intent.imageGuided && canDirectlySuggest) {
         const imageCandidateProducts = dedupeChatProducts([
             ...(ragContext.products || []),
-            ...(await collectChatCandidateProducts(intent, userMessage).catch(() => []))
+            ...(await collectChatCandidateProducts(intent, userMessage, { limit: desiredProductLimit }).catch(() => []))
         ]);
 
         imageReferenceProducts = selectChatSuggestedProducts(imageCandidateProducts, intent, {
@@ -984,9 +1081,17 @@ async function buildEnhancedChatSystemPrompt(messages, userMessage) {
     const suggestedProducts = intent.imageGuided
         ? dedupeChatProducts([
             ...imageReferenceProducts,
+            ...ragSuggestedProducts,
             ...searchSuggestedProducts
-        ]).slice(0, 6)
-        : searchSuggestedProducts;
+        ]).slice(0, desiredProductLimit)
+        : selectChatSuggestedProducts(
+            dedupeChatProducts([
+                ...ragSuggestedProducts,
+                ...searchSuggestedProducts
+            ]),
+            intent,
+            { limit: desiredProductLimit }
+        );
     const shouldAskClarifyingQuestion = hasProductIntent && !canDirectlySuggest;
 
     if (!hasProductIntent && !shouldAskClarifyingQuestion) {
@@ -1720,83 +1825,5 @@ exports.adminGetConversations = async (req, res) => {
     } catch (error) {
         console.error('Admin get conversations error:', error);
         return res.status(500).json({ success: false, message: error.message });
-    }
-};
-
-// Override customer chat flow with deterministic stateful commerce logic.
-exports.sendMessage = async (req, res) => {
-    try {
-        const message = normalizeMessage(req.body.message);
-        const uploadedMedia = Array.isArray(req.uploadedChatMedia) ? req.uploadedChatMedia : [];
-
-        if (!message && !uploadedMedia.length) {
-            return res.status(400).json({ success: false, message: 'Tin nháº¯n hoáº·c media khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng' });
-        }
-
-        const userId = req.user ? req.user.id : null;
-        const sessionId = req.sessionID;
-        const guestName = resolveGuestName(req);
-        const customerMessageMetadata = buildChatMessageMetadata({ attachments: uploadedMedia });
-        const customerMessageType = buildChatMessageType(message, { attachments: uploadedMedia });
-
-        const conversation = await Chat.findOrCreateConversation(userId, sessionId, guestName);
-        const previousMessages = await Chat.getMessages(conversation.id, 20);
-        const customerMessage = await Chat.addMessage(
-            conversation.id,
-            'customer',
-            userId,
-            message,
-            {
-                messageType: customerMessageType,
-                metadata: customerMessageMetadata
-            }
-        );
-
-        if (conversation.handling_mode === 'manual') {
-            const hasAdminMessage = previousMessages.some((item) => item.sender_type === 'admin');
-
-            return res.json({
-                success: true,
-                conversationId: conversation.id,
-                customerMessage,
-                manualMode: true,
-                notice: hasAdminMessage
-                    ? null
-                    : 'Tin nháº¯n cá»§a báº¡n Ä‘Ã£ Ä‘Æ°á»£c chuyá»ƒn cho admin. Vui lÃ²ng chá» pháº£n há»“i.'
-            });
-        }
-
-        const aiContext = await buildCustomerAiContext(message, uploadedMedia);
-        const commerceReply = await generateChatCommerceReply({
-            rawUserMessage: message,
-            effectiveUserMessage: aiContext.effectiveMessage,
-            previousMessages,
-            conversationState: conversation.conversation_state || Chat.getDefaultConversationState(),
-            attachments: uploadedMedia
-        });
-
-        await Chat.updateConversationState(conversation.id, commerceReply.conversationState);
-
-        const botMessage = await Chat.addMessage(
-            conversation.id,
-            'bot',
-            null,
-            commerceReply.text,
-            {
-                messageType: buildChatMessageType(commerceReply.text, { products: commerceReply.products }),
-                metadata: buildChatMessageMetadata({ products: commerceReply.products })
-            }
-        );
-
-        return res.json({
-            success: true,
-            conversationId: conversation.id,
-            customerMessage,
-            botMessage,
-            manualMode: false
-        });
-    } catch (error) {
-        console.error('Chat send error:', error);
-        return res.status(500).json({ success: false, message: 'Lá»—i gá»­i tin nháº¯n' });
     }
 };

@@ -89,6 +89,71 @@ class Product {
         return products;
     }
 
+    static getVariantAggregateSelect(productAlias = 'p') {
+        return `
+                   (
+                       SELECT GROUP_CONCAT(DISTINCT NULLIF(TRIM(pv.color), '') ORDER BY pv.color SEPARATOR ', ')
+                       FROM product_variants pv
+                       WHERE pv.product_id = ${productAlias}.id
+                   ) as variant_colors,
+                   (
+                       SELECT GROUP_CONCAT(DISTINCT NULLIF(TRIM(pv.size), '') ORDER BY pv.size SEPARATOR ', ')
+                       FROM product_variants pv
+                       WHERE pv.product_id = ${productAlias}.id
+                   ) as variant_sizes`;
+    }
+
+    static buildSearchFilterClause(searchValue, params = [], productAlias = 'p') {
+        const normalizedSearch = String(searchValue || '').trim();
+        if (!normalizedSearch) {
+            return '';
+        }
+
+        const exactSearchTerm = `%${normalizedSearch}%`;
+        const terms = Array.from(new Set(
+            normalizedSearch
+                .split(/\s+/)
+                .map((term) => term.trim())
+                .filter((term) => term.length >= 2)
+        )).slice(0, 8);
+
+        const productFieldClause = `(
+            ${productAlias}.name LIKE ?
+            OR ${productAlias}.description LIKE ?
+            OR ${productAlias}.sku LIKE ?
+            OR EXISTS (
+                SELECT 1
+                FROM product_variants pv
+                WHERE pv.product_id = ${productAlias}.id
+                  AND (
+                      pv.color LIKE ?
+                      OR pv.size LIKE ?
+                      OR pv.sku LIKE ?
+                  )
+            )
+        )`;
+
+        const groups = [productFieldClause];
+        params.push(
+            exactSearchTerm,
+            exactSearchTerm,
+            exactSearchTerm,
+            exactSearchTerm,
+            exactSearchTerm,
+            exactSearchTerm
+        );
+
+        if (terms.length > 1) {
+            groups.push(`(${terms.map(() => productFieldClause).join(' AND ')})`);
+            terms.forEach((term) => {
+                const likeTerm = `%${term}%`;
+                params.push(likeTerm, likeTerm, likeTerm, likeTerm, likeTerm, likeTerm);
+            });
+        }
+
+        return ` AND (${groups.join(' OR ')})`;
+    }
+
     static groupReviewMediaByReviewId(mediaRows = []) {
         const mediaMap = new Map();
 
@@ -236,7 +301,8 @@ class Product {
                    (SELECT COUNT(*) FROM product_images WHERE product_id = p.id) as image_count,
                    s.type as sale_type,
                    s.value as sale_value,
-                   s.name as sale_name
+                   s.name as sale_name,
+${this.getVariantAggregateSelect('p')}
             FROM products p
             LEFT JOIN categories c ON p.category_id = c.id
             LEFT JOIN sales s ON p.sale_id = s.id AND s.is_active = TRUE
@@ -264,9 +330,7 @@ class Product {
 
         // Tìm kiếm theo từ khóa (an toàn SQL injection)
         if (filters.search) {
-            query += ' AND (p.name LIKE ? OR p.description LIKE ? OR p.sku LIKE ?)';
-            const searchTerm = `%${filters.search}%`;
-            params.push(searchTerm, searchTerm, searchTerm);
+            query += this.buildSearchFilterClause(filters.search, params, 'p');
         }
 
         // Lọc sản phẩm nổi bật
@@ -319,9 +383,7 @@ class Product {
         }
 
         if (filters.search) {
-            query += ' AND (p.name LIKE ? OR p.description LIKE ? OR p.sku LIKE ?)';
-            const searchTerm = `%${filters.search}%`;
-            params.push(searchTerm, searchTerm, searchTerm);
+            query += this.buildSearchFilterClause(filters.search, params, 'p');
         }
 
         if (filters.is_featured) {
@@ -373,7 +435,8 @@ class Product {
                     (SELECT COUNT(*) FROM product_images WHERE product_id = p.id) as image_count,
                     s.type as sale_type,
                     s.value as sale_value,
-                    s.name as sale_name
+                    s.name as sale_name,
+${this.getVariantAggregateSelect('p')}
              FROM products p
              LEFT JOIN categories c ON p.category_id = c.id
              LEFT JOIN sales s ON p.sale_id = s.id AND s.is_active = TRUE
@@ -401,16 +464,7 @@ class Product {
                     s.type as sale_type,
                     s.value as sale_value,
                     s.name as sale_name,
-                    (
-                        SELECT GROUP_CONCAT(DISTINCT NULLIF(TRIM(pv.color), '') ORDER BY pv.color SEPARATOR ', ')
-                        FROM product_variants pv
-                        WHERE pv.product_id = p.id
-                    ) as variant_colors,
-                    (
-                        SELECT GROUP_CONCAT(DISTINCT NULLIF(TRIM(pv.size), '') ORDER BY pv.size SEPARATOR ', ')
-                        FROM product_variants pv
-                        WHERE pv.product_id = p.id
-                    ) as variant_sizes
+${this.getVariantAggregateSelect('p')}
              FROM products p
              LEFT JOIN categories c ON p.category_id = c.id
              LEFT JOIN sales s ON p.sale_id = s.id AND s.is_active = TRUE
@@ -727,32 +781,42 @@ class Product {
      * @returns {Promise<Array>} Mảng sản phẩm khớp với từ khóa
      */
     static async search(searchQuery, limit = 20) {
-        const searchTerm = `%${searchQuery}%`;
-        const exactSearchTerm = `${searchQuery}%`;
         const limitNum = parseInt(limit) || 20;
+        const params = [];
+        const searchClause = this.buildSearchFilterClause(searchQuery, params, 'p');
+        const exactPrefixTerm = `${searchQuery}%`;
+        const looseSearchTerm = `%${searchQuery}%`;
 
         // Query tìm kiếm chính xác
         const query = `
             SELECT p.*,
+                   c.name as category_name,
+                   c.slug as category_slug,
                    (SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = TRUE LIMIT 1) as primary_image,
                    s.type as sale_type,
-                   s.value as sale_value
+                   s.value as sale_value,
+                   s.name as sale_name,
+${this.getVariantAggregateSelect('p')}
             FROM products p
+            LEFT JOIN categories c ON p.category_id = c.id
             LEFT JOIN sales s ON p.sale_id = s.id AND s.is_active = TRUE
                 AND NOW() BETWEEN s.start_date AND s.end_date
             WHERE p.is_active = TRUE
-              AND (p.name LIKE ? OR p.description LIKE ? OR p.sku LIKE ?)
+              ${searchClause}
             ORDER BY CASE
                 WHEN p.name LIKE ? THEN 1
-                WHEN p.description LIKE ? THEN 2
-                ELSE 3
+                WHEN p.name LIKE ? THEN 2
+                WHEN p.description LIKE ? THEN 3
+                ELSE 4
             END, p.sold_count DESC
             LIMIT ${limitNum}
         `;
 
         let [rows] = await pool.query(query, [
-            searchTerm, searchTerm, searchTerm,
-            exactSearchTerm, exactSearchTerm
+            ...params,
+            exactPrefixTerm,
+            looseSearchTerm,
+            looseSearchTerm
         ]);
 
         // Nếu không tìm thấy kết quả, thực hiện fuzzy search
@@ -790,19 +854,47 @@ class Product {
         }
 
         // Tạo điều kiện LIKE cho từng từ
-        const likeConditions = words.map(() => 'p.name LIKE ?').join(' OR ');
-        const likeParams = words.map(word => `%${word}%`);
+        const buildVariantExistsClause = () => `EXISTS (
+            SELECT 1
+            FROM product_variants pv
+            WHERE pv.product_id = p.id
+              AND (
+                  pv.color LIKE ?
+                  OR pv.size LIKE ?
+                  OR pv.sku LIKE ?
+              )
+        )`;
+        const buildFieldClause = () => `(
+            p.name LIKE ?
+            OR p.description LIKE ?
+            OR p.sku LIKE ?
+            OR ${buildVariantExistsClause()}
+        )`;
+        const likeConditions = words.map(() => buildFieldClause()).join(' OR ');
+        const matchScoreClauses = words.map(() => `(CASE WHEN ${buildFieldClause()} THEN 1 ELSE 0 END)`).join(' + ');
+        const params = [];
+        const appendLikeParams = (word) => {
+            const likeTerm = `%${word}%`;
+            params.push(likeTerm, likeTerm, likeTerm, likeTerm, likeTerm, likeTerm);
+        };
+        words.forEach((word) => appendLikeParams(word));
+        words.forEach((word) => appendLikeParams(word));
 
         // Query fuzzy: tìm sản phẩm có chứa ít nhất 1 từ trong query
         const fuzzyQuery = `
             SELECT p.*,
+                   c.name as category_name,
+                   c.slug as category_slug,
                    (SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = TRUE LIMIT 1) as primary_image,
                    s.type as sale_type,
                    s.value as sale_value,
+                   s.name as sale_name,
+${this.getVariantAggregateSelect('p')},
                    (
-                       ${words.map(() => `(CASE WHEN p.name LIKE ? THEN 1 ELSE 0 END)`).join(' + ')}
+                       ${matchScoreClauses}
                    ) as match_score
             FROM products p
+            LEFT JOIN categories c ON p.category_id = c.id
             LEFT JOIN sales s ON p.sale_id = s.id AND s.is_active = TRUE
                 AND NOW() BETWEEN s.start_date AND s.end_date
             WHERE p.is_active = TRUE
@@ -812,18 +904,21 @@ class Product {
         `;
 
         // Params: lặp lại likeParams 2 lần (cho match_score và điều kiện WHERE)
-        const params = [...likeParams, ...likeParams];
-
         let [rows] = await pool.query(fuzzyQuery, params);
 
         // Nếu vẫn không có kết quả, tìm theo SOUNDEX (phát âm tương tự)
         if (rows.length === 0) {
             const soundexQuery = `
                 SELECT p.*,
+                       c.name as category_name,
+                       c.slug as category_slug,
                        (SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = TRUE LIMIT 1) as primary_image,
                        s.type as sale_type,
-                       s.value as sale_value
+                       s.value as sale_value,
+                       s.name as sale_name,
+${this.getVariantAggregateSelect('p')}
                 FROM products p
+                LEFT JOIN categories c ON p.category_id = c.id
                 LEFT JOIN sales s ON p.sale_id = s.id AND s.is_active = TRUE
                     AND NOW() BETWEEN s.start_date AND s.end_date
                 WHERE p.is_active = TRUE

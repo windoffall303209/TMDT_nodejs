@@ -1,19 +1,6 @@
 const pool = require('../config/database');
 
 class Chat {
-    static getDefaultConversationState() {
-        return {
-            intent: 'unknown',
-            gender: null,
-            category: null,
-            color: null,
-            price_range: null,
-            sku: null,
-            allow_recommendation: false,
-            confirmed: false
-        };
-    }
-
     static getLastMessagePreviewSql(conversationAlias = 'cc') {
         return `(
                     SELECT COALESCE(
@@ -60,67 +47,6 @@ class Chat {
         }
 
         return JSON.stringify(metadata);
-    }
-
-    static parseConversationState(rawValue) {
-        const defaultState = this.getDefaultConversationState();
-
-        if (!rawValue) {
-            return defaultState;
-        }
-
-        const parsedValue = typeof rawValue === 'object' ? rawValue : (() => {
-            try {
-                return JSON.parse(rawValue);
-            } catch (error) {
-                return null;
-            }
-        })();
-
-        if (!parsedValue || typeof parsedValue !== 'object') {
-            return defaultState;
-        }
-
-        const priceRange = parsedValue.price_range && typeof parsedValue.price_range === 'object'
-            ? {
-                min: Number.isFinite(Number(parsedValue.price_range.min))
-                    ? Number(parsedValue.price_range.min)
-                    : null,
-                max: Number.isFinite(Number(parsedValue.price_range.max))
-                    ? Number(parsedValue.price_range.max)
-                    : null,
-                label: typeof parsedValue.price_range.label === 'string'
-                    ? parsedValue.price_range.label
-                    : null
-            }
-            : null;
-
-        return {
-            ...defaultState,
-            intent: typeof parsedValue.intent === 'string' ? parsedValue.intent : defaultState.intent,
-            gender: typeof parsedValue.gender === 'string' ? parsedValue.gender : null,
-            category: typeof parsedValue.category === 'string' ? parsedValue.category : null,
-            color: typeof parsedValue.color === 'string' ? parsedValue.color : null,
-            price_range: priceRange,
-            sku: typeof parsedValue.sku === 'string' ? parsedValue.sku : null,
-            allow_recommendation: Boolean(parsedValue.allow_recommendation),
-            confirmed: Boolean(parsedValue.confirmed)
-        };
-    }
-
-    static serializeConversationState(state) {
-        return JSON.stringify(this.parseConversationState(state));
-    }
-
-    static hydrateConversation(conversation) {
-        if (!conversation || typeof conversation !== 'object') {
-            return conversation;
-        }
-
-        return {
-            ...conversation,
-            conversation_state: this.parseConversationState(conversation.conversation_state)
-        };
     }
 
     static hydrateMessage(message) {
@@ -183,7 +109,7 @@ class Chat {
             scope.params
         );
 
-        return this.hydrateConversation(rows[0] || null);
+        return rows[0] || null;
     }
 
     static async findOrCreateConversation(userId, sessionId, guestName = 'Khach') {
@@ -227,7 +153,7 @@ class Chat {
             [conversationId]
         );
 
-        return this.hydrateConversation(rows[0] || null);
+        return rows[0] || null;
     }
 
     static async getMessages(conversationId, limit = 50) {
@@ -335,7 +261,7 @@ class Chat {
         const [countResult] = await pool.execute('SELECT COUNT(*) AS total FROM chat_conversations');
 
         return {
-            conversations: rows.map((row) => this.hydrateConversation(row)),
+            conversations: rows,
             total: countResult[0].total
         };
     }
@@ -373,15 +299,6 @@ class Chat {
         await pool.execute(
             'UPDATE chat_conversations SET handling_mode = ?, updated_at = NOW() WHERE id = ?',
             [mode, conversationId]
-        );
-
-        return this.getConversationById(conversationId);
-    }
-
-    static async updateConversationState(conversationId, conversationState) {
-        await pool.execute(
-            'UPDATE chat_conversations SET conversation_state = ?, updated_at = NOW() WHERE id = ?',
-            [this.serializeConversationState(conversationState), conversationId]
         );
 
         return this.getConversationById(conversationId);
