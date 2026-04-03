@@ -16,8 +16,10 @@ jest.mock('../models/User', () => ({
 
 jest.mock('../models/Category', () => ({
     findAllForAdmin: jest.fn(),
+    findRootCategories: jest.fn(),
     findBySlugAny: jest.fn(),
     findById: jest.fn(),
+    findByIdAny: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
     getUsageStats: jest.fn(),
@@ -88,14 +90,15 @@ describe('adminController category management', () => {
     });
 
     it('renders the categories page with aggregated stats', async () => {
-        const allCategories = [
-            { id: 1, name: 'Nu', parent_id: null, product_count: 5, child_count: 1 },
+        const rootCategories = [
+            { id: 1, name: 'Nu', parent_id: null, product_count: 5, child_count: 1 }
+        ];
+        const filteredCategories = [
             { id: 2, name: 'Ao khoac nu', parent_id: 1, product_count: 2, child_count: 0 }
         ];
 
-        Category.findAllForAdmin
-            .mockResolvedValueOnce(allCategories)
-            .mockResolvedValueOnce([allCategories[1]]);
+        Category.findAllForAdmin.mockResolvedValue(filteredCategories);
+        Category.findRootCategories.mockResolvedValue(rootCategories);
 
         const req = {
             query: { search: 'ao khoac' },
@@ -106,13 +109,13 @@ describe('adminController category management', () => {
         await adminController.getCategories(req, res);
 
         expect(res.render).toHaveBeenCalledWith('admin/categories', expect.objectContaining({
-            categories: [allCategories[1]],
-            parentCategories: allCategories,
+            categories: filteredCategories,
+            parentCategories: rootCategories,
             categoryStats: {
-                total: 2,
-                root: 1,
+                total: 1,
+                root: 0,
                 children: 1,
-                assignedProducts: 7
+                assignedProducts: 2
             },
             searchQuery: 'ao khoac',
             currentPage: 'categories'
@@ -125,9 +128,9 @@ describe('adminController category management', () => {
 
         const req = {
             body: {
-                name: 'Áo Khoác Nữ',
+                name: 'Ao Khoac Nu',
                 slug: '',
-                description: 'Áo khoác cho mùa lạnh',
+                description: 'Ao khoac cho mua lanh',
                 parent_id: '',
                 image_url: '',
                 display_order: '4'
@@ -138,16 +141,16 @@ describe('adminController category management', () => {
         await adminController.createCategory(req, res);
 
         expect(Category.create).toHaveBeenCalledWith(expect.objectContaining({
-            name: 'Áo Khoác Nữ',
+            name: 'Ao Khoac Nu',
             slug: 'ao-khoac-nu',
             parent_id: null,
             display_order: 4
         }));
-        expect(res.redirect).toHaveBeenCalledWith('/admin/categories?success=Da+them+danh+muc+thanh+cong');
+        expect(res.redirect).toHaveBeenCalledWith('/admin/categories');
     });
 
     it('rejects updating a category to use itself as the parent', async () => {
-        const existingCategory = {
+        Category.findByIdAny.mockResolvedValue({
             id: 5,
             name: 'Ao khoac',
             slug: 'ao-khoac',
@@ -155,14 +158,8 @@ describe('adminController category management', () => {
             parent_id: null,
             image_url: '',
             display_order: 0
-        };
-
-        Category.findById.mockImplementation(async (id) => {
-            if (Number(id) === 5) {
-                return existingCategory;
-            }
-            return null;
         });
+        Category.createsCircularReference.mockResolvedValue(true);
 
         const req = {
             params: { id: '5' },
@@ -180,13 +177,12 @@ describe('adminController category management', () => {
         expect(res.status).toHaveBeenCalledWith(400);
         expect(res.json).toHaveBeenCalledWith({
             success: false,
-            message: 'Khong the chon chinh danh muc nay lam danh muc cha'
+            message: 'Không thể tạo vòng lặp danh mục cha-con'
         });
         expect(Category.update).not.toHaveBeenCalled();
     });
 
     it('rejects deleting categories that still contain products', async () => {
-        Category.findById.mockResolvedValue({ id: 8, name: 'Dam' });
         Category.getUsageStats.mockResolvedValue({ product_count: 3, child_count: 0 });
 
         const req = { params: { id: '8' } };
@@ -197,7 +193,7 @@ describe('adminController category management', () => {
         expect(res.status).toHaveBeenCalledWith(400);
         expect(res.json).toHaveBeenCalledWith({
             success: false,
-            message: 'Khong the xoa danh muc dang co san pham'
+            message: 'Không thể xóa: danh mục đang có 3 sản phẩm và 0 danh mục con'
         });
         expect(Category.delete).not.toHaveBeenCalled();
     });
