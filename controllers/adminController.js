@@ -884,10 +884,10 @@ exports.deleteAllProducts = async (req, res) => {
             deletedCount: result.deletedProducts,
             blockedCount: result.blockedProducts,
             message: result.totalProducts === 0
-                ? 'Khong co san pham nao trong database de xoa.'
+                ? 'Không có sản phẩm nào trong database để xóa.'
                 : result.blockedProducts > 0
-                    ? `Da xoa vinh vien ${result.deletedProducts} san pham. Con ${result.blockedProducts} san pham khong the xoa vi da nam trong lich su don hang.`
-                    : `Da xoa vinh vien ${result.deletedProducts} san pham khoi database.`
+                    ? `Đã xóa vĩnh viễn ${result.deletedProducts} sản phẩm. Còn ${result.blockedProducts} sản phẩm không thể xóa vì đã nằm trong lịch sử đơn hàng.`
+                    : `Đã xóa vĩnh viễn ${result.deletedProducts} sản phẩm khỏi database.`
         });
     } catch (error) {
         res.status(400).json({ success: false, message: error.message });

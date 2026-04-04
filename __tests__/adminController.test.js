@@ -315,7 +315,7 @@ describe('adminController bulk product import', () => {
             success: true,
             deletedCount: 14,
             blockedCount: 4,
-            message: 'Da xoa vinh vien 14 san pham. Con 4 san pham khong the xoa vi da nam trong lich su don hang.'
+            message: 'Đã xóa vĩnh viễn 14 sản phẩm. Còn 4 sản phẩm không thể xóa vì đã nằm trong lịch sử đơn hàng.'
         });
     });
 });

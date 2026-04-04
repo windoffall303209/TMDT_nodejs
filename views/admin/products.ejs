@@ -58,7 +58,7 @@
             </form>
         </div>
 
-        <div class="admin-section admin-section--collapsible is-open">
+        <div class="admin-section admin-section--collapsible<%= bulkImportResult ? ' is-open' : '' %>">
             <h3 class="admin-section__title admin-section__title--toggle" data-admin-toggle="section">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -195,7 +195,7 @@
                     data-product-action="delete-all-products"
                     data-total-product-count="<%= totalProductCount || 0 %>"
                 >
-                    X&oacute;a v&#297;nh vi&#7877;n t&#7845;t c&#7843; s&#7843;n ph&#7849;m
+                    Xóa vĩnh viễn tất cả sản phẩm
                 </button>
             </div>
         </div>
@@ -545,6 +545,18 @@
         <div class="confirm-modal__text">
             <h3 id="confirmTitle">Xóa Sản Phẩm</h3>
             <p id="confirmMessage">Bạn có chắc muốn xóa sản phẩm này? Hành động không thể hoàn tác.</p>
+        </div>
+        <div id="confirmTypingGroup" class="confirm-modal__typing" hidden>
+            <label id="confirmTypingLabel" for="confirmTypingInput" class="confirm-modal__typing-label">Nhập "Xóa tất cả" để xác nhận</label>
+            <input
+                id="confirmTypingInput"
+                type="text"
+                class="confirm-modal__typing-input"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="Xóa tất cả"
+            >
+            <small id="confirmTypingHint" class="confirm-modal__typing-hint"></small>
         </div>
         <div class="confirm-modal__buttons">
             <button id="confirmNo" class="admin-btn admin-btn--ghost">Hủy</button>
