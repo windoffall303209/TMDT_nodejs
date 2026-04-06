@@ -1087,19 +1087,19 @@ function initAdminProducts() {
     function generateSku() {
         if (!autoSkuCheckbox?.checked) return;
 
-        // Láº¥y tÃªn danh má»¥c Ä‘Ã£ chá»n
+        // Lấy tên danh mục đã chọn
         const selectedOption = categorySelect?.options[categorySelect.selectedIndex];
         const categoryName = selectedOption?.text || '';
 
-        // Táº¡o viáº¿t táº¯t tá»« tÃªn danh má»¥c (láº¥y 3 chá»¯ cÃ¡i Ä‘áº§u, chuyá»ƒn thÃ nh uppercase khÃ´ng dáº¥u)
+        // Tạo viết tắt từ tên danh mục (lấy 3 chữ cái đầu, chuyển thành uppercase không dấu)
         const abbr = categoryName
-            .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // bá» dáº¥u
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // bỏ dấu
             .replace(/[^a-zA-Z\s]/g, '')
             .trim()
             .substring(0, 3)
             .toUpperCase() || 'PRD';
 
-        // Random 4 kÃ½ tá»± alphanumeric
+        // Random 4 ký tự alphanumeric
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         let randomPart = '';
         for (let i = 0; i < 4; i++) {
@@ -1123,7 +1123,7 @@ function initAdminProducts() {
             }
         });
 
-        // Khi thay Ä‘á»•i danh má»¥c => cáº­p nháº­t láº¡i SKU náº¿u Ä‘ang á»Ÿ cháº¿ Ä‘á»™ tá»± Ä‘á»™ng
+        // Khi thay đổi danh mục => cập nhật lại SKU nếu đang ở chế độ tự động
         categorySelect?.addEventListener('change', generateSku);
     }
 

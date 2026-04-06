@@ -1,15 +1,15 @@
 ﻿/**
  * =============================================================================
- * ADMIN CONTROLLER - Äiá»u khiá»ƒn trang quáº£n trá»‹
+ * ADMIN CONTROLLER - Điều khiển trang quản trị
  * =============================================================================
- * File nÃ y chá»©a cÃ¡c hÃ m xá»­ lÃ½ logic cho trang Admin:
- * - Dashboard: Thá»‘ng kÃª tá»•ng quan
- * - Quáº£n lÃ½ sáº£n pháº©m: CRUD sáº£n pháº©m, quáº£n lÃ½ áº£nh
- * - Quáº£n lÃ½ Ä‘Æ¡n hÃ ng: Xem, cáº­p nháº­t tráº¡ng thÃ¡i
- * - Quáº£n lÃ½ ngÆ°á»i dÃ¹ng: Xem, khÃ³a/má»Ÿ khÃ³a tÃ i khoáº£n
- * - Quáº£n lÃ½ banner: CRUD banner quáº£ng cÃ¡o
- * - Quáº£n lÃ½ khuyáº¿n mÃ£i: CRUD chÆ°Æ¡ng trÃ¬nh sale
- * - Email marketing: Gá»­i email hÃ ng loáº¡t
+ * File này chứa các hàm xử lý logic cho trang Admin:
+ * - Dashboard: Thống kê tổng quan
+ * - Quản lý sản phẩm: CRUD sản phẩm, quản lý ảnh
+ * - Quản lý đơn hàng: Xem, cập nhật trạng thái
+ * - Quản lý người dùng: Xem, khóa/mở khóa tài khoản
+ * - Quản lý banner: CRUD banner quảng cáo
+ * - Quản lý khuyến mãi: CRUD chương trình sale
+ * - Email marketing: Gửi email hàng loạt
  * =============================================================================
  */
 
@@ -33,9 +33,13 @@ const upload = require('../middleware/upload');
 const { scheduleProductVisualEmbeddingSync } = require('../services/productVisualEmbeddingService');
 const ProductImageEmbedding = require('../models/ProductImageEmbedding');
 
+const ADMIN_PRODUCT_SELECTION_LIMIT = 20000;
+
 function parseSelectedProductIds(body) {
     const rawValues = body.product_ids ?? body['product_ids[]'] ?? [];
-    const normalized = Array.isArray(rawValues) ? rawValues : [rawValues];
+    const normalized = Array.isArray(rawValues)
+        ? rawValues
+        : (rawValues && typeof rawValues === 'object' ? Object.values(rawValues) : [rawValues]);
 
     return [...new Set(
         normalized
@@ -107,17 +111,17 @@ function escapeHtml(value) {
 
 function formatCurrencyVnd(value) {
     const amount = Number(value) || 0;
-    return `${amount.toLocaleString('vi-VN')}Ä‘`;
+    return `${amount.toLocaleString('vi-VN')}đ`;
 }
 
 function formatDateTimeVi(value) {
     if (!value) {
-        return 'KhÃ´ng giá»›i háº¡n';
+        return 'Không giới hạn';
     }
 
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) {
-        return 'KhÃ´ng giá»›i háº¡n';
+        return 'Không giới hạn';
     }
 
     return date.toLocaleString('vi-VN');
@@ -228,11 +232,11 @@ async function getAnnouncementRecipients() {
         }
 
         seenEmails.add(email);
-        const fallbackName = email.split('@')[0] || 'báº¡n';
+        const fallbackName = email.split('@')[0] || 'bạn';
 
         list.push({
             email,
-            full_name: String(subscriber?.user_name || fallbackName).trim() || 'báº¡n'
+            full_name: String(subscriber?.user_name || fallbackName).trim() || 'bạn'
         });
 
         return list;
@@ -242,48 +246,48 @@ async function getAnnouncementRecipients() {
 function buildVoucherAnnouncementCampaign(voucher) {
     const baseUrl = String(process.env.BASE_URL || 'http://localhost:3000').replace(/\/$/, '');
     const valueText = voucher.type === 'percentage'
-        ? `Giáº£m ${voucher.value}%${voucher.max_discount_amount ? `, tá»‘i Ä‘a ${formatCurrencyVnd(voucher.max_discount_amount)}` : ''}`
-        : `Giáº£m ${formatCurrencyVnd(voucher.value)}`;
+        ? `Giảm ${voucher.value}%${voucher.max_discount_amount ? `, tối đa ${formatCurrencyVnd(voucher.max_discount_amount)}` : ''}`
+        : `Giảm ${formatCurrencyVnd(voucher.value)}`;
     const minOrderText = Number(voucher.min_order_amount || 0) > 0
-        ? `ÄÆ¡n tá»‘i thiá»ƒu ${formatCurrencyVnd(voucher.min_order_amount)}`
-        : 'KhÃ´ng yÃªu cáº§u giÃ¡ trá»‹ Ä‘Æ¡n tá»‘i thiá»ƒu';
+        ? `Đơn tối thiểu ${formatCurrencyVnd(voucher.min_order_amount)}`
+        : 'Không yêu cầu giá trị đơn tối thiểu';
     const scopeText = voucher.applicable_product_count > 0
-        ? `Ãp dá»¥ng cho ${voucher.applicable_product_count} sáº£n pháº©m Ä‘Æ°á»£c chá»n`
-        : 'Ãp dá»¥ng cho toÃ n bá»™ sáº£n pháº©m Ä‘á»§ Ä‘iá»u kiá»‡n';
+        ? `Áp dụng cho ${voucher.applicable_product_count} sản phẩm được chọn`
+        : 'Áp dụng cho toàn bộ sản phẩm đủ điều kiện';
     const descriptionHtml = voucher.description
         ? `<p style="margin:0 0 18px;color:#65594d;line-height:1.7;">${escapeHtml(voucher.description)}</p>`
         : '';
 
     return {
-        subject: `Voucher má»›i tá»« WIND OF FALL: ${voucher.code}`,
+        subject: `Voucher mới từ WIND OF FALL: ${voucher.code}`,
         content: `
             <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; padding: 24px; color: #211d18;">
                 <div style="text-align:center; margin-bottom: 24px;">
                     <h1 style="margin:0; font-size:28px; letter-spacing:0.04em;">WIND OF FALL</h1>
-                    <p style="margin:8px 0 0; color:#7c6f60;">ThÃ´ng bÃ¡o Æ°u Ä‘Ã£i má»›i dÃ nh cho {{name}}</p>
+                    <p style="margin:8px 0 0; color:#7c6f60;">Thông báo ưu đãi mới dành cho {{name}}</p>
                 </div>
                 <div style="background: linear-gradient(135deg, #f8e3a2, #f4c95d); border-radius: 24px; padding: 28px; margin-bottom: 20px;">
-                    <p style="margin:0 0 10px; font-size:13px; letter-spacing:0.14em; text-transform:uppercase; color:#7b5d1a;">Voucher má»›i</p>
+                    <p style="margin:0 0 10px; font-size:13px; letter-spacing:0.14em; text-transform:uppercase; color:#7b5d1a;">Voucher mới</p>
                     <h2 style="margin:0 0 14px; font-size:30px; color:#1f1a13;">${escapeHtml(voucher.code)}</h2>
                     <p style="margin:0; font-size:18px; font-weight:700; color:#402d05;">${escapeHtml(valueText)}</p>
                 </div>
                 ${descriptionHtml}
                 <table style="width:100%; border-collapse:collapse; margin-bottom: 24px;">
                     <tr>
-                        <td style="padding:10px 12px; border:1px solid #ead9b5; color:#7c6f60;">Pháº¡m vi</td>
+                        <td style="padding:10px 12px; border:1px solid #ead9b5; color:#7c6f60;">Phạm vi</td>
                         <td style="padding:10px 12px; border:1px solid #ead9b5; font-weight:600;">${escapeHtml(scopeText)}</td>
                     </tr>
                     <tr>
-                        <td style="padding:10px 12px; border:1px solid #ead9b5; color:#7c6f60;">Äiá»u kiá»‡n</td>
+                        <td style="padding:10px 12px; border:1px solid #ead9b5; color:#7c6f60;">Điều kiện</td>
                         <td style="padding:10px 12px; border:1px solid #ead9b5; font-weight:600;">${escapeHtml(minOrderText)}</td>
                     </tr>
                     <tr>
-                        <td style="padding:10px 12px; border:1px solid #ead9b5; color:#7c6f60;">Thá»i gian Ã¡p dá»¥ng</td>
+                        <td style="padding:10px 12px; border:1px solid #ead9b5; color:#7c6f60;">Thời gian áp dụng</td>
                         <td style="padding:10px 12px; border:1px solid #ead9b5; font-weight:600;">${escapeHtml(formatDateTimeVi(voucher.start_date))} - ${escapeHtml(formatDateTimeVi(voucher.end_date))}</td>
                     </tr>
                 </table>
                 <div style="text-align:center;">
-                    <a href="${baseUrl}" style="display:inline-block; padding:14px 28px; border-radius:999px; background:#17120c; color:#fff; text-decoration:none; font-weight:700;">Mua sáº¯m ngay</a>
+                    <a href="${baseUrl}" style="display:inline-block; padding:14px 28px; border-radius:999px; background:#17120c; color:#fff; text-decoration:none; font-weight:700;">Mua sắm ngay</a>
                 </div>
             </div>
         `
@@ -293,41 +297,41 @@ function buildVoucherAnnouncementCampaign(voucher) {
 function buildSaleAnnouncementCampaign(sale) {
     const baseUrl = String(process.env.BASE_URL || 'http://localhost:3000').replace(/\/$/, '');
     const valueText = sale.type === 'percentage'
-        ? `Giáº£m ${sale.value}%`
-        : `Giáº£m ${formatCurrencyVnd(sale.value)}`;
+        ? `Giảm ${sale.value}%`
+        : `Giảm ${formatCurrencyVnd(sale.value)}`;
     const scopeText = sale.assigned_product_count > 0
-        ? `Äang Ã¡p dá»¥ng cho ${sale.assigned_product_count} sáº£n pháº©m`
-        : 'ChÆ°a gáº¯n sáº£n pháº©m cá»¥ thá»ƒ';
+        ? `Đang áp dụng cho ${sale.assigned_product_count} sản phẩm`
+        : 'Chưa gắn sản phẩm cụ thể';
     const descriptionHtml = sale.description
         ? `<p style="margin:0 0 18px;color:#65594d;line-height:1.7;">${escapeHtml(sale.description)}</p>`
         : '';
 
     return {
-        subject: `Khuyáº¿n mÃ£i má»›i tá»« WIND OF FALL: ${sale.name}`,
+        subject: `Khuyến mãi mới từ WIND OF FALL: ${sale.name}`,
         content: `
             <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; padding: 24px; color: #211d18;">
                 <div style="text-align:center; margin-bottom: 24px;">
                     <h1 style="margin:0; font-size:28px; letter-spacing:0.04em;">WIND OF FALL</h1>
-                    <p style="margin:8px 0 0; color:#7c6f60;">Æ¯u Ä‘Ã£i má»›i dÃ nh cho {{name}}</p>
+                    <p style="margin:8px 0 0; color:#7c6f60;">Ưu đãi mới dành cho {{name}}</p>
                 </div>
                 <div style="background: linear-gradient(135deg, #fde3b7, #f8b35b); border-radius: 24px; padding: 28px; margin-bottom: 20px;">
-                    <p style="margin:0 0 10px; font-size:13px; letter-spacing:0.14em; text-transform:uppercase; color:#9a5412;">ChÆ°Æ¡ng trÃ¬nh khuyáº¿n mÃ£i</p>
+                    <p style="margin:0 0 10px; font-size:13px; letter-spacing:0.14em; text-transform:uppercase; color:#9a5412;">Chương trình khuyến mãi</p>
                     <h2 style="margin:0 0 14px; font-size:30px; color:#1f1a13;">${escapeHtml(sale.name)}</h2>
                     <p style="margin:0; font-size:18px; font-weight:700; color:#6f2c12;">${escapeHtml(valueText)}</p>
                 </div>
                 ${descriptionHtml}
                 <table style="width:100%; border-collapse:collapse; margin-bottom: 24px;">
                     <tr>
-                        <td style="padding:10px 12px; border:1px solid #ead9b5; color:#7c6f60;">Pháº¡m vi</td>
+                        <td style="padding:10px 12px; border:1px solid #ead9b5; color:#7c6f60;">Phạm vi</td>
                         <td style="padding:10px 12px; border:1px solid #ead9b5; font-weight:600;">${escapeHtml(scopeText)}</td>
                     </tr>
                     <tr>
-                        <td style="padding:10px 12px; border:1px solid #ead9b5; color:#7c6f60;">Thá»i gian Ã¡p dá»¥ng</td>
+                        <td style="padding:10px 12px; border:1px solid #ead9b5; color:#7c6f60;">Thời gian áp dụng</td>
                         <td style="padding:10px 12px; border:1px solid #ead9b5; font-weight:600;">${escapeHtml(formatDateTimeVi(sale.start_date))} - ${escapeHtml(formatDateTimeVi(sale.end_date))}</td>
                     </tr>
                 </table>
                 <div style="text-align:center;">
-                    <a href="${baseUrl}" style="display:inline-block; padding:14px 28px; border-radius:999px; background:#17120c; color:#fff; text-decoration:none; font-weight:700;">KhÃ¡m phÃ¡ bá»™ sÆ°u táº­p</a>
+                    <a href="${baseUrl}" style="display:inline-block; padding:14px 28px; border-radius:999px; background:#17120c; color:#fff; text-decoration:none; font-weight:700;">Khám phá bộ sưu tập</a>
                 </div>
             </div>
         `
@@ -397,19 +401,19 @@ async function getDashboardAnalytics() {
 }
 
 // =============================================================================
-// DASHBOARD - Trang tá»•ng quan
+// DASHBOARD - Trang tổng quan
 // =============================================================================
 
 /**
- * Hiá»ƒn thá»‹ trang Dashboard (Tá»•ng quan)
+ * Hiển thị trang Dashboard (Tổng quan)
  *
- * @description Láº¥y cÃ¡c thá»‘ng kÃª tá»•ng quan vá» Ä‘Æ¡n hÃ ng, doanh thu
- *              vÃ  danh sÃ¡ch Ä‘Æ¡n hÃ ng gáº§n Ä‘Ã¢y Ä‘á»ƒ hiá»ƒn thá»‹ trÃªn dashboard
+ * @description Lấy các thống kê tổng quan về đơn hàng, doanh thu
+ *              và danh sách đơn hàng gần đây để hiển thị trên dashboard
  *
- * @param {Object} req - Request object tá»« Express
- * @param {Object} res - Response object tá»« Express
+ * @param {Object} req - Request object từ Express
+ * @param {Object} res - Response object từ Express
  *
- * @returns {void} Render trang admin/dashboard vá»›i dá»¯ liá»‡u thá»‘ng kÃª
+ * @returns {void} Render trang admin/dashboard với dữ liệu thống kê
  */
 exports.getDashboard = async (req, res) => {
     try {
@@ -430,24 +434,24 @@ exports.getDashboard = async (req, res) => {
             }
         };
 
-        // Khá»Ÿi táº¡o object thá»‘ng kÃª vá»›i giÃ¡ trá»‹ máº·c Ä‘á»‹nh
+        // Khởi tạo object thống kê với giá trị mặc định
         let stats = {
-            total_orders: 0,        // Tá»•ng sá»‘ Ä‘Æ¡n hÃ ng
-            pending_orders: 0,      // ÄÆ¡n hÃ ng chá» xá»­ lÃ½
-            delivered_orders: 0,    // ÄÆ¡n hÃ ng Ä‘Ã£ giao
-            cancelled_orders: 0,    // ÄÆ¡n hÃ ng Ä‘Ã£ há»§y
-            total_revenue: 0,       // Tá»•ng doanh thu
-            today_revenue: 0,       // Doanh thu hÃ´m nay
-            month_revenue: 0        // Doanh thu thÃ¡ng nÃ y
+            total_orders: 0,        // Tổng số đơn hàng
+            pending_orders: 0,      // Đơn hàng chờ xử lý
+            delivered_orders: 0,    // Đơn hàng đã giao
+            cancelled_orders: 0,    // Đơn hàng đã hủy
+            total_revenue: 0,       // Tổng doanh thu
+            today_revenue: 0,       // Doanh thu hôm nay
+            month_revenue: 0        // Doanh thu tháng này
         };
-        let recentOrders = [];      // Danh sÃ¡ch Ä‘Æ¡n hÃ ng gáº§n Ä‘Ã¢y
+        let recentOrders = [];      // Danh sách đơn hàng gần đây
         stats.total_users = 0;
         stats.total_products = 0;
         stats.completed_orders = 0;
         stats.processing_orders = 0;
 
         try {
-            // Láº¥y thá»‘ng kÃª tá»« database
+            // Lấy thống kê từ database
             const [orderStats, dashboardAnalytics, recentOrdersData] = await Promise.all([
                 Order.getStatistics(),
                 getDashboardAnalytics(),
@@ -475,10 +479,10 @@ exports.getDashboard = async (req, res) => {
             };
         } catch (err) {
             console.error('Dashboard data error:', err);
-            // Sá»­ dá»¥ng giÃ¡ trá»‹ máº·c Ä‘á»‹nh náº¿u lá»—i
+            // Sử dụng giá trị mặc định nếu lỗi
         }
 
-        // Render trang dashboard vá»›i dá»¯ liá»‡u
+        // Render trang dashboard với dữ liệu
         res.render('admin/dashboard', {
             stats,
             recentOrders,
@@ -488,13 +492,13 @@ exports.getDashboard = async (req, res) => {
             currentPage: 'dashboard'
         });
     } catch (error) {
-        console.error('Lá»—i trang quáº£n trá»‹:', error);
-        res.status(500).render('error', { message: 'Lá»—i táº£i dashboard: ' + error.message, user: req.user });
+        console.error('Lỗi trang quản trị:', error);
+        res.status(500).render('error', { message: 'Lỗi tải dashboard: ' + error.message, user: req.user });
     }
 };
 
 // =============================================================================
-// QUáº¢N LÃ DANH Má»¤C - Categories Management
+// QUẢN LÝ DANH MỤC - Categories Management
 // =============================================================================
 
 exports.getCategories = async (req, res) => {
@@ -523,7 +527,7 @@ exports.getCategories = async (req, res) => {
             currentPage: 'categories'
         });
     } catch (error) {
-        res.status(500).render('error', { message: 'Lá»—i táº£i danh má»¥c: ' + error.message, user: req.user });
+        res.status(500).render('error', { message: 'Lỗi tải danh mục: ' + error.message, user: req.user });
     }
 };
 
@@ -553,11 +557,11 @@ exports.updateCategory = async (req, res) => {
         const { id } = req.params;
         const existing = await Category.findByIdAny(id);
         if (!existing) {
-            return res.status(404).json({ success: false, message: 'Danh má»¥c khÃ´ng tá»“n táº¡i' });
+            return res.status(404).json({ success: false, message: 'Danh mục không tồn tại' });
         }
         const { name, slug, description, parent_id, image_url, display_order } = req.body;
         if (parent_id && await Category.createsCircularReference(id, parent_id)) {
-            return res.status(400).json({ success: false, message: 'KhÃ´ng thá»ƒ táº¡o vÃ²ng láº·p danh má»¥c cha-con' });
+            return res.status(400).json({ success: false, message: 'Không thể tạo vòng lặp danh mục cha-con' });
         }
         await Category.update(id, {
             name: name || existing.name,
@@ -567,7 +571,7 @@ exports.updateCategory = async (req, res) => {
             image_url: image_url !== undefined ? (image_url || null) : existing.image_url,
             display_order: display_order !== undefined ? (parseInt(display_order) || 0) : existing.display_order
         });
-        res.json({ success: true, message: 'Cáº­p nháº­t danh má»¥c thÃ nh cÃ´ng' });
+        res.json({ success: true, message: 'Cập nhật danh mục thành công' });
     } catch (error) {
         res.status(400).json({ success: false, message: error.message });
     }
@@ -580,30 +584,30 @@ exports.deleteCategory = async (req, res) => {
         if (stats.product_count > 0 || stats.child_count > 0) {
             return res.status(400).json({
                 success: false,
-                message: `KhÃ´ng thá»ƒ xÃ³a: danh má»¥c Ä‘ang cÃ³ ${stats.product_count} sáº£n pháº©m vÃ  ${stats.child_count} danh má»¥c con`
+                message: `Không thể xóa: danh mục đang có ${stats.product_count} sản phẩm và ${stats.child_count} danh mục con`
             });
         }
         await Category.delete(id);
-        res.json({ success: true, message: 'ÄÃ£ xÃ³a danh má»¥c' });
+        res.json({ success: true, message: 'Đã xóa danh mục' });
     } catch (error) {
         res.status(400).json({ success: false, message: error.message });
     }
 };
 
 // =============================================================================
-// QUáº¢N LÃ Sáº¢N PHáº¨M - Products Management
+// QUẢN LÝ SẢN PHẨM - Products Management
 // =============================================================================
 
 /**
- * Hiá»ƒn thá»‹ danh sÃ¡ch sáº£n pháº©m
+ * Hiển thị danh sách sản phẩm
  *
- * @description Láº¥y danh sÃ¡ch táº¥t cáº£ sáº£n pháº©m vÃ  danh má»¥c
- *              Ä‘á»ƒ hiá»ƒn thá»‹ trÃªn trang quáº£n lÃ½ sáº£n pháº©m
+ * @description Lấy danh sách tất cả sản phẩm và danh mục
+ *              để hiển thị trên trang quản lý sản phẩm
  *
- * @param {Object} req - Request object tá»« Express
- * @param {Object} res - Response object tá»« Express
+ * @param {Object} req - Request object từ Express
+ * @param {Object} res - Response object từ Express
  *
- * @returns {void} Render trang admin/products vá»›i danh sÃ¡ch sáº£n pháº©m
+ * @returns {void} Render trang admin/products với danh sách sản phẩm
  */
 exports.getProducts = async (req, res) => {
     try {
@@ -650,7 +654,7 @@ exports.getProducts = async (req, res) => {
             totalProductCount
         });
     } catch (error) {
-        res.status(500).render('error', { message: 'Lá»—i táº£i sáº£n pháº©m: ' + error.message, user: req.user });
+        res.status(500).render('error', { message: 'Lỗi tải sản phẩm: ' + error.message, user: req.user });
     }
 };
 
@@ -691,7 +695,7 @@ exports.importProducts = async (req, res) => {
                 createdCount: 0,
                 failedCount: 0,
                 createdProducts: [],
-                errors: [{ message: 'Vui lÃ²ng táº£i lÃªn file Excel (.xlsx hoáº·c .xls).' }]
+                errors: [{ message: 'Vui lòng tải lên file Excel (.xlsx hoặc .xls).' }]
             };
             return res.redirect('/admin/products');
         }
@@ -724,26 +728,26 @@ exports.importProducts = async (req, res) => {
 };
 
 /**
- * Táº¡o sáº£n pháº©m má»›i
+ * Tạo sản phẩm mới
  *
- * @description Nháº­n dá»¯ liá»‡u tá»« form táº¡o sáº£n pháº©m, tá»± Ä‘á»™ng táº¡o slug náº¿u khÃ´ng cÃ³,
- *              lÆ°u sáº£n pháº©m vÃ o database vÃ  xá»­ lÃ½ upload áº£nh
+ * @description Nhận dữ liệu từ form tạo sản phẩm, tự động tạo slug nếu không có,
+ *              lưu sản phẩm vào database và xử lý upload ảnh
  *
- * @param {Object} req - Request object tá»« Express
- * @param {Object} req.body - Dá»¯ liá»‡u sáº£n pháº©m tá»« form
- * @param {number} req.body.category_id - ID danh má»¥c
- * @param {string} req.body.name - TÃªn sáº£n pháº©m
- * @param {string} [req.body.slug] - Slug URL (tá»± Ä‘á»™ng táº¡o náº¿u khÃ´ng cÃ³)
- * @param {string} req.body.description - MÃ´ táº£ sáº£n pháº©m
- * @param {number} req.body.price - GiÃ¡ sáº£n pháº©m
- * @param {number} req.body.stock_quantity - Sá»‘ lÆ°á»£ng tá»“n kho
- * @param {string} req.body.sku - MÃ£ SKU
- * @param {number} [req.body.sale_id] - ID chÆ°Æ¡ng trÃ¬nh khuyáº¿n mÃ£i
- * @param {string} [req.body.is_featured] - Sáº£n pháº©m ná»•i báº­t ('on' = true)
- * @param {Array} [req.files] - Danh sÃ¡ch file áº£nh upload
- * @param {Object} res - Response object tá»« Express
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.body - Dữ liệu sản phẩm từ form
+ * @param {number} req.body.category_id - ID danh mục
+ * @param {string} req.body.name - Tên sản phẩm
+ * @param {string} [req.body.slug] - Slug URL (tự động tạo nếu không có)
+ * @param {string} req.body.description - Mô tả sản phẩm
+ * @param {number} req.body.price - Giá sản phẩm
+ * @param {number} req.body.stock_quantity - Số lượng tồn kho
+ * @param {string} req.body.sku - Mã SKU
+ * @param {number} [req.body.sale_id] - ID chương trình khuyến mãi
+ * @param {string} [req.body.is_featured] - Sản phẩm nổi bật ('on' = true)
+ * @param {Array} [req.files] - Danh sách file ảnh upload
+ * @param {Object} res - Response object từ Express
  *
- * @returns {Redirect} Redirect vá» trang danh sÃ¡ch sáº£n pháº©m
+ * @returns {Redirect} Redirect về trang danh sách sản phẩm
  */
 exports.createProduct = async (req, res) => {
     try {
@@ -800,17 +804,17 @@ exports.createProduct = async (req, res) => {
 };
 
 /**
- * Cáº­p nháº­t thÃ´ng tin sáº£n pháº©m
+ * Cập nhật thông tin sản phẩm
  *
- * @description Nháº­n dá»¯ liá»‡u cáº­p nháº­t tá»« form vÃ  lÆ°u vÃ o database
+ * @description Nhận dữ liệu cập nhật từ form và lưu vào database
  *
- * @param {Object} req - Request object tá»« Express
- * @param {Object} req.params - Tham sá»‘ URL
- * @param {number} req.params.id - ID sáº£n pháº©m cáº§n cáº­p nháº­t
- * @param {Object} req.body - Dá»¯ liá»‡u cáº­p nháº­t
- * @param {Object} res - Response object tá»« Express
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.params - Tham số URL
+ * @param {number} req.params.id - ID sản phẩm cần cập nhật
+ * @param {Object} req.body - Dữ liệu cập nhật
+ * @param {Object} res - Response object từ Express
  *
- * @returns {Redirect} Redirect vá» trang danh sÃ¡ch sáº£n pháº©m
+ * @returns {Redirect} Redirect về trang danh sách sản phẩm
  */
 exports.updateProduct = async (req, res) => {
     try {
@@ -824,7 +828,7 @@ exports.updateProduct = async (req, res) => {
 
         const currentProduct = await Product.findById(id);
         if (!currentProduct) {
-            return res.status(404).json({ success: false, message: 'Sáº£n pháº©m khÃ´ng tá»“n táº¡i' });
+            return res.status(404).json({ success: false, message: 'Sản phẩm không tồn tại' });
         }
 
         await Product.update(id, {
@@ -847,28 +851,28 @@ exports.updateProduct = async (req, res) => {
 
         scheduleProductVisualEmbeddingSync(id);
 
-        res.json({ success: true, message: 'Cáº­p nháº­t sáº£n pháº©m thÃ nh cÃ´ng' });
+        res.json({ success: true, message: 'Cập nhật sản phẩm thành công' });
     } catch (error) {
         res.status(400).json({ success: false, message: error.message });
     }
 };
 
 /**
- * XÃ³a sáº£n pháº©m
+ * Xóa sản phẩm
  *
- * @description XÃ³a sáº£n pháº©m khá»i database dá»±a trÃªn ID
+ * @description Xóa sản phẩm khỏi database dựa trên ID
  *
- * @param {Object} req - Request object tá»« Express
- * @param {Object} req.params - Tham sá»‘ URL
- * @param {number} req.params.id - ID sáº£n pháº©m cáº§n xÃ³a
- * @param {Object} res - Response object tá»« Express
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.params - Tham số URL
+ * @param {number} req.params.id - ID sản phẩm cần xóa
+ * @param {Object} res - Response object từ Express
  *
- * @returns {JSON} Tráº£ vá» JSON vá»›i thÃ´ng bÃ¡o thÃ nh cÃ´ng/tháº¥t báº¡i
+ * @returns {JSON} Trả về JSON với thông báo thành công/thất bại
  */
 exports.deleteProduct = async (req, res) => {
     try {
         const { id } = req.params;
-        // XÃ³a sáº£n pháº©m (sáº½ cascade xÃ³a cáº£ áº£nh liÃªn quan)
+        // Xóa sản phẩm (sẽ cascade xóa cả ảnh liên quan)
         await Product.delete(id);
         res.json({ message: 'Product deleted successfully' });
     } catch (error) {
@@ -895,25 +899,25 @@ exports.deleteAllProducts = async (req, res) => {
 };
 
 // =============================================================================
-// QUáº¢N LÃ ÄÆ N HÃ€NG - Orders Management
+// QUẢN LÝ ĐƠN HÀNG - Orders Management
 // =============================================================================
 
 /**
- * Hiá»ƒn thá»‹ danh sÃ¡ch Ä‘Æ¡n hÃ ng
+ * Hiển thị danh sách đơn hàng
  *
- * @description Láº¥y danh sÃ¡ch táº¥t cáº£ Ä‘Æ¡n hÃ ng Ä‘á»ƒ hiá»ƒn thá»‹ trÃªn trang quáº£n lÃ½
+ * @description Lấy danh sách tất cả đơn hàng để hiển thị trên trang quản lý
  *
- * @param {Object} req - Request object tá»« Express
- * @param {Object} res - Response object tá»« Express
+ * @param {Object} req - Request object từ Express
+ * @param {Object} res - Response object từ Express
  *
- * @returns {void} Render trang admin/orders vá»›i danh sÃ¡ch Ä‘Æ¡n hÃ ng
+ * @returns {void} Render trang admin/orders với danh sách đơn hàng
  */
 exports.getOrders = async (req, res) => {
     try {
         let orders = [];
         const searchQuery = typeof req.query.search === 'string' ? req.query.search.trim() : '';
         try {
-            // Láº¥y 50 Ä‘Æ¡n hÃ ng gáº§n nháº¥t
+            // Lấy 50 đơn hàng gần nhất
             orders = await Order.findAll({
                 limit: 50,
                 offset: 0,
@@ -923,7 +927,7 @@ exports.getOrders = async (req, res) => {
             console.error('Orders data error:', err);
         }
 
-        // Render trang quáº£n lÃ½ Ä‘Æ¡n hÃ ng
+        // Render trang quản lý đơn hàng
         res.render('admin/orders', {
             orders,
             searchQuery,
@@ -931,15 +935,15 @@ exports.getOrders = async (req, res) => {
             currentPage: 'orders'
         });
     } catch (error) {
-        res.status(500).render('error', { message: 'Lá»—i táº£i Ä‘Æ¡n hÃ ng: ' + error.message, user: req.user });
+        res.status(500).render('error', { message: 'Lỗi tải đơn hàng: ' + error.message, user: req.user });
     }
 };
 
 /**
- * Hiá»ƒn thá»‹ chi tiáº¿t Ä‘Æ¡n hÃ ng
+ * Hiển thị chi tiết đơn hàng
  *
- * @param {Object} req - Request object tá»« Express
- * @param {Object} res - Response object tá»« Express
+ * @param {Object} req - Request object từ Express
+ * @param {Object} res - Response object từ Express
  */
 exports.getOrderDetail = async (req, res) => {
     try {
@@ -952,28 +956,28 @@ exports.getOrderDetail = async (req, res) => {
             currentPage: 'orders'
         });
     } catch (error) {
-        res.status(500).render('error', { message: 'Lá»—i táº£i Ä‘Æ¡n hÃ ng: ' + error.message, user: req.user });
+        res.status(500).render('error', { message: 'Lỗi tải đơn hàng: ' + error.message, user: req.user });
     }
 };
 
 /**
- * Cáº­p nháº­t tráº¡ng thÃ¡i Ä‘Æ¡n hÃ ng
+ * Cập nhật trạng thái đơn hàng
  *
- * @description Thay Ä‘á»•i tráº¡ng thÃ¡i Ä‘Æ¡n hÃ ng (pending, confirmed, shipping, delivered, cancelled)
+ * @description Thay đổi trạng thái đơn hàng (pending, confirmed, shipping, delivered, cancelled)
  *
- * @param {Object} req - Request object tá»« Express
- * @param {Object} req.params.id - ID Ä‘Æ¡n hÃ ng
- * @param {Object} req.body.status - Tráº¡ng thÃ¡i má»›i
- * @param {Object} res - Response object tá»« Express
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.params.id - ID đơn hàng
+ * @param {Object} req.body.status - Trạng thái mới
+ * @param {Object} res - Response object từ Express
  *
- * @returns {JSON} Tráº£ vá» JSON vá»›i thÃ´ng bÃ¡o thÃ nh cÃ´ng/tháº¥t báº¡i
+ * @returns {JSON} Trả về JSON với thông báo thành công/thất bại
  */
 exports.updateOrderStatus = async (req, res) => {
     try {
         const { id } = req.params;
         const { status } = req.body;
 
-        // Cáº­p nháº­t tráº¡ng thÃ¡i trong database
+        // Cập nhật trạng thái trong database
         await Order.updateStatus(id, status);
         res.json({ message: 'Order status updated successfully' });
     } catch (error) {
@@ -982,18 +986,18 @@ exports.updateOrderStatus = async (req, res) => {
 };
 
 // =============================================================================
-// QUáº¢N LÃ NGÆ¯á»œI DÃ™NG - Users Management
+// QUẢN LÝ NGƯỜI DÙNG - Users Management
 // =============================================================================
 
 /**
- * Hiá»ƒn thá»‹ danh sÃ¡ch ngÆ°á»i dÃ¹ng
+ * Hiển thị danh sách người dùng
  *
- * @description Láº¥y danh sÃ¡ch táº¥t cáº£ ngÆ°á»i dÃ¹ng Ä‘Ã£ Ä‘Äƒng kÃ½
+ * @description Lấy danh sách tất cả người dùng đã đăng ký
  *
- * @param {Object} req - Request object tá»« Express
- * @param {Object} res - Response object tá»« Express
+ * @param {Object} req - Request object từ Express
+ * @param {Object} res - Response object từ Express
  *
- * @returns {void} Render trang admin/users vá»›i danh sÃ¡ch ngÆ°á»i dÃ¹ng
+ * @returns {void} Render trang admin/users với danh sách người dùng
  */
 exports.getUsers = async (req, res) => {
     try {
@@ -1006,7 +1010,7 @@ exports.getUsers = async (req, res) => {
 
         try {
             users = await User.findAll({ limit, offset });
-            // Äáº¿m tá»•ng ngÆ°á»i dÃ¹ng
+            // Đếm tổng người dùng
             const pool = require('../config/database');
             const [countResult] = await pool.execute('SELECT COUNT(*) as total FROM users');
             totalItems = countResult[0].total;
@@ -1023,39 +1027,39 @@ exports.getUsers = async (req, res) => {
             pagination: { totalItems, totalPages, currentPage: page, limit }
         });
     } catch (error) {
-        res.status(500).render('error', { message: 'Lá»—i táº£i ngÆ°á»i dÃ¹ng: ' + error.message, user: req.user });
+        res.status(500).render('error', { message: 'Lỗi tải người dùng: ' + error.message, user: req.user });
     }
 };
 
 /**
- * Xem chi tiáº¿t ngÆ°á»i dÃ¹ng (API JSON)
+ * Xem chi tiết người dùng (API JSON)
  *
- * @param {Object} req - Request object tá»« Express
- * @param {Object} res - Response object tá»« Express
+ * @param {Object} req - Request object từ Express
+ * @param {Object} res - Response object từ Express
  */
 exports.getUserDetail = async (req, res) => {
     try {
         const { id } = req.params;
         const pool = require('../config/database');
 
-        // Láº¥y user info (bao gá»“m cáº£ bá»‹ khÃ³a)
+        // Lấy user info (bao gồm cả bị khóa)
         const [users] = await pool.execute(
             'SELECT id, email, full_name, phone, avatar_url, birthday, role, email_verified, marketing_consent, is_active, created_at FROM users WHERE id = ?',
             [id]
         );
         const userData = users[0];
         if (!userData) {
-            return res.status(404).json({ success: false, message: 'KhÃ´ng tÃ¬m tháº¥y ngÆ°á»i dÃ¹ng' });
+            return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
         }
 
-        // Láº¥y Ä‘á»‹a chá»‰
+        // Lấy địa chỉ
         const [addresses] = await pool.execute(
             'SELECT * FROM addresses WHERE user_id = ? ORDER BY is_default DESC',
             [id]
         );
         userData.addresses = addresses;
 
-        // Láº¥y 5 Ä‘Æ¡n hÃ ng gáº§n nháº¥t
+        // Lấy 5 đơn hàng gần nhất
         const [orders] = await pool.execute(
             'SELECT id, order_code, total_amount, final_amount, status, payment_status, created_at FROM orders WHERE user_id = ? ORDER BY created_at DESC LIMIT 5',
             [id]
@@ -1069,23 +1073,23 @@ exports.getUserDetail = async (req, res) => {
 };
 
 /**
- * Cáº­p nháº­t tráº¡ng thÃ¡i ngÆ°á»i dÃ¹ng (KhÃ³a/Má»Ÿ khÃ³a)
+ * Cập nhật trạng thái người dùng (Khóa/Mở khóa)
  *
- * @description KhÃ³a hoáº·c má»Ÿ khÃ³a tÃ i khoáº£n ngÆ°á»i dÃ¹ng
+ * @description Khóa hoặc mở khóa tài khoản người dùng
  *
- * @param {Object} req - Request object tá»« Express
- * @param {Object} req.params.id - ID ngÆ°á»i dÃ¹ng
- * @param {Object} req.body.is_active - Tráº¡ng thÃ¡i má»›i ('true' hoáº·c 'false')
- * @param {Object} res - Response object tá»« Express
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.params.id - ID người dùng
+ * @param {Object} req.body.is_active - Trạng thái mới ('true' hoặc 'false')
+ * @param {Object} res - Response object từ Express
  *
- * @returns {JSON} Tráº£ vá» JSON vá»›i thÃ´ng bÃ¡o thÃ nh cÃ´ng/tháº¥t báº¡i
+ * @returns {JSON} Trả về JSON với thông báo thành công/thất bại
  */
 exports.updateUserStatus = async (req, res) => {
     try {
         const { id } = req.params;
         const { is_active } = req.body;
 
-        // Cáº­p nháº­t tráº¡ng thÃ¡i (chuyá»ƒn string 'true'/'false' thÃ nh boolean)
+        // Cập nhật trạng thái (chuyển string 'true'/'false' thành boolean)
         await User.updateStatus(id, is_active === 'true');
         res.json({ message: 'User status updated successfully' });
     } catch (error) {
@@ -1094,18 +1098,18 @@ exports.updateUserStatus = async (req, res) => {
 };
 
 // =============================================================================
-// QUáº¢N LÃ BANNER - Banners Management
+// QUẢN LÝ BANNER - Banners Management
 // =============================================================================
 
 /**
- * Hiá»ƒn thá»‹ danh sÃ¡ch banner
+ * Hiển thị danh sách banner
  *
- * @description Láº¥y danh sÃ¡ch táº¥t cáº£ banner quáº£ng cÃ¡o
+ * @description Lấy danh sách tất cả banner quảng cáo
  *
- * @param {Object} req - Request object tá»« Express
- * @param {Object} res - Response object tá»« Express
+ * @param {Object} req - Request object từ Express
+ * @param {Object} res - Response object từ Express
  *
- * @returns {void} Render trang admin/banners vá»›i danh sÃ¡ch banner
+ * @returns {void} Render trang admin/banners với danh sách banner
  */
 exports.getBanners = async (req, res) => {
     try {
@@ -1116,49 +1120,49 @@ exports.getBanners = async (req, res) => {
             console.error('Banners data error:', err);
         }
 
-        // Render trang quáº£n lÃ½ banner
+        // Render trang quản lý banner
         res.render('admin/banners', {
             banners,
             user: req.user,
             currentPage: 'banners'
         });
     } catch (error) {
-        res.status(500).render('error', { message: 'Lá»—i táº£i banners: ' + error.message, user: req.user });
+        res.status(500).render('error', { message: 'Lỗi tải banners: ' + error.message, user: req.user });
     }
 };
 
 /**
- * Táº¡o banner má»›i
+ * Tạo banner mới
  *
- * @description Táº¡o banner quáº£ng cÃ¡o má»›i vá»›i áº£nh upload hoáº·c URL
+ * @description Tạo banner quảng cáo mới với ảnh upload hoặc URL
  *
- * @param {Object} req - Request object tá»« Express
- * @param {Object} req.body - Dá»¯ liá»‡u banner
- * @param {string} req.body.title - TiÃªu Ä‘á» banner
- * @param {string} req.body.subtitle - TiÃªu Ä‘á» phá»¥
- * @param {string} req.body.description - MÃ´ táº£
- * @param {string} req.body.link_url - URL khi click vÃ o banner
- * @param {string} req.body.button_text - Text nÃºt CTA
- * @param {number} req.body.display_order - Thá»© tá»± hiá»ƒn thá»‹
- * @param {string} [req.body.start_date] - NgÃ y báº¯t Ä‘áº§u hiá»ƒn thá»‹
- * @param {string} [req.body.end_date] - NgÃ y káº¿t thÃºc hiá»ƒn thá»‹
- * @param {Object} [req.file] - File áº£nh upload
- * @param {Object} res - Response object tá»« Express
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.body - Dữ liệu banner
+ * @param {string} req.body.title - Tiêu đề banner
+ * @param {string} req.body.subtitle - Tiêu đề phụ
+ * @param {string} req.body.description - Mô tả
+ * @param {string} req.body.link_url - URL khi click vào banner
+ * @param {string} req.body.button_text - Text nút CTA
+ * @param {number} req.body.display_order - Thứ tự hiển thị
+ * @param {string} [req.body.start_date] - Ngày bắt đầu hiển thị
+ * @param {string} [req.body.end_date] - Ngày kết thúc hiển thị
+ * @param {Object} [req.file] - File ảnh upload
+ * @param {Object} res - Response object từ Express
  *
- * @returns {Redirect} Redirect vá» trang danh sÃ¡ch banner
+ * @returns {Redirect} Redirect về trang danh sách banner
  */
 exports.createBanner = async (req, res) => {
     try {
-        // Láº¥y dá»¯ liá»‡u tá»« form
+        // Lấy dữ liệu từ form
         const { title, subtitle, description, link_url, button_text, display_order, start_date, end_date } = req.body;
 
-        // Xá»­ lÃ½ áº£nh upload (Æ°u tiÃªn URL Cloudinary)
+        // Xử lý ảnh upload (ưu tiên URL Cloudinary)
         let image_url = '';
         if (req.file) {
             image_url = req.file.cloudinaryUrl || `/uploads/${req.file.filename}`;
         }
 
-        // Táº¡o banner trong database
+        // Tạo banner trong database
         await Banner.create({
             title,
             subtitle,
@@ -1171,7 +1175,7 @@ exports.createBanner = async (req, res) => {
             end_date: end_date || null
         });
 
-        // Redirect vá» trang danh sÃ¡ch
+        // Redirect về trang danh sách
         res.redirect('/admin/banners');
     } catch (error) {
         res.status(400).json({ message: error.message });
@@ -1179,20 +1183,20 @@ exports.createBanner = async (req, res) => {
 };
 
 /**
- * XÃ³a banner
+ * Xóa banner
  *
- * @description XÃ³a banner khá»i database
+ * @description Xóa banner khỏi database
  *
- * @param {Object} req - Request object tá»« Express
- * @param {Object} req.params.id - ID banner cáº§n xÃ³a
- * @param {Object} res - Response object tá»« Express
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.params.id - ID banner cần xóa
+ * @param {Object} res - Response object từ Express
  *
- * @returns {JSON} Tráº£ vá» JSON vá»›i thÃ´ng bÃ¡o thÃ nh cÃ´ng/tháº¥t báº¡i
+ * @returns {JSON} Trả về JSON với thông báo thành công/thất bại
  */
 exports.deleteBanner = async (req, res) => {
     try {
         const pool = require('../config/database');
-        // XÃ³a banner tá»« database
+        // Xóa banner từ database
         await pool.execute('DELETE FROM banners WHERE id = ?', [req.params.id]);
         res.json({ success: true, message: 'Banner deleted' });
     } catch (error) {
@@ -1201,18 +1205,18 @@ exports.deleteBanner = async (req, res) => {
 };
 
 // =============================================================================
-// QUáº¢N LÃ KHUYáº¾N MÃƒI - Sales Management
+// QUẢN LÝ KHUYẾN MÃI - Sales Management
 // =============================================================================
 
 /**
- * Hiá»ƒn thá»‹ danh sÃ¡ch khuyáº¿n mÃ£i
+ * Hiển thị danh sách khuyến mãi
  *
- * @description Láº¥y danh sÃ¡ch táº¥t cáº£ chÆ°Æ¡ng trÃ¬nh khuyáº¿n mÃ£i
+ * @description Lấy danh sách tất cả chương trình khuyến mãi
  *
- * @param {Object} req - Request object tá»« Express
- * @param {Object} res - Response object tá»« Express
+ * @param {Object} req - Request object từ Express
+ * @param {Object} res - Response object từ Express
  *
- * @returns {void} Render trang admin/sales vá»›i danh sÃ¡ch khuyáº¿n mÃ£i
+ * @returns {void} Render trang admin/sales với danh sách khuyến mãi
  */
 exports.getSales = async (req, res) => {
     try {
@@ -1223,7 +1227,7 @@ exports.getSales = async (req, res) => {
         try {
             const [salesData, productsData, totalSubscribers] = await Promise.all([
                 Sale.findAll(searchQuery ? { search: searchQuery } : {}),
-                Product.findAll({ limit: 1000, offset: 0, sort_by: 'name', sort_order: 'ASC' }),
+                Product.findAll({ limit: ADMIN_PRODUCT_SELECTION_LIMIT, offset: 0, sort_by: 'name', sort_order: 'ASC' }),
                 Newsletter.countActive()
             ]);
             sales = await attachSaleAssignments(salesData);
@@ -1233,7 +1237,7 @@ exports.getSales = async (req, res) => {
             console.error('Sales data error:', err);
         }
 
-        // Render trang quáº£n lÃ½ khuyáº¿n mÃ£i
+        // Render trang quản lý khuyến mãi
         res.render('admin/sales', {
             sales,
             products,
@@ -1243,26 +1247,26 @@ exports.getSales = async (req, res) => {
             currentPage: 'sales'
         });
     } catch (error) {
-        res.status(500).render('error', { message: 'Lá»—i táº£i khuyáº¿n mÃ£i: ' + error.message, user: req.user });
+        res.status(500).render('error', { message: 'Lỗi tải khuyến mãi: ' + error.message, user: req.user });
     }
 };
 
 /**
- * Táº¡o chÆ°Æ¡ng trÃ¬nh khuyáº¿n mÃ£i má»›i
+ * Tạo chương trình khuyến mãi mới
  *
- * @description Táº¡o khuyáº¿n mÃ£i má»›i vá»›i loáº¡i giáº£m giÃ¡ (% hoáº·c sá»‘ tiá»n cá»‘ Ä‘á»‹nh)
+ * @description Tạo khuyến mãi mới với loại giảm giá (% hoặc số tiền cố định)
  *
- * @param {Object} req - Request object tá»« Express
- * @param {Object} req.body - Dá»¯ liá»‡u khuyáº¿n mÃ£i
- * @param {string} req.body.name - TÃªn chÆ°Æ¡ng trÃ¬nh
- * @param {string} req.body.description - MÃ´ táº£
- * @param {string} req.body.type - Loáº¡i giáº£m giÃ¡ ('percentage' hoáº·c 'fixed')
- * @param {number} req.body.value - GiÃ¡ trá»‹ giáº£m (% hoáº·c sá»‘ tiá»n)
- * @param {string} req.body.start_date - NgÃ y báº¯t Ä‘áº§u
- * @param {string} req.body.end_date - NgÃ y káº¿t thÃºc
- * @param {Object} res - Response object tá»« Express
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.body - Dữ liệu khuyến mãi
+ * @param {string} req.body.name - Tên chương trình
+ * @param {string} req.body.description - Mô tả
+ * @param {string} req.body.type - Loại giảm giá ('percentage' hoặc 'fixed')
+ * @param {number} req.body.value - Giá trị giảm (% hoặc số tiền)
+ * @param {string} req.body.start_date - Ngày bắt đầu
+ * @param {string} req.body.end_date - Ngày kết thúc
+ * @param {Object} res - Response object từ Express
  *
- * @returns {Redirect} Redirect vá» trang danh sÃ¡ch khuyáº¿n mÃ£i
+ * @returns {Redirect} Redirect về trang danh sách khuyến mãi
  */
 exports.createSale = async (req, res) => {
     try {
@@ -1270,7 +1274,7 @@ exports.createSale = async (req, res) => {
         const productIds = parseSelectedProductIds(req.body);
         const shouldNotifySubscribers = parseChecked(req.body.notify_subscribers);
 
-        // Táº¡o khuyáº¿n mÃ£i trong database
+        // Tạo khuyến mãi trong database
         const sale = await Sale.create({
             name,
             description,
@@ -1287,29 +1291,29 @@ exports.createSale = async (req, res) => {
             const result = await sendSaleAnnouncement(createdSale);
 
             if (result.total === 0) {
-                return res.redirect(buildAdminNoticeRedirect('/admin/sales', 'ÄÃ£ táº¡o khuyáº¿n mÃ£i nhÆ°ng hiá»‡n chÆ°a cÃ³ ngÆ°á»i Ä‘Äƒng kÃ½ nháº­n thÃ´ng bÃ¡o.', 'warning'));
+                return res.redirect(buildAdminNoticeRedirect('/admin/sales', 'Đã tạo khuyến mãi nhưng hiện chưa có người đăng ký nhận thông báo.', 'warning'));
             }
 
             if (result.success === result.total) {
-                return res.redirect(buildAdminNoticeRedirect('/admin/sales', `ÄÃ£ táº¡o khuyáº¿n mÃ£i vÃ  gá»­i email thÃ nh cÃ´ng tá»›i ${result.success} ngÆ°á»i Ä‘Äƒng kÃ½.`));
+                return res.redirect(buildAdminNoticeRedirect('/admin/sales', `Đã tạo khuyến mãi và gửi email thành công tới ${result.success} người đăng ký.`));
             }
 
             if (result.success > 0) {
-                return res.redirect(buildAdminNoticeRedirect('/admin/sales', `ÄÃ£ táº¡o khuyáº¿n mÃ£i vÃ  gá»­i email tá»›i ${result.success}/${result.total} ngÆ°á»i Ä‘Äƒng kÃ½.`, 'warning'));
+                return res.redirect(buildAdminNoticeRedirect('/admin/sales', `Đã tạo khuyến mãi và gửi email tới ${result.success}/${result.total} người đăng ký.`, 'warning'));
             }
 
-            return res.redirect(buildAdminNoticeRedirect('/admin/sales', 'ÄÃ£ táº¡o khuyáº¿n mÃ£i nhÆ°ng chÆ°a gá»­i email thÃ nh cÃ´ng. Vui lÃ²ng kiá»ƒm tra cáº¥u hÃ¬nh email.', 'error'));
+            return res.redirect(buildAdminNoticeRedirect('/admin/sales', 'Đã tạo khuyến mãi nhưng chưa gửi email thành công. Vui lòng kiểm tra cấu hình email.', 'error'));
         }
 
-        // Redirect vá» trang danh sÃ¡ch
-        res.redirect(buildAdminNoticeRedirect('/admin/sales', 'ÄÃ£ táº¡o khuyáº¿n mÃ£i thÃ nh cÃ´ng.'));
+        // Redirect về trang danh sách
+        res.redirect(buildAdminNoticeRedirect('/admin/sales', 'Đã tạo khuyến mãi thành công.'));
     } catch (error) {
-        res.redirect(buildAdminNoticeRedirect('/admin/sales', error.message || 'KhÃ´ng thá»ƒ táº¡o khuyáº¿n mÃ£i.', 'error'));
+        res.redirect(buildAdminNoticeRedirect('/admin/sales', error.message || 'Không thể tạo khuyến mãi.', 'error'));
     }
 };
 
 /**
- * Cáº­p nháº­t chÆ°Æ¡ng trÃ¬nh khuyáº¿n mÃ£i
+ * Cập nhật chương trình khuyến mãi
  */
 exports.updateSale = async (req, res) => {
     try {
@@ -1317,7 +1321,7 @@ exports.updateSale = async (req, res) => {
         const existingSale = await Sale.findById(id);
 
         if (!existingSale) {
-            return res.status(404).json({ success: false, message: 'Khuyáº¿n mÃ£i khÃ´ng tá»“n táº¡i' });
+            return res.status(404).json({ success: false, message: 'Khuyến mãi không tồn tại' });
         }
 
         const { name, description, type, value, start_date, end_date, is_active } = req.body;
@@ -1335,14 +1339,14 @@ exports.updateSale = async (req, res) => {
 
         await Sale.assignProducts(id, productIds);
 
-        res.json({ success: true, message: 'Cáº­p nháº­t khuyáº¿n mÃ£i thÃ nh cÃ´ng' });
+        res.json({ success: true, message: 'Cập nhật khuyến mãi thành công' });
     } catch (error) {
         res.status(400).json({ success: false, message: error.message });
     }
 };
 
 /**
- * Ngá»«ng vÃ  gá»¡ Ã¡p dá»¥ng khuyáº¿n mÃ£i khá»i sáº£n pháº©m
+ * Ngừng và gỡ áp dụng khuyến mãi khỏi sản phẩm
  */
 exports.deleteSale = async (req, res) => {
     try {
@@ -1350,13 +1354,13 @@ exports.deleteSale = async (req, res) => {
         const existingSale = await Sale.findById(id);
 
         if (!existingSale) {
-            return res.status(404).json({ success: false, message: 'Khuyáº¿n mÃ£i khÃ´ng tá»“n táº¡i' });
+            return res.status(404).json({ success: false, message: 'Khuyến mãi không tồn tại' });
         }
 
         await Sale.assignProducts(id, []);
         await Sale.delete(id);
 
-        res.json({ success: true, message: 'ÄÃ£ ngá»«ng khuyáº¿n mÃ£i' });
+        res.json({ success: true, message: 'Đã ngừng khuyến mãi' });
     } catch (error) {
         res.status(400).json({ success: false, message: error.message });
     }
@@ -1368,7 +1372,7 @@ exports.sendSaleAnnouncementEmail = async (req, res) => {
         const existingSale = await Sale.findById(id);
 
         if (!existingSale) {
-            return res.status(404).json({ success: false, message: 'Khuyáº¿n mÃ£i khÃ´ng tá»“n táº¡i', toastType: 'error' });
+            return res.status(404).json({ success: false, message: 'Khuyến mãi không tồn tại', toastType: 'error' });
         }
 
         const [sale] = await attachSaleAssignments([existingSale]);
@@ -1378,7 +1382,7 @@ exports.sendSaleAnnouncementEmail = async (req, res) => {
             return res.json({
                 success: true,
                 toastType: 'warning',
-                message: 'Hiá»‡n chÆ°a cÃ³ ngÆ°á»i dÃ¹ng nÃ o Ä‘Äƒng kÃ½ nháº­n thÃ´ng bÃ¡o.'
+                message: 'Hiện chưa có người dùng nào đăng ký nhận thông báo.'
             });
         }
 
@@ -1386,7 +1390,7 @@ exports.sendSaleAnnouncementEmail = async (req, res) => {
             return res.json({
                 success: true,
                 toastType: 'success',
-                message: `ÄÃ£ gá»­i email thÃ´ng bÃ¡o khuyáº¿n mÃ£i tá»›i ${result.success} ngÆ°á»i Ä‘Äƒng kÃ½.`
+                message: `Đã gửi email thông báo khuyến mãi tới ${result.success} người đăng ký.`
             });
         }
 
@@ -1394,14 +1398,14 @@ exports.sendSaleAnnouncementEmail = async (req, res) => {
             return res.json({
                 success: true,
                 toastType: 'warning',
-                message: `ÄÃ£ gá»­i email tá»›i ${result.success}/${result.total} ngÆ°á»i Ä‘Äƒng kÃ½.`
+                message: `Đã gửi email tới ${result.success}/${result.total} người đăng ký.`
             });
         }
 
         return res.status(500).json({
             success: false,
             toastType: 'error',
-            message: 'KhÃ´ng gá»­i Ä‘Æ°á»£c email thÃ´ng bÃ¡o. Vui lÃ²ng kiá»ƒm tra cáº¥u hÃ¬nh email.'
+            message: 'Không gửi được email thông báo. Vui lòng kiểm tra cấu hình email.'
         });
     } catch (error) {
         res.status(400).json({ success: false, message: error.message, toastType: 'error' });
@@ -1413,32 +1417,32 @@ exports.sendSaleAnnouncementEmail = async (req, res) => {
 // =============================================================================
 
 /**
- * Gá»­i email marketing hÃ ng loáº¡t
+ * Gửi email marketing hàng loạt
  *
- * @description Gá»­i email quáº£ng cÃ¡o Ä‘áº¿n táº¥t cáº£ ngÆ°á»i dÃ¹ng Ä‘Ã£ Ä‘á»“ng Ã½ nháº­n marketing
+ * @description Gửi email quảng cáo đến tất cả người dùng đã đồng ý nhận marketing
  *
- * @param {Object} req - Request object tá»« Express
- * @param {Object} req.body - Ná»™i dung email
- * @param {string} req.body.subject - TiÃªu Ä‘á» email
- * @param {string} req.body.content - Ná»™i dung email (HTML)
- * @param {Object} res - Response object tá»« Express
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.body - Nội dung email
+ * @param {string} req.body.subject - Tiêu đề email
+ * @param {string} req.body.content - Nội dung email (HTML)
+ * @param {Object} res - Response object từ Express
  *
- * @returns {JSON} Tráº£ vá» JSON vá»›i sá»‘ lÆ°á»£ng email Ä‘Ã£ gá»­i thÃ nh cÃ´ng
+ * @returns {JSON} Trả về JSON với số lượng email đã gửi thành công
  */
 exports.sendMarketingEmail = async (req, res) => {
     try {
         const { subject, content } = req.body;
 
-        // Láº¥y danh sÃ¡ch ngÆ°á»i dÃ¹ng Ä‘Ã£ Ä‘á»“ng Ã½ nháº­n email marketing
+        // Lấy danh sách người dùng đã đồng ý nhận email marketing
         const users = await User.getMarketingList();
 
-        // Gá»­i email hÃ ng loáº¡t
+        // Gửi email hàng loạt
         const result = await emailService.sendMarketingEmail(users, {
             subject,
             content
         });
 
-        // Tráº£ vá» káº¿t quáº£
+        // Trả về kết quả
         res.json({
             message: `Email sent to ${result.success}/${result.total} users`
         });
@@ -1448,19 +1452,19 @@ exports.sendMarketingEmail = async (req, res) => {
 };
 
 // =============================================================================
-// QUáº¢N LÃ áº¢NH Sáº¢N PHáº¨M - Product Images Management
+// QUẢN LÝ ẢNH SẢN PHẨM - Product Images Management
 // =============================================================================
 
 /**
- * Láº¥y danh sÃ¡ch áº£nh cá»§a sáº£n pháº©m
+ * Lấy danh sách ảnh của sản phẩm
  *
- * @description Láº¥y táº¥t cáº£ áº£nh cá»§a má»™t sáº£n pháº©m, sáº¯p xáº¿p áº£nh chÃ­nh lÃªn Ä‘áº§u
+ * @description Lấy tất cả ảnh của một sản phẩm, sắp xếp ảnh chính lên đầu
  *
- * @param {Object} req - Request object tá»« Express
- * @param {Object} req.params.id - ID sáº£n pháº©m
- * @param {Object} res - Response object tá»« Express
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.params.id - ID sản phẩm
+ * @param {Object} res - Response object từ Express
  *
- * @returns {JSON} Tráº£ vá» JSON vá»›i danh sÃ¡ch áº£nh: { images: [...] }
+ * @returns {JSON} Trả về JSON với danh sách ảnh: { images: [...] }
  */
 exports.getProductImages = async (req, res) => {
     try {
@@ -1472,17 +1476,17 @@ exports.getProductImages = async (req, res) => {
 };
 
 /**
- * ThÃªm áº£nh sáº£n pháº©m báº±ng URL
+ * Thêm ảnh sản phẩm bằng URL
  *
- * @description ThÃªm áº£nh má»›i cho sáº£n pháº©m báº±ng cÃ¡ch nháº­p URL áº£nh
+ * @description Thêm ảnh mới cho sản phẩm bằng cách nhập URL ảnh
  *
- * @param {Object} req - Request object tá»« Express
- * @param {Object} req.params.id - ID sáº£n pháº©m
- * @param {Object} req.body.image_url - URL cá»§a áº£nh
- * @param {boolean} [req.body.is_primary] - Äáº·t lÃ m áº£nh chÃ­nh
- * @param {Object} res - Response object tá»« Express
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.params.id - ID sản phẩm
+ * @param {Object} req.body.image_url - URL của ảnh
+ * @param {boolean} [req.body.is_primary] - Đặt làm ảnh chính
+ * @param {Object} res - Response object từ Express
  *
- * @returns {JSON} Tráº£ vá» JSON vá»›i thÃ´ng bÃ¡o thÃ nh cÃ´ng/tháº¥t báº¡i
+ * @returns {JSON} Trả về JSON với thông báo thành công/thất bại
  */
 exports.addProductImageUrl = async (req, res) => {
     try {
@@ -1490,7 +1494,7 @@ exports.addProductImageUrl = async (req, res) => {
         const { image_url, is_primary } = req.body;
         const productId = req.params.id;
 
-        // Náº¿u Ä‘áº·t lÃ m áº£nh chÃ­nh, bá» flag is_primary cá»§a cÃ¡c áº£nh khÃ¡c
+        // Nếu đặt làm ảnh chính, bỏ flag is_primary của các ảnh khác
         if (is_primary) {
             await pool.execute(
                 'UPDATE product_images SET is_primary = FALSE WHERE product_id = ?',
@@ -1498,7 +1502,7 @@ exports.addProductImageUrl = async (req, res) => {
             );
         }
 
-        // ThÃªm áº£nh má»›i vÃ o database
+        // Thêm ảnh mới vào database
         await pool.execute(
             'INSERT INTO product_images (product_id, image_url, is_primary) VALUES (?, ?, ?)',
             [productId, image_url, is_primary || false]
@@ -1513,17 +1517,17 @@ exports.addProductImageUrl = async (req, res) => {
 };
 
 /**
- * Upload áº£nh sáº£n pháº©m
+ * Upload ảnh sản phẩm
  *
- * @description Upload file áº£nh tá»« mÃ¡y tÃ­nh vÃ  lÆ°u vÃ o server
+ * @description Upload file ảnh từ máy tính và lưu vào server
  *
- * @param {Object} req - Request object tá»« Express
- * @param {Object} req.params.id - ID sáº£n pháº©m
- * @param {Object} req.file - File áº£nh upload (tá»« multer)
- * @param {string} req.body.is_primary - Äáº·t lÃ m áº£nh chÃ­nh ('true'/'false')
- * @param {Object} res - Response object tá»« Express
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.params.id - ID sản phẩm
+ * @param {Object} req.file - File ảnh upload (từ multer)
+ * @param {string} req.body.is_primary - Đặt làm ảnh chính ('true'/'false')
+ * @param {Object} res - Response object từ Express
  *
- * @returns {JSON} Tráº£ vá» JSON vá»›i thÃ´ng bÃ¡o thÃ nh cÃ´ng/tháº¥t báº¡i
+ * @returns {JSON} Trả về JSON với thông báo thành công/thất bại
  */
 exports.uploadProductImage = async (req, res) => {
     try {
@@ -1550,7 +1554,7 @@ exports.uploadProductImage = async (req, res) => {
 
         res.json({
             success: true,
-            message: files.length > 1 ? `ÄÃ£ táº£i lÃªn ${files.length} áº£nh` : 'ÄÃ£ táº£i lÃªn áº£nh'
+            message: files.length > 1 ? `Đã tải lên ${files.length} ảnh` : 'Đã tải lên ảnh'
         });
     } catch (error) {
         res.status(400).json({ message: error.message });
@@ -1558,15 +1562,15 @@ exports.uploadProductImage = async (req, res) => {
 };
 
 /**
- * XÃ³a áº£nh sáº£n pháº©m
+ * Xóa ảnh sản phẩm
  *
- * @description XÃ³a má»™t áº£nh khá»i sáº£n pháº©m
+ * @description Xóa một ảnh khỏi sản phẩm
  *
- * @param {Object} req - Request object tá»« Express
- * @param {Object} req.params.imageId - ID cá»§a áº£nh cáº§n xÃ³a
- * @param {Object} res - Response object tá»« Express
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.params.imageId - ID của ảnh cần xóa
+ * @param {Object} res - Response object từ Express
  *
- * @returns {JSON} Tráº£ vá» JSON vá»›i thÃ´ng bÃ¡o thÃ nh cÃ´ng/tháº¥t báº¡i
+ * @returns {JSON} Trả về JSON với thông báo thành công/thất bại
  */
 exports.deleteProductImage = async (req, res) => {
     try {
@@ -1590,42 +1594,42 @@ exports.deleteProductImage = async (req, res) => {
 };
 
 /**
- * Äáº·t áº£nh lÃ m áº£nh chÃ­nh
+ * Đặt ảnh làm ảnh chính
  *
- * @description Äáº·t má»™t áº£nh lÃ m áº£nh chÃ­nh (primary) cá»§a sáº£n pháº©m.
- *              Bá» flag is_primary cá»§a cÃ¡c áº£nh khÃ¡c cÃ¹ng sáº£n pháº©m
+ * @description Đặt một ảnh làm ảnh chính (primary) của sản phẩm.
+ *              Bỏ flag is_primary của các ảnh khác cùng sản phẩm
  *
- * @param {Object} req - Request object tá»« Express
- * @param {Object} req.params.imageId - ID cá»§a áº£nh cáº§n Ä‘áº·t lÃ m chÃ­nh
- * @param {Object} res - Response object tá»« Express
+ * @param {Object} req - Request object từ Express
+ * @param {Object} req.params.imageId - ID của ảnh cần đặt làm chính
+ * @param {Object} res - Response object từ Express
  *
- * @returns {JSON} Tráº£ vá» JSON vá»›i thÃ´ng bÃ¡o thÃ nh cÃ´ng/tháº¥t báº¡i
+ * @returns {JSON} Trả về JSON với thông báo thành công/thất bại
  */
 exports.setPrimaryImage = async (req, res) => {
     try {
         const pool = require('../config/database');
         const imageId = req.params.imageId;
 
-        // Láº¥y product_id tá»« áº£nh nÃ y
+        // Lấy product_id từ ảnh này
         const [image] = await pool.execute(
             'SELECT product_id FROM product_images WHERE id = ?',
             [imageId]
         );
 
-        // Kiá»ƒm tra áº£nh cÃ³ tá»“n táº¡i khÃ´ng
+        // Kiểm tra ảnh có tồn tại không
         if (image.length === 0) {
             return res.status(404).json({ message: 'Image not found' });
         }
 
         const productId = image[0].product_id;
 
-        // Bá» flag is_primary cá»§a táº¥t cáº£ áº£nh cÃ¹ng sáº£n pháº©m
+        // Bỏ flag is_primary của tất cả ảnh cùng sản phẩm
         await pool.execute(
             'UPDATE product_images SET is_primary = FALSE WHERE product_id = ?',
             [productId]
         );
 
-        // Äáº·t áº£nh nÃ y lÃ m áº£nh chÃ­nh
+        // Đặt ảnh này làm ảnh chính
         await pool.execute(
             'UPDATE product_images SET is_primary = TRUE WHERE id = ?',
             [imageId]
@@ -1640,11 +1644,11 @@ exports.setPrimaryImage = async (req, res) => {
 };
 
 // =============================================================================
-// QUáº¢N LÃ VOUCHER - Vouchers Management
+// QUẢN LÝ VOUCHER - Vouchers Management
 // =============================================================================
 
 /**
- * Hiá»ƒn thá»‹ danh sÃ¡ch voucher
+ * Hiển thị danh sách voucher
  */
 exports.getVouchers = async (req, res) => {
     try {
@@ -1655,7 +1659,7 @@ exports.getVouchers = async (req, res) => {
         try {
             const [voucherData, productsData, totalSubscribers] = await Promise.all([
                 Voucher.findAll(searchQuery ? { search: searchQuery } : {}),
-                Product.findAll({ limit: 1000, offset: 0, sort_by: 'name', sort_order: 'ASC' }),
+                Product.findAll({ limit: ADMIN_PRODUCT_SELECTION_LIMIT, offset: 0, sort_by: 'name', sort_order: 'ASC' }),
                 Newsletter.countActive()
             ]);
             vouchers = await attachVoucherAssignments(voucherData);
@@ -1674,12 +1678,12 @@ exports.getVouchers = async (req, res) => {
             currentPage: 'vouchers'
         });
     } catch (error) {
-        res.status(500).render('error', { message: 'Lá»—i táº£i vouchers: ' + error.message, user: req.user });
+        res.status(500).render('error', { message: 'Lỗi tải vouchers: ' + error.message, user: req.user });
     }
 };
 
 /**
- * Táº¡o voucher má»›i
+ * Tạo voucher mới
  */
 exports.createVoucher = async (req, res) => {
     try {
@@ -1712,29 +1716,29 @@ exports.createVoucher = async (req, res) => {
             const result = await sendVoucherAnnouncement(voucher);
 
             if (result.total === 0) {
-                return res.redirect(buildAdminNoticeRedirect('/admin/vouchers', 'ÄÃ£ táº¡o voucher nhÆ°ng hiá»‡n chÆ°a cÃ³ ngÆ°á»i Ä‘Äƒng kÃ½ nháº­n thÃ´ng bÃ¡o.', 'warning'));
+                return res.redirect(buildAdminNoticeRedirect('/admin/vouchers', 'Đã tạo voucher nhưng hiện chưa có người đăng ký nhận thông báo.', 'warning'));
             }
 
             if (result.success === result.total) {
-                return res.redirect(buildAdminNoticeRedirect('/admin/vouchers', `ÄÃ£ táº¡o voucher vÃ  gá»­i email thÃ nh cÃ´ng tá»›i ${result.success} ngÆ°á»i Ä‘Äƒng kÃ½.`));
+                return res.redirect(buildAdminNoticeRedirect('/admin/vouchers', `Đã tạo voucher và gửi email thành công tới ${result.success} người đăng ký.`));
             }
 
             if (result.success > 0) {
-                return res.redirect(buildAdminNoticeRedirect('/admin/vouchers', `ÄÃ£ táº¡o voucher vÃ  gá»­i email tá»›i ${result.success}/${result.total} ngÆ°á»i Ä‘Äƒng kÃ½.`, 'warning'));
+                return res.redirect(buildAdminNoticeRedirect('/admin/vouchers', `Đã tạo voucher và gửi email tới ${result.success}/${result.total} người đăng ký.`, 'warning'));
             }
 
-            return res.redirect(buildAdminNoticeRedirect('/admin/vouchers', 'ÄÃ£ táº¡o voucher nhÆ°ng chÆ°a gá»­i email thÃ nh cÃ´ng. Vui lÃ²ng kiá»ƒm tra cáº¥u hÃ¬nh email.', 'error'));
+            return res.redirect(buildAdminNoticeRedirect('/admin/vouchers', 'Đã tạo voucher nhưng chưa gửi email thành công. Vui lòng kiểm tra cấu hình email.', 'error'));
         }
 
-        res.redirect(buildAdminNoticeRedirect('/admin/vouchers', 'ÄÃ£ táº¡o voucher thÃ nh cÃ´ng.'));
+        res.redirect(buildAdminNoticeRedirect('/admin/vouchers', 'Đã tạo voucher thành công.'));
     } catch (error) {
         console.error('Create voucher error:', error);
-        res.redirect(buildAdminNoticeRedirect('/admin/vouchers', error.message || 'KhÃ´ng thá»ƒ táº¡o voucher.', 'error'));
+        res.redirect(buildAdminNoticeRedirect('/admin/vouchers', error.message || 'Không thể tạo voucher.', 'error'));
     }
 };
 
 /**
- * Cáº­p nháº­t voucher
+ * Cập nhật voucher
  */
 exports.updateVoucher = async (req, res) => {
     try {
@@ -1769,7 +1773,7 @@ exports.updateVoucher = async (req, res) => {
 };
 
 /**
- * XÃ³a voucher
+ * Xóa voucher
  */
 exports.deleteVoucher = async (req, res) => {
     try {
@@ -1782,7 +1786,7 @@ exports.deleteVoucher = async (req, res) => {
 };
 
 /**
- * Cáº­p nháº­t tráº¡ng thÃ¡i voucher
+ * Cập nhật trạng thái voucher
  */
 exports.updateVoucherStatus = async (req, res) => {
     try {
@@ -1801,7 +1805,7 @@ exports.sendVoucherAnnouncementEmail = async (req, res) => {
         const existingVoucher = await Voucher.findById(id);
 
         if (!existingVoucher) {
-            return res.status(404).json({ success: false, message: 'Voucher khÃ´ng tá»“n táº¡i', toastType: 'error' });
+            return res.status(404).json({ success: false, message: 'Voucher không tồn tại', toastType: 'error' });
         }
 
         const [voucher] = await attachVoucherAssignments([existingVoucher]);
@@ -1811,7 +1815,7 @@ exports.sendVoucherAnnouncementEmail = async (req, res) => {
             return res.json({
                 success: true,
                 toastType: 'warning',
-                message: 'Hiá»‡n chÆ°a cÃ³ ngÆ°á»i dÃ¹ng nÃ o Ä‘Äƒng kÃ½ nháº­n thÃ´ng bÃ¡o.'
+                message: 'Hiện chưa có người dùng nào đăng ký nhận thông báo.'
             });
         }
 
@@ -1819,7 +1823,7 @@ exports.sendVoucherAnnouncementEmail = async (req, res) => {
             return res.json({
                 success: true,
                 toastType: 'success',
-                message: `ÄÃ£ gá»­i email thÃ´ng bÃ¡o voucher tá»›i ${result.success} ngÆ°á»i Ä‘Äƒng kÃ½.`
+                message: `Đã gửi email thông báo voucher tới ${result.success} người đăng ký.`
             });
         }
 
@@ -1827,14 +1831,14 @@ exports.sendVoucherAnnouncementEmail = async (req, res) => {
             return res.json({
                 success: true,
                 toastType: 'warning',
-                message: `ÄÃ£ gá»­i email tá»›i ${result.success}/${result.total} ngÆ°á»i Ä‘Äƒng kÃ½.`
+                message: `Đã gửi email tới ${result.success}/${result.total} người đăng ký.`
             });
         }
 
         return res.status(500).json({
             success: false,
             toastType: 'error',
-            message: 'KhÃ´ng gá»­i Ä‘Æ°á»£c email thÃ´ng bÃ¡o. Vui lÃ²ng kiá»ƒm tra cáº¥u hÃ¬nh email.'
+            message: 'Không gửi được email thông báo. Vui lòng kiểm tra cấu hình email.'
         });
     } catch (error) {
         res.status(400).json({ success: false, message: error.message, toastType: 'error' });
@@ -1842,7 +1846,7 @@ exports.sendVoucherAnnouncementEmail = async (req, res) => {
 };
 
 // =============================================================================
-// BIáº¾N THá»‚ Sáº¢N PHáº¨M - PRODUCT VARIANTS
+// BIẾN THỂ SẢN PHẨM - PRODUCT VARIANTS
 // =============================================================================
 
 exports.getProductVariants = async (req, res) => {
@@ -1868,19 +1872,19 @@ exports.deleteProductVariant = async (req, res) => {
         if (await Product.isVariantReferenced(req.params.variantId)) {
             return res.status(400).json({
                 success: false,
-                message: 'KhÃ´ng thá»ƒ xÃ³a biáº¿n thá»ƒ Ä‘Ã£ Ä‘Æ°á»£c dÃ¹ng trong giá» hÃ ng hoáº·c Ä‘Æ¡n hÃ ng'
+                message: 'Không thể xóa biến thể đã được dùng trong giỏ hàng hoặc đơn hàng'
             });
         }
 
         await Product.deleteVariant(req.params.variantId);
-        res.json({ success: true, message: 'ÄÃ£ xÃ³a biáº¿n thá»ƒ' });
+        res.json({ success: true, message: 'Đã xóa biến thể' });
     } catch (error) {
         res.status(400).json({ success: false, message: error.message });
     }
 };
 
 // =============================================================================
-// QUáº¢N LÃ BANNER - Banners Management
+// QUẢN LÝ BANNER - Banners Management
 // =============================================================================
 
 exports.getBanners = async (req, res) => {
@@ -1897,7 +1901,7 @@ exports.getBanners = async (req, res) => {
             currentPage: 'banners'
         });
     } catch (error) {
-        res.status(500).render('error', { message: 'Lá»—i táº£i banners: ' + error.message, user: req.user });
+        res.status(500).render('error', { message: 'Lỗi tải banners: ' + error.message, user: req.user });
     }
 };
 
@@ -1942,7 +1946,7 @@ exports.toggleBannerActive = async (req, res) => {
     try {
         const banner = await Banner.toggleActive(req.params.id);
         if (!banner) {
-            return res.status(404).json({ success: false, message: 'Banner khÃ´ng tá»“n táº¡i' });
+            return res.status(404).json({ success: false, message: 'Banner không tồn tại' });
         }
         res.json({ success: true, is_active: banner.is_active });
     } catch (error) {
@@ -1954,7 +1958,7 @@ exports.reorderBanners = async (req, res) => {
     try {
         const { items } = req.body;
         if (!Array.isArray(items)) {
-            return res.status(400).json({ success: false, message: 'Dá»¯ liá»‡u khÃ´ng há»£p lá»‡' });
+            return res.status(400).json({ success: false, message: 'Dữ liệu không hợp lệ' });
         }
         await Banner.updateOrder(items);
         res.json({ success: true });
@@ -1968,7 +1972,7 @@ exports.updateBanner = async (req, res) => {
         const { id } = req.params;
         const existing = await Banner.findById(id);
         if (!existing) {
-            return res.status(404).json({ success: false, message: 'Banner khÃ´ng tá»“n táº¡i' });
+            return res.status(404).json({ success: false, message: 'Banner không tồn tại' });
         }
         const { title, subtitle, link_url } = req.body;
 

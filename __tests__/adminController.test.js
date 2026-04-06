@@ -188,7 +188,7 @@ describe('adminController category management', () => {
         expect(res.status).toHaveBeenCalledWith(400);
         expect(res.json).toHaveBeenCalledWith({
             success: false,
-            message: 'KhÃ´ng thá»ƒ táº¡o vÃ²ng láº·p danh má»¥c cha-con'
+            message: 'Không thể tạo vòng lặp danh mục cha-con'
         });
         expect(Category.update).not.toHaveBeenCalled();
     });
@@ -204,7 +204,7 @@ describe('adminController category management', () => {
         expect(res.status).toHaveBeenCalledWith(400);
         expect(res.json).toHaveBeenCalledWith({
             success: false,
-            message: 'KhÃ´ng thá»ƒ xÃ³a: danh má»¥c Ä‘ang cÃ³ 3 sáº£n pháº©m vÃ  0 danh má»¥c con'
+            message: 'Không thể xóa: danh mục đang có 3 sản phẩm và 0 danh mục con'
         });
         expect(Category.delete).not.toHaveBeenCalled();
     });
@@ -292,7 +292,7 @@ describe('adminController bulk product import', () => {
         expect(req.session.adminProductImportResult).toEqual(expect.objectContaining({
             createdCount: 0,
             errors: [expect.objectContaining({
-                message: 'Vui lÃ²ng táº£i lÃªn file Excel (.xlsx hoáº·c .xls).'
+                message: 'Vui lòng tải lên file Excel (.xlsx hoặc .xls).'
             })]
         }));
         expect(res.redirect).toHaveBeenCalledWith('/admin/products');

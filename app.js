@@ -9,6 +9,9 @@ const bodyParser = require("body-parser");
 const { optionalAuth } = require("./middleware/auth");
 const headerCategories = require("./middleware/headerCategories");
 
+const FORM_PARAMETER_LIMIT = 20000;
+const FORM_BODY_LIMIT = "5mb";
+
 function createApp() {
   const app = express();
   app.set("trust proxy", true);
@@ -44,8 +47,14 @@ function createApp() {
   app.use(cors());
 
   // Body parser
-  app.use(bodyParser.urlencoded({ extended: true }));
-  app.use(bodyParser.json());
+  app.use(
+    bodyParser.urlencoded({
+      extended: true,
+      parameterLimit: FORM_PARAMETER_LIMIT,
+      limit: FORM_BODY_LIMIT,
+    }),
+  );
+  app.use(bodyParser.json({ limit: FORM_BODY_LIMIT }));
 
   // Cookie parser
   app.use(cookieParser());
