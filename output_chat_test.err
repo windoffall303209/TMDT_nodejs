@@ -1,0 +1,25 @@
+=3103 : The term '=3103' is not recognized as the name of a cmdlet, function, script file, or operable program. Check 
+the spelling of the name, or if a path was included, verify that the path is correct and try again.
+At line:1 char:1
++ ='3103'; Set-Location 'C:\Users\WIND-OF-FALL\Documents\Project\TMDT_n ...
++ ~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (=3103:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+ 
+Server failed to start: Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:1948:16)
+    at listenInCluster (node:net:2005:12)
+    at Server.listen (node:net:2110:7)
+    at app.listen (C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\node_modules\express\lib\application.js:635:24)
+    at C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\server.js:27:30
+    at new Promise (<anonymous>)
+    at startServer (C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\server.js:26:12)
+    at Object.<anonymous> (C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\server.js:89:5)
+    at Module._compile (node:internal/modules/cjs/loader:1812:14)
+    at Object..js (node:internal/modules/cjs/loader:1943:10) {
+  code: 'EADDRINUSE',
+  errno: -4091,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}

@@ -1,0 +1,209 @@
+Chat RAG ensure ready error: Error: Embedding request timed out after 8000ms
+    at fetchWithTimeout (C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\services\chatEmbeddingService.js:53:19)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async createEmbeddings (C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\services\chatEmbeddingService.js:117:22)
+    at async embedChunks (C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\services\chatRagService.js:403:28)
+    at async syncProductChunks (C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\services\chatRagService.js:437:28)
+    at async C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\services\chatRagService.js:480:20
+    at async ensureSourceReady (C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\services\chatRagService.js:508:5)
+    at async ensureChatRagReady (C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\services\chatRagService.js:512:5)
+    at async retrieveChatRagContext (C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\services\chatRagService.js:575:9)
+    at async buildEnhancedChatSystemPrompt (C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\controllers\chatController.js:1176:24)
+Enhanced OpenAI API request failed: AI request timed out after 8000ms
+Chat RAG ensure ready error: Error: Embedding request timed out after 8000ms
+    at fetchWithTimeout (C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\services\chatEmbeddingService.js:53:19)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async createEmbeddings (C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\services\chatEmbeddingService.js:117:22)
+    at async embedChunks (C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\services\chatRagService.js:403:28)
+    at async syncProductChunks (C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\services\chatRagService.js:437:28)
+    at async C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\services\chatRagService.js:480:20
+    at async ensureSourceReady (C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\services\chatRagService.js:508:5)
+    at async ensureChatRagReady (C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\services\chatRagService.js:512:5)
+    at async retrieveChatRagContext (C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\services\chatRagService.js:575:9)
+    at async buildEnhancedChatSystemPrompt (C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\controllers\chatController.js:1234:24)
+Enhanced OpenAI API request failed: AI request timed out after 8000ms
+Chat RAG ensure ready error: Error: Embedding request timed out after 8000ms
+    at fetchWithTimeout (C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\services\chatEmbeddingService.js:53:19)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async createEmbeddings (C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\services\chatEmbeddingService.js:117:22)
+    at async embedChunks (C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\services\chatRagService.js:403:28)
+    at async syncProductChunks (C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\services\chatRagService.js:437:28)
+    at async C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\services\chatRagService.js:480:20
+    at async ensureSourceReady (C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\services\chatRagService.js:508:5)
+    at async ensureChatRagReady (C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\services\chatRagService.js:512:5)
+    at async retrieveChatRagContext (C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\services\chatRagService.js:575:9)
+    at async buildEnhancedChatSystemPrompt (C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\controllers\chatController.js:1234:24)
+Enhanced OpenAI API request failed: AI request timed out after 8000ms
+Chat image analysis error: SyntaxError: Unexpected end of JSON input
+    at JSON.parse (<anonymous>)
+    at parseJSONFromBytes (node:internal/deps/undici/undici:4255:19)
+    at successSteps (node:internal/deps/undici/undici:6902:27)
+    at readAllBytes (node:internal/deps/undici/undici:5825:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\services\chatVisionService.js:275
+    const rawText = data.candidates?.[0]?.content?.parts?.map((part) => part.text || '').join('\n') || '';
+          ^
+
+SyntaxError: Identifier 'rawText' has already been declared
+    at wrapSafe (node:internal/modules/cjs/loader:1743:18)
+    at Module._compile (node:internal/modules/cjs/loader:1786:20)
+    at Object..js (node:internal/modules/cjs/loader:1943:10)
+    at Module.load (node:internal/modules/cjs/loader:1533:32)
+    at Module._load (node:internal/modules/cjs/loader:1335:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.require (node:internal/modules/cjs/loader:1556:12)
+    at require (node:internal/modules/helpers:152:16)
+    at Object.<anonymous> (C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\controllers\chatController.js:4:38)
+    at Module._compile (node:internal/modules/cjs/loader:1812:14)
+
+Node.js v24.14.0
+C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\services\chatVisionService.js:275
+    const rawText = data.candidates?.[0]?.content?.parts?.map((part) => part.text || '').join('\n') || '';
+          ^
+
+SyntaxError: Identifier 'rawText' has already been declared
+    at wrapSafe (node:internal/modules/cjs/loader:1743:18)
+    at Module._compile (node:internal/modules/cjs/loader:1786:20)
+    at Object..js (node:internal/modules/cjs/loader:1943:10)
+    at Module.load (node:internal/modules/cjs/loader:1533:32)
+    at Module._load (node:internal/modules/cjs/loader:1335:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.require (node:internal/modules/cjs/loader:1556:12)
+    at require (node:internal/modules/helpers:152:16)
+    at Object.<anonymous> (C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\controllers\chatController.js:4:38)
+    at Module._compile (node:internal/modules/cjs/loader:1812:14)
+
+Node.js v24.14.0
+C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\services\chatVisionService.js:275
+    const rawText = data.candidates?.[0]?.content?.parts?.map((part) => part.text || '').join('\n') || '';
+          ^
+
+SyntaxError: Identifier 'rawText' has already been declared
+    at wrapSafe (node:internal/modules/cjs/loader:1743:18)
+    at Module._compile (node:internal/modules/cjs/loader:1786:20)
+    at Object..js (node:internal/modules/cjs/loader:1943:10)
+    at Module.load (node:internal/modules/cjs/loader:1533:32)
+    at Module._load (node:internal/modules/cjs/loader:1335:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.require (node:internal/modules/cjs/loader:1556:12)
+    at require (node:internal/modules/helpers:152:16)
+    at Object.<anonymous> (C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\controllers\chatController.js:4:38)
+    at Module._compile (node:internal/modules/cjs/loader:1812:14)
+
+Node.js v24.14.0
+C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\services\chatVisionService.js:275
+    const rawText = data.candidates?.[0]?.content?.parts?.map((part) => part.text || '').join('\n') || '';
+          ^
+
+SyntaxError: Identifier 'rawText' has already been declared
+    at wrapSafe (node:internal/modules/cjs/loader:1743:18)
+    at Module._compile (node:internal/modules/cjs/loader:1786:20)
+    at Object..js (node:internal/modules/cjs/loader:1943:10)
+    at Module.load (node:internal/modules/cjs/loader:1533:32)
+    at Module._load (node:internal/modules/cjs/loader:1335:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.require (node:internal/modules/cjs/loader:1556:12)
+    at require (node:internal/modules/helpers:152:16)
+    at Object.<anonymous> (C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\controllers\chatController.js:4:38)
+    at Module._compile (node:internal/modules/cjs/loader:1812:14)
+
+Node.js v24.14.0
+C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\services\chatVisionService.js:275
+    const rawText = data.candidates?.[0]?.content?.parts?.map((part) => part.text || '').join('\n') || '';
+          ^
+
+SyntaxError: Identifier 'rawText' has already been declared
+    at wrapSafe (node:internal/modules/cjs/loader:1743:18)
+    at Module._compile (node:internal/modules/cjs/loader:1786:20)
+    at Object..js (node:internal/modules/cjs/loader:1943:10)
+    at Module.load (node:internal/modules/cjs/loader:1533:32)
+    at Module._load (node:internal/modules/cjs/loader:1335:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.require (node:internal/modules/cjs/loader:1556:12)
+    at require (node:internal/modules/helpers:152:16)
+    at Object.<anonymous> (C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\controllers\chatController.js:4:38)
+    at Module._compile (node:internal/modules/cjs/loader:1812:14)
+
+Node.js v24.14.0
+C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\services\chatVisionService.js:275
+    const rawText = data.candidates?.[0]?.content?.parts?.map((part) => part.text || '').join('\n') || '';
+          ^
+
+SyntaxError: Identifier 'rawText' has already been declared
+    at wrapSafe (node:internal/modules/cjs/loader:1743:18)
+    at Module._compile (node:internal/modules/cjs/loader:1786:20)
+    at Object..js (node:internal/modules/cjs/loader:1943:10)
+    at Module.load (node:internal/modules/cjs/loader:1533:32)
+    at Module._load (node:internal/modules/cjs/loader:1335:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.require (node:internal/modules/cjs/loader:1556:12)
+    at require (node:internal/modules/helpers:152:16)
+    at Object.<anonymous> (C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\controllers\chatController.js:4:38)
+    at Module._compile (node:internal/modules/cjs/loader:1812:14)
+
+Node.js v24.14.0
+C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\services\chatVisionService.js:275
+    const rawText = data.candidates?.[0]?.content?.parts?.map((part) => part.text || '').join('\n') || '';
+          ^
+
+SyntaxError: Identifier 'rawText' has already been declared
+    at wrapSafe (node:internal/modules/cjs/loader:1743:18)
+    at Module._compile (node:internal/modules/cjs/loader:1786:20)
+    at Object..js (node:internal/modules/cjs/loader:1943:10)
+    at Module.load (node:internal/modules/cjs/loader:1533:32)
+    at Module._load (node:internal/modules/cjs/loader:1335:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.require (node:internal/modules/cjs/loader:1556:12)
+    at require (node:internal/modules/helpers:152:16)
+    at Object.<anonymous> (C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\controllers\chatController.js:4:38)
+    at Module._compile (node:internal/modules/cjs/loader:1812:14)
+
+Node.js v24.14.0
+C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\services\chatVisionService.js:275
+    const rawText = data.candidates?.[0]?.content?.parts?.map((part) => part.text || '').join('\n') || '';
+          ^
+
+SyntaxError: Identifier 'rawText' has already been declared
+    at wrapSafe (node:internal/modules/cjs/loader:1743:18)
+    at Module._compile (node:internal/modules/cjs/loader:1786:20)
+    at Object..js (node:internal/modules/cjs/loader:1943:10)
+    at Module.load (node:internal/modules/cjs/loader:1533:32)
+    at Module._load (node:internal/modules/cjs/loader:1335:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.require (node:internal/modules/cjs/loader:1556:12)
+    at require (node:internal/modules/helpers:152:16)
+    at Object.<anonymous> (C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\controllers\chatController.js:4:38)
+    at Module._compile (node:internal/modules/cjs/loader:1812:14)
+
+Node.js v24.14.0
+C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\services\chatVisionService.js:275
+    const rawText = data.candidates?.[0]?.content?.parts?.map((part) => part.text || '').join('\n') || '';
+          ^
+
+SyntaxError: Identifier 'rawText' has already been declared
+    at wrapSafe (node:internal/modules/cjs/loader:1743:18)
+    at Module._compile (node:internal/modules/cjs/loader:1786:20)
+    at Object..js (node:internal/modules/cjs/loader:1943:10)
+    at Module.load (node:internal/modules/cjs/loader:1533:32)
+    at Module._load (node:internal/modules/cjs/loader:1335:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.require (node:internal/modules/cjs/loader:1556:12)
+    at require (node:internal/modules/helpers:152:16)
+    at Object.<anonymous> (C:\Users\WIND-OF-FALL\Documents\Project\TMDT_nodejs\controllers\chatController.js:4:38)
+    at Module._compile (node:internal/modules/cjs/loader:1812:14)
+
+Node.js v24.14.0
+(node:47540) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 exit listeners added to [Bus]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit
+(Use `node --trace-warnings ...` to show where the warning was created)
+Enhanced OpenAI API request failed: AI request timed out after 8000ms
+Enhanced OpenAI API request failed: AI request timed out after 8000ms
+Enhanced OpenAI API request failed: AI request timed out after 8000ms
+Enhanced OpenAI API request failed: AI request timed out after 8000ms
+Enhanced OpenAI API request failed: AI request timed out after 8000ms
+Chat RAG background sync error (product): Embedding request timed out after 8000ms
+Chat RAG background sync error (product): Embedding request timed out after 8000ms
+Enhanced OpenAI API request failed: AI request timed out after 8000ms
+Enhanced OpenAI API request failed: AI request timed out after 8000ms
+Chat RAG background sync error (product): Embedding request timed out after 8000ms
+Chat RAG background sync error (product): Embedding request timed out after 8000ms
+Enhanced OpenAI API request failed: AI request timed out after 8000ms

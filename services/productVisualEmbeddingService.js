@@ -24,6 +24,34 @@ function resolveModel() {
     return String(process.env.PRODUCT_VISUAL_EMBED_MODEL || DEFAULT_EMBED_MODEL).trim() || DEFAULT_EMBED_MODEL;
 }
 
+function getVisualEmbeddingTimeoutMs() {
+    return Math.max(4000, Number.parseInt(process.env.PRODUCT_VISUAL_EMBED_TIMEOUT_MS, 10) || 10000);
+}
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = getVisualEmbeddingTimeoutMs()) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+        controller.abort();
+    }, timeoutMs);
+
+    timeoutId.unref?.();
+
+    try {
+        return await fetch(url, {
+            ...options,
+            signal: controller.signal
+        });
+    } catch (error) {
+        if (error?.name === 'AbortError') {
+            throw new Error(`Visual embedding request timed out after ${timeoutMs}ms`);
+        }
+
+        throw error;
+    } finally {
+        clearTimeout(timeoutId);
+    }
+}
+
 function hasVisualEmbeddingCredentials() {
     return Boolean(resolveVisualApiKey());
 }
@@ -139,7 +167,7 @@ async function embedImageBuffer(imageBuffer, options = {}) {
     const maxAttempts = 3;
     while (attempt < maxAttempts) {
         attempt += 1;
-        const response = await fetch(url, {
+        const response = await fetchWithTimeout(url, {
             method: 'POST',
             headers: {
                 Authorization: `Bearer ${apiKey}`,

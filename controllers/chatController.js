@@ -274,6 +274,74 @@ function buildMediaOnlyFallbackReply(mediaItems = []) {
     return 'Mình đã nhận media của bạn. Hiện mình đối sánh tốt nhất với ảnh sản phẩm, nên bạn có thể gửi thêm ảnh rõ món đồ hoặc mô tả ngắn để mình gợi ý chính xác hơn.';
 }
 
+function buildGreetingChatReply() {
+    return {
+        text: 'Xin chào! Mình là trợ lý AI của WIND OF FALL. Bạn muốn xem sản phẩm, hỏi size màu, hay cần hỗ trợ về đơn hàng để mình trả lời nhanh nhé?',
+        messageType: 'text',
+        metadata: null
+    };
+}
+
+function isCapabilityQuestion(normalizedMessage) {
+    if (!normalizedMessage) {
+        return false;
+    }
+
+    return [
+        'ban la ai',
+        'ban la gi',
+        'co the lam gi',
+        'lam duoc gi',
+        'ho tro duoc gi',
+        'ho tro gi',
+        'giup duoc gi',
+        'chuc nang gi',
+        'co the giup gi'
+    ].some((phrase) => includesChatPhrase(normalizedMessage, phrase));
+}
+
+function buildCapabilityChatReply() {
+    return {
+        text: 'Mình là trợ lý AI của WIND OF FALL. Mình có thể gợi ý sản phẩm theo nhu cầu, màu, size, ngân sách; hỗ trợ tìm mẫu gần đúng từ ảnh; và trả lời các thông tin cơ bản như thanh toán COD/VNPay/MoMo hoặc giao hàng toàn quốc. Nếu bạn cần xử lý sâu hơn về đơn hàng hay tình huống đặc biệt thì admin sẽ hỗ trợ thêm.',
+        messageType: 'text',
+        metadata: null
+    };
+}
+
+function isSimpleCatalogQuestion(normalizedMessage) {
+    if (!normalizedMessage) {
+        return false;
+    }
+
+    return /\bco\b.*\bkhong\b/.test(normalizedMessage)
+        || includesChatPhrase(normalizedMessage, 'con khong')
+        || includesChatPhrase(normalizedMessage, 'co mau nao')
+        || includesChatPhrase(normalizedMessage, 'xem mau')
+        || includesChatPhrase(normalizedMessage, 'co san pham nao');
+}
+
+function shouldUseLocalCatalogReply(normalizedMessage, intent) {
+    if (!normalizedMessage || !intent) {
+        return false;
+    }
+
+    const hasSupportIntent = CHAT_SUPPORT_KEYWORDS.some((keyword) => includesChatPhrase(normalizedMessage, keyword));
+    if (hasSupportIntent) {
+        return false;
+    }
+
+    if (!shouldChatSuggestProducts(intent) || !canChatDirectlySuggestProducts(intent)) {
+        return false;
+    }
+
+    return isSimpleCatalogQuestion(normalizedMessage)
+        || includesChatPhrase(normalizedMessage, 'tim')
+        || includesChatPhrase(normalizedMessage, 'goi y')
+        || includesChatPhrase(normalizedMessage, 'de xuat')
+        || includesChatPhrase(normalizedMessage, 'tu van')
+        || includesChatPhrase(normalizedMessage, 'xem');
+}
+
 function isChatImageSearchIntent(normalizedMessage) {
     if (!normalizedMessage) {
         return false;
@@ -331,6 +399,10 @@ function includesChatPhrase(text, phrase) {
     }
 
     return new RegExp(`(^|[^a-z0-9])${escapeChatRegex(needle)}([^a-z0-9]|$)`).test(haystack);
+}
+
+function getAiRequestTimeoutMs() {
+    return Math.max(3000, Number.parseInt(process.env.AI_FETCH_TIMEOUT_MS, 10) || 8000);
 }
 
 function detectChatRule(normalizedMessage, rules = []) {
@@ -484,7 +556,7 @@ function detectChatColors(normalizedMessage) {
 function getChatRequestedProductLimit(userMessage, fallbackLimit = 6) {
     const normalizedMessage = normalizeChatText(userMessage);
     const requestPattern = /\b(?:goi y|de xuat|tu van|chon|liet ke|show|tim|tim kiem|xem|cho)\b/;
-    const quantityPattern = /\b(\d{1,2})\s+(?:san pham|mau|ao|quan|dam|vay|set|item|mon)\b/;
+    const quantityPattern = /\b(\d{1,2})\s+(?:(?:chiec|cai|bo|mau|item|mon)\s+)?(?:san pham|ao|quan|dam|vay|set|combo|look)\b/;
     const match = normalizedMessage.match(quantityPattern);
 
     if (!match || !requestPattern.test(normalizedMessage)) {
@@ -563,7 +635,7 @@ function inferChatAudience(productText) {
     return 'neutral';
 }
 
-function buildChatIntent(userMessage) {
+function buildChatIntent(userMessage, options = {}) {
     const normalizedMessage = normalizeChatText(userMessage);
     const gender = detectChatRule(normalizedMessage, CHAT_GENDER_RULES);
     const occasion = detectChatRule(normalizedMessage, CHAT_OCCASION_RULES);
@@ -571,7 +643,8 @@ function buildChatIntent(userMessage) {
     const colors = detectChatColors(normalizedMessage);
     const budget = parseChatBudget(normalizedMessage);
     const focusTerms = extractChatTerms(normalizedMessage);
-    const imageGuided = includesChatPhrase(normalizedMessage, 'mo ta tu anh')
+    const imageGuided = Boolean(options.forceImageGuided)
+        || includesChatPhrase(normalizedMessage, 'mo ta tu anh')
         || includesChatPhrase(normalizedMessage, 'tu khoa tim kiem');
 
     const intent = {
@@ -611,8 +684,8 @@ function mergeChatFocusTerms(primaryTerms = [], fallbackTerms = []) {
     return Array.from(new Set([...(primaryTerms || []), ...(fallbackTerms || [])])).slice(0, 8);
 }
 
-function buildChatIntentFromContext(messages = [], userMessage = '') {
-    const currentIntent = buildChatIntent(userMessage);
+function buildChatIntentFromContext(messages = [], userMessage = '', options = {}) {
+    const currentIntent = buildChatIntent(userMessage, options);
     const priorCustomerIntents = Array.isArray(messages)
         ? messages
             .filter((message) => message && message.sender_type === 'customer' && typeof message.message === 'string')
@@ -686,6 +759,115 @@ function buildChatIntentSummary(intent) {
     }
 
     return parts.length ? `\n\nNhu cau khach hien tai:\n- ${parts.join('\n- ')}` : '';
+}
+
+function describeChatNeed(intent) {
+    const parts = [];
+
+    if (Array.isArray(intent?.categories) && intent.categories.length) {
+        parts.push(intent.categories.map((item) => item.label).join(', '));
+    }
+
+    if (intent?.gender?.label) {
+        parts.push(intent.gender.label);
+    }
+
+    if (Array.isArray(intent?.colors) && intent.colors.length) {
+        parts.push(`màu ${intent.colors.map((item) => item.label).join(', ')}`);
+    }
+
+    if (intent?.occasion?.label) {
+        parts.push(`mặc ${intent.occasion.label}`);
+    }
+
+    if (intent?.budget?.label) {
+        parts.push(intent.budget.label);
+    }
+
+    return parts.length ? parts.join(' ') : 'nhu cầu của bạn';
+}
+
+function buildLocalCatalogReply(intent, suggestedProducts = []) {
+    if (!Array.isArray(suggestedProducts) || !suggestedProducts.length) {
+        return {
+            text: `Mình chưa thấy mẫu thật sự khớp với ${describeChatNeed(intent)} trong catalog hiện tại. Bạn nói thêm form, chất liệu hoặc ngân sách để mình lọc sát hơn nhé.`,
+            messageType: 'text',
+            metadata: null
+        };
+    }
+
+    const text = suggestedProducts.length === 1
+        ? `Mình thấy hiện shop có 1 mẫu khá khớp với ${describeChatNeed(intent)}. Mình gửi bạn ngay bên dưới để xem nhanh nhé.`
+        : `Mình đã lọc được ${suggestedProducts.length} mẫu khá khớp với ${describeChatNeed(intent)}. Mình gửi bạn ngay bên dưới để bạn so sánh nhanh nhé.`;
+
+    return {
+        text,
+        messageType: buildChatMessageType(text, { products: suggestedProducts }),
+        metadata: buildChatMessageMetadata({ products: suggestedProducts })
+    };
+}
+
+function shouldUseFastImageProductFlow(normalizedMessage, hasImageAttachment) {
+    if (!hasImageAttachment || !productVisualEmbeddingService.hasVisualEmbeddingCredentials()) {
+        return false;
+    }
+
+    if (!normalizedMessage) {
+        return true;
+    }
+
+    const hasSupportIntent = CHAT_SUPPORT_KEYWORDS.some((keyword) => includesChatPhrase(normalizedMessage, keyword));
+    if (hasSupportIntent) {
+        return false;
+    }
+
+    return includesChatPhrase(normalizedMessage, 'giong nay')
+        || includesChatPhrase(normalizedMessage, 'giong anh')
+        || includesChatPhrase(normalizedMessage, 'giong hinh')
+        || includesChatPhrase(normalizedMessage, 'tuong tu')
+        || includesChatPhrase(normalizedMessage, 'san pham')
+        || CHAT_PRODUCT_KEYWORDS.some((keyword) => includesChatPhrase(normalizedMessage, keyword));
+}
+
+function describeImageSearchNeed(intent, imageAnalysis) {
+    const description = String(imageAnalysis?.description || '').trim();
+    if (description) {
+        return description;
+    }
+
+    const intentNeed = describeChatNeed(intent);
+    if (!intentNeed || normalizeChatText(intentNeed) === 'nhu cau cua ban') {
+        return 'mẫu trong ảnh bạn gửi';
+    }
+
+    return intentNeed;
+}
+
+function buildLocalImageCatalogReply(intent, imageAnalysis, suggestedProducts = []) {
+    const imageNeed = describeImageSearchNeed(intent, imageAnalysis);
+
+    if (!Array.isArray(suggestedProducts) || !suggestedProducts.length) {
+        const text = imageAnalysis?.description
+            ? `Mình đã nhận ra đây là ${imageNeed.toLowerCase()}. Hiện shop chưa thấy mẫu thật sự gần trong catalog, nên mình chưa muốn gợi ý sai cho bạn. Bạn có thể gửi ảnh rõ hơn hoặc nói thêm màu, form dáng hay chất liệu nhé.`
+            : 'Mình đã nhận ảnh và thử đối chiếu với catalog hiện tại nhưng chưa thấy mẫu thật sự gần. Bạn có thể gửi ảnh rõ hơn hoặc nói thêm loại đồ, màu sắc, form dáng để mình lọc sát hơn nhé.';
+
+        return {
+            text,
+            messageType: 'text',
+            metadata: null
+        };
+    }
+
+    const text = imageAnalysis?.matchSummary
+        || (suggestedProducts.length === 1
+            ? `Dựa trên ảnh bạn gửi, mình thấy có 1 mẫu khá gần với ${imageNeed}. Mình gửi bạn ngay bên dưới để xem nhanh nhé.`
+            : `Dựa trên ảnh bạn gửi, mình đã lọc được ${suggestedProducts.length} mẫu khá gần với ${imageNeed}. Mình gửi bạn ngay bên dưới để bạn so sánh nhanh nhé.`);
+
+    return {
+        text,
+        messageType: buildChatMessageType(text, { products: suggestedProducts }),
+        metadata: buildChatMessageMetadata({ products: suggestedProducts })
+    };
 }
 
 async function collectChatCandidateProducts(intent, userMessage, options = {}) {
@@ -1024,9 +1206,9 @@ function fuseVisualAndTextImageProducts(visualProducts, textProducts, intent, ma
         const chat_score = 40 + combined * 58;
         const ranking = scoreChatCandidate(product, intent);
         const chat_reason = v > 0.34
-            ? 'gan ve hinh anh va tim kiem'
+            ? 'gần với hình ảnh và tìm kiếm'
             : v > 0
-                ? 'tuong dong hinh anh'
+                ? 'tương đồng hình ảnh'
                 : ranking.reason;
 
         merged.push({
@@ -1129,25 +1311,22 @@ async function getChatSuggestedProducts(userMessage, messages = [], options = {}
 
 async function buildEnhancedChatSystemPrompt(messages, userMessage, flowOptions = {}) {
     let featuredContext = '';
-    const intent = buildChatIntentFromContext(messages, userMessage);
+    const forceImageGuided = Boolean(flowOptions.visualImageUrl);
+    const intent = buildChatIntentFromContext(messages, userMessage, { forceImageGuided });
     const desiredProductLimit = getChatRequestedProductLimit(userMessage, 6);
-    const hasProductIntent = shouldChatSuggestProducts(intent);
-    const canDirectlySuggest = hasProductIntent && canChatDirectlySuggestProducts(intent);
+    const hasSupportIntent = CHAT_SUPPORT_KEYWORDS.some((keyword) => includesChatPhrase(intent.normalizedMessage, keyword));
+    const looksLikeImageProductSearch = !normalizeMessage(userMessage)
+        || includesChatPhrase(intent.normalizedMessage, 'giong nay')
+        || includesChatPhrase(intent.normalizedMessage, 'giong anh')
+        || includesChatPhrase(intent.normalizedMessage, 'giong hinh')
+        || includesChatPhrase(intent.normalizedMessage, 'giong mau nay')
+        || includesChatPhrase(intent.normalizedMessage, 'san pham')
+        || CHAT_PRODUCT_KEYWORDS.some((keyword) => includesChatPhrase(intent.normalizedMessage, keyword));
+    const hasProductIntent = shouldChatSuggestProducts(intent)
+        || (forceImageGuided && looksLikeImageProductSearch && !hasSupportIntent);
+    const canDirectlySuggest = hasProductIntent
+        && (canChatDirectlySuggestProducts(intent) || (intent.imageGuided && Boolean(flowOptions.visualImageUrl)));
     const visualImageUrl = flowOptions.visualImageUrl || null;
-
-    const ragContext = await retrieveChatRagContext(userMessage, {
-        productLimit: desiredProductLimit,
-        knowledgeLimit: 4
-    }).catch((error) => {
-        console.error('Chat RAG retrieval error:', error);
-        return { products: [], knowledge: [] };
-    });
-    const ragSuggestedProducts = canDirectlySuggest
-        ? selectChatSuggestedProducts(ragContext.products || [], intent, { limit: desiredProductLimit })
-        : [];
-    const searchSuggestedProducts = canDirectlySuggest
-        ? await getChatSuggestedProducts(userMessage, messages, { limit: desiredProductLimit })
-        : [];
     let imageReferenceProducts = [];
 
     let visualFromEmbeddings = [];
@@ -1164,6 +1343,22 @@ async function buildEnhancedChatSystemPrompt(messages, userMessage, flowOptions 
                 return [];
             });
     }
+
+    const ragContext = (intent.imageGuided && visualFromEmbeddings.length)
+        ? { products: [], knowledge: [] }
+        : await retrieveChatRagContext(userMessage, {
+            productLimit: desiredProductLimit,
+            knowledgeLimit: 4
+        }).catch((error) => {
+            console.error('Chat RAG retrieval error:', error);
+            return { products: [], knowledge: [] };
+        });
+    const ragSuggestedProducts = canDirectlySuggest
+        ? selectChatSuggestedProducts(ragContext.products || [], intent, { limit: desiredProductLimit })
+        : [];
+    const searchSuggestedProducts = canDirectlySuggest
+        ? await getChatSuggestedProducts(userMessage, messages, { limit: desiredProductLimit })
+        : [];
 
     if (intent.imageGuided && canDirectlySuggest) {
         if (visualFromEmbeddings.length) {
@@ -1268,8 +1463,66 @@ Thong tin cua hang:
     return {
         prompt,
         suggestedProducts,
-        imageReferenceProducts
+        imageReferenceProducts,
+        intent,
+        hasProductIntent
     };
+}
+
+async function readJsonResponseSafely(response, label) {
+    if (typeof response?.text !== 'function') {
+        const data = typeof response?.json === 'function' ? await response.json() : null;
+        return {
+            data,
+            rawText: data ? JSON.stringify(data) : ''
+        };
+    }
+
+    const rawText = await response.text();
+
+    if (!rawText) {
+        return {
+            data: null,
+            rawText: ''
+        };
+    }
+
+    try {
+        return {
+            data: JSON.parse(rawText),
+            rawText
+        };
+    } catch (error) {
+        console.error(`${label} invalid JSON response:`, response.status, rawText.slice(0, 300));
+        return {
+            data: null,
+            rawText
+        };
+    }
+}
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = getAiRequestTimeoutMs()) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+        controller.abort();
+    }, timeoutMs);
+
+    timeoutId.unref?.();
+
+    try {
+        return await fetch(url, {
+            ...options,
+            signal: controller.signal
+        });
+    } catch (error) {
+        if (error?.name === 'AbortError') {
+            throw new Error(`AI request timed out after ${timeoutMs}ms`);
+        }
+
+        throw error;
+    } finally {
+        clearTimeout(timeoutId);
+    }
 }
 
 async function callEnhancedOpenAI(systemPrompt, messages, userMessage) {
@@ -1291,23 +1544,35 @@ async function callEnhancedOpenAI(systemPrompt, messages, userMessage) {
 
     chatMessages.push({ role: 'user', content: userMessage });
 
-    const response = await fetch(`${baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-            model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
-            messages: chatMessages,
-            max_tokens: 420,
-            temperature: 0.55
-        })
-    });
+    let response;
 
-    const data = await response.json();
+    try {
+        response = await fetchWithTimeout(`${baseUrl}/chat/completions`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
+                messages: chatMessages,
+                max_tokens: 420,
+                temperature: 0.55
+            })
+        });
+    } catch (error) {
+        console.error('Enhanced OpenAI API request failed:', error.message || error);
+        return null;
+    }
+
+    const { data, rawText } = await readJsonResponseSafely(response, 'Enhanced OpenAI API');
     if (!response.ok) {
-        console.error('Enhanced OpenAI API error:', response.status, JSON.stringify(data));
+        console.error('Enhanced OpenAI API error:', response.status, rawText || JSON.stringify(data));
+        return null;
+    }
+
+    if (!data) {
+        console.error('Enhanced OpenAI API returned empty response body.');
         return null;
     }
 
@@ -1333,25 +1598,37 @@ async function callEnhancedGemini(systemPrompt, messages, userMessage) {
 
     contents.push({ role: 'user', parts: [{ text: userMessage }] });
 
-    const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-        {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                system_instruction: { parts: [{ text: systemPrompt }] },
-                contents,
-                generationConfig: {
-                    maxOutputTokens: 420,
-                    temperature: 0.55
-                }
-            })
-        }
-    );
+    let response;
 
-    const data = await response.json();
+    try {
+        response = await fetchWithTimeout(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    system_instruction: { parts: [{ text: systemPrompt }] },
+                    contents,
+                    generationConfig: {
+                        maxOutputTokens: 420,
+                        temperature: 0.55
+                    }
+                })
+            }
+        );
+    } catch (error) {
+        console.error('Enhanced Gemini API request failed:', error.message || error);
+        return null;
+    }
+
+    const { data, rawText } = await readJsonResponseSafely(response, 'Enhanced Gemini API');
     if (!response.ok) {
-        console.error('Enhanced Gemini API error:', response.status, JSON.stringify(data));
+        console.error('Enhanced Gemini API error:', response.status, rawText || JSON.stringify(data));
+        return null;
+    }
+
+    if (!data) {
+        console.error('Enhanced Gemini API returned empty response body.');
         return null;
     }
 
@@ -1421,7 +1698,13 @@ async function callEnhancedAI(messages, userMessage, options = {}) {
     const hasOpenAI = Boolean(process.env.OPENAI_API_KEY);
     const hasGemini = Boolean(process.env.GEMINI_API_KEY);
     const visualImageUrl = getFirstChatImageUrlFromAttachments(options.attachments);
-    const { prompt, suggestedProducts, imageReferenceProducts } = await buildEnhancedChatSystemPrompt(
+    const {
+        prompt,
+        suggestedProducts,
+        imageReferenceProducts,
+        intent,
+        hasProductIntent
+    } = await buildEnhancedChatSystemPrompt(
         messages,
         userMessage,
         { visualImageUrl }
@@ -1444,6 +1727,10 @@ async function callEnhancedAI(messages, userMessage, options = {}) {
             metadata: buildChatMessageMetadata({ products: suggestedProducts })
         };
     };
+
+    if (visualImageUrl && hasProductIntent) {
+        return buildLocalImageCatalogReply(intent, options.imageAnalysis, suggestedProducts);
+    }
 
     if (!hasOpenAI && !hasGemini) {
         return buildResult('Xin lỗi, hệ thống AI đang tạm bảo trì. Admin sẽ hỗ trợ bạn sớm nhất có thể.');
@@ -1533,23 +1820,35 @@ async function callOpenAI(systemPrompt, messages, userMessage) {
 
     chatMessages.push({ role: 'user', content: userMessage });
 
-    const response = await fetch(`${baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-            model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
-            messages: chatMessages,
-            max_tokens: 300,
-            temperature: 0.7
-        })
-    });
+    let response;
 
-    const data = await response.json();
+    try {
+        response = await fetchWithTimeout(`${baseUrl}/chat/completions`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
+                messages: chatMessages,
+                max_tokens: 300,
+                temperature: 0.7
+            })
+        });
+    } catch (error) {
+        console.error('OpenAI API request failed:', error.message || error);
+        return null;
+    }
+
+    const { data, rawText } = await readJsonResponseSafely(response, 'OpenAI API');
     if (!response.ok) {
-        console.error('OpenAI API error:', response.status, JSON.stringify(data));
+        console.error('OpenAI API error:', response.status, rawText || JSON.stringify(data));
+        return null;
+    }
+
+    if (!data) {
+        console.error('OpenAI API returned empty response body.');
         return null;
     }
 
@@ -1575,25 +1874,37 @@ async function callGemini(systemPrompt, messages, userMessage) {
 
     contents.push({ role: 'user', parts: [{ text: userMessage }] });
 
-    const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-        {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                system_instruction: { parts: [{ text: systemPrompt }] },
-                contents,
-                generationConfig: {
-                    maxOutputTokens: 300,
-                    temperature: 0.7
-                }
-            })
-        }
-    );
+    let response;
 
-    const data = await response.json();
+    try {
+        response = await fetchWithTimeout(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    system_instruction: { parts: [{ text: systemPrompt }] },
+                    contents,
+                    generationConfig: {
+                        maxOutputTokens: 300,
+                        temperature: 0.7
+                    }
+                })
+            }
+        );
+    } catch (error) {
+        console.error('Gemini API request failed:', error.message || error);
+        return null;
+    }
+
+    const { data, rawText } = await readJsonResponseSafely(response, 'Gemini API');
     if (!response.ok) {
-        console.error('Gemini API error:', response.status, JSON.stringify(data));
+        console.error('Gemini API error:', response.status, rawText || JSON.stringify(data));
+        return null;
+    }
+
+    if (!data) {
+        console.error('Gemini API returned empty response body.');
         return null;
     }
 
@@ -1664,8 +1975,12 @@ function resolveGuestName(req) {
 async function buildCustomerAiContext(message, uploadedMedia = []) {
     const normalizedMessage = normalizeMessage(message);
     const firstImage = getFirstChatImageAttachment(uploadedMedia);
-    const imageAnalysis = firstImage ? await describeProductFromImage(firstImage, normalizedMessage) : null;
-    const effectiveMessage = normalizeMessage(buildMediaAnalysisMessage(normalizedMessage, imageAnalysis));
+    const shouldSkipVisionAnalysis = shouldUseFastImageProductFlow(normalizeChatText(normalizedMessage), Boolean(firstImage));
+    const imageAnalysis = (firstImage && !shouldSkipVisionAnalysis)
+        ? await describeProductFromImage(firstImage, normalizedMessage)
+        : null;
+    const effectiveMessage = normalizeMessage(buildMediaAnalysisMessage(normalizedMessage, imageAnalysis))
+        || (firstImage ? 'tim san pham tu anh' : '');
 
     return {
         imageAnalysis,
@@ -1719,9 +2034,65 @@ exports.sendMessage = async (req, res) => {
             });
         }
 
-        const aiContext = await buildCustomerAiContext(message, uploadedMedia);
-        const quickReply = buildChatImageSearchQuickReply(normalizedMessage, uploadedMedia);
-        const aiResponse = quickReply || (aiContext.effectiveMessage
+        const localGreetingReply = (!uploadedMedia.length && isGreetingOnlyMessage(normalizedMessage))
+            ? buildGreetingChatReply()
+            : null;
+        const localCapabilityReply = (!uploadedMedia.length && !localGreetingReply && isCapabilityQuestion(normalizedMessage))
+            ? buildCapabilityChatReply()
+            : null;
+        const localInstantReply = localGreetingReply || localCapabilityReply;
+        const aiContext = localInstantReply
+            ? null
+            : await buildCustomerAiContext(message, uploadedMedia);
+        const quickReply = localInstantReply
+            ? null
+            : buildChatImageSearchQuickReply(normalizedMessage, uploadedMedia);
+        const localCatalogReply = (!uploadedMedia.length
+            && !localInstantReply
+            && !quickReply
+            && aiContext?.effectiveMessage)
+            ? await (async () => {
+                const localIntent = buildChatIntentFromContext(previousMessages, aiContext.effectiveMessage);
+                if (!shouldUseLocalCatalogReply(normalizedMessage, localIntent)) {
+                    return null;
+                }
+
+                const desiredLimit = getChatRequestedProductLimit(aiContext.effectiveMessage, 6);
+                const catalogProducts = await getChatSuggestedProducts(aiContext.effectiveMessage, previousMessages, {
+                    limit: desiredLimit
+                }).catch((error) => {
+                    console.error('Local catalog reply lookup error:', error);
+                    return [];
+                });
+                let suggestedProducts = selectChatSuggestedProducts(
+                    dedupeChatProducts(catalogProducts),
+                    localIntent,
+                    { limit: desiredLimit }
+                );
+
+                if (suggestedProducts.length < desiredLimit) {
+                    const ragContext = await retrieveChatRagContext(aiContext.effectiveMessage, {
+                        productLimit: desiredLimit,
+                        knowledgeLimit: 0
+                    }).catch((error) => {
+                        console.error('Local catalog reply RAG error:', error);
+                        return { products: [], knowledge: [] };
+                    });
+
+                    suggestedProducts = selectChatSuggestedProducts(
+                        dedupeChatProducts([
+                            ...catalogProducts,
+                            ...(ragContext.products || [])
+                        ]),
+                        localIntent,
+                        { limit: desiredLimit }
+                    );
+                }
+
+                return buildLocalCatalogReply(localIntent, suggestedProducts);
+            })()
+            : null;
+        const aiResponse = localInstantReply || quickReply || localCatalogReply || (aiContext && aiContext.effectiveMessage
             ? await callEnhancedAI(previousMessages, aiContext.effectiveMessage, {
                 attachments: uploadedMedia,
                 imageAnalysis: aiContext.imageAnalysis,

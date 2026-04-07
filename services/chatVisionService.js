@@ -21,6 +21,66 @@ function extractJsonObject(rawValue) {
     }
 }
 
+function getVisionTimeoutMs() {
+    return Math.max(3000, Number.parseInt(process.env.VISION_FETCH_TIMEOUT_MS, 10) || 8000);
+}
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = getVisionTimeoutMs()) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+        controller.abort();
+    }, timeoutMs);
+
+    timeoutId.unref?.();
+
+    try {
+        return await fetch(url, {
+            ...options,
+            signal: controller.signal
+        });
+    } catch (error) {
+        if (error?.name === 'AbortError') {
+            throw new Error(`Vision request timed out after ${timeoutMs}ms`);
+        }
+
+        throw error;
+    } finally {
+        clearTimeout(timeoutId);
+    }
+}
+
+async function readJsonResponseSafely(response, label) {
+    if (typeof response?.text !== 'function') {
+        const data = typeof response?.json === 'function' ? await response.json() : null;
+        return {
+            data,
+            rawText: data ? JSON.stringify(data) : ''
+        };
+    }
+
+    const rawText = await response.text();
+
+    if (!rawText) {
+        return {
+            data: null,
+            rawText: ''
+        };
+    }
+
+    try {
+        return {
+            data: JSON.parse(rawText),
+            rawText
+        };
+    } catch (error) {
+        console.error(`${label} invalid JSON response:`, response.status, rawText.slice(0, 300));
+        return {
+            data: null,
+            rawText
+        };
+    }
+}
+
 function normalizeVisionResult(result) {
     if (!result || typeof result !== 'object') {
         return null;
@@ -82,11 +142,12 @@ function isLikelyVisionModel(modelName = '') {
 
 function resolveOpenAIVisionModel() {
     const explicitVisionModel = String(process.env.OPENAI_VISION_MODEL || '').trim();
-    if (explicitVisionModel) {
+    const textModel = String(process.env.OPENAI_MODEL || '').trim();
+
+    if (explicitVisionModel && (isLikelyVisionModel(explicitVisionModel) || explicitVisionModel !== textModel)) {
         return explicitVisionModel;
     }
 
-    const textModel = String(process.env.OPENAI_MODEL || '').trim();
     if (isLikelyVisionModel(textModel)) {
         return textModel;
     }
@@ -107,7 +168,7 @@ async function analyzeImageWithOpenAI(media, userMessage = '') {
 
     const baseUrl = process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1';
     const model = resolveOpenAIVisionModel();
-    const response = await fetch(`${baseUrl}/chat/completions`, {
+    const response = await fetchWithTimeout(`${baseUrl}/chat/completions`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -135,9 +196,14 @@ async function analyzeImageWithOpenAI(media, userMessage = '') {
         })
     });
 
-    const data = await response.json();
+    const { data, rawText } = await readJsonResponseSafely(response, `OpenAI chat vision (${model})`);
     if (!response.ok) {
-        console.error(`OpenAI chat vision error (${model}):`, response.status, JSON.stringify(data));
+        console.error(`OpenAI chat vision error (${model}):`, response.status, rawText || JSON.stringify(data));
+        return null;
+    }
+
+    if (!data) {
+        console.error(`OpenAI chat vision returned empty response body (${model}).`);
         return null;
     }
 
@@ -145,7 +211,7 @@ async function analyzeImageWithOpenAI(media, userMessage = '') {
 }
 
 async function fetchImageAsBase64(mediaUrl) {
-    const response = await fetch(mediaUrl);
+    const response = await fetchWithTimeout(mediaUrl);
     if (!response.ok) {
         throw new Error(`Cannot fetch media: ${response.status}`);
     }
@@ -167,7 +233,7 @@ async function analyzeImageWithGemini(media, userMessage = '') {
 
     const model = process.env.GEMINI_VISION_MODEL || process.env.GEMINI_MODEL || 'gemini-2.0-flash';
     const imagePayload = await fetchImageAsBase64(media.mediaUrl);
-    const response = await fetch(
+    const response = await fetchWithTimeout(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
         {
             method: 'POST',
@@ -195,14 +261,19 @@ async function analyzeImageWithGemini(media, userMessage = '') {
         }
     );
 
-    const data = await response.json();
+    const { data, rawText } = await readJsonResponseSafely(response, `Gemini chat vision (${model})`);
     if (!response.ok) {
-        console.error('Gemini chat vision error:', response.status, JSON.stringify(data));
+        console.error('Gemini chat vision error:', response.status, rawText || JSON.stringify(data));
         return null;
     }
 
-    const rawText = data.candidates?.[0]?.content?.parts?.map((part) => part.text || '').join('\n') || '';
-    return normalizeVisionResult(extractJsonObject(rawText));
+    if (!data) {
+        console.error(`Gemini chat vision returned empty response body (${model}).`);
+        return null;
+    }
+
+    const rawReplyText = data.candidates?.[0]?.content?.parts?.map((part) => part.text || '').join('\n') || '';
+    return normalizeVisionResult(extractJsonObject(rawReplyText));
 }
 
 async function describeProductFromImage(media, userMessage = '') {
