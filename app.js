@@ -8,6 +8,7 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 const { optionalAuth } = require("./middleware/auth");
 const headerCategories = require("./middleware/headerCategories");
+const { storefrontSettings } = require("./middleware/storefrontSettings");
 
 const FORM_PARAMETER_LIMIT = 20000;
 const FORM_BODY_LIMIT = "5mb";
@@ -91,6 +92,7 @@ function createApp() {
 
   // Global auth check - populate req.user from JWT token for all requests
   app.use(optionalAuth);
+  app.use(storefrontSettings);
   app.use(headerCategories);
 
   // Make user available to all views

@@ -13,6 +13,10 @@ router.use(verifyToken, isAdmin);
 router.get('/dashboard', adminController.getDashboard);
 router.get('/', (req, res) => res.redirect('/admin/dashboard'));
 
+// Storefront Settings
+router.get('/storefront', adminController.getStorefrontSettings);
+router.post('/storefront', adminController.updateStorefrontSettings);
+
 // Categories
 router.get('/categories', adminController.getCategories);
 router.post('/categories', adminController.createCategory);

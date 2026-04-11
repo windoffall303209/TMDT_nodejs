@@ -2,7 +2,7 @@
 
 <div class="admin-page">
     <div class="container">
-        <!-- Page Header -->
+        <!-- Tiêu đề trang + tổng số đơn hàng -->
         <div class="admin-page-header">
             <div class="admin-page-header__left">
                 <h1>Quản Lý Đơn Hàng</h1>
@@ -20,7 +20,7 @@
             </div> -->
         </div>
 
-        <!-- Stats Cards -->
+        <!-- Các thẻ thống kê trạng thái đơn -->
         <div class="stats-grid">
             <div class="stat-card stat-card--blue">
                 <h3 class="stat-card__label">Tổng đơn hàng</h3>
@@ -40,7 +40,7 @@
             </div>
         </div>
 
-        <!-- Filter Tabs -->
+        <!-- Tab lọc nhanh theo trạng thái -->
         <div class="admin-section admin-section--tabs">
             <div class="order-tabs">
                 <button class="order-tab active" data-status="all">Tất cả</button>
@@ -79,7 +79,7 @@
             </form>
         </div>
 
-        <!-- Orders Table -->
+        <!-- Bảng danh sách đơn hàng -->
         <% if (orders && orders.length > 0) { %>
             <div class="admin-table-wrapper">
                 <table class="admin-table">

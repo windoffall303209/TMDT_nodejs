@@ -88,6 +88,8 @@ const REVIEW_FEEDBACK_MESSAGES = {
 
 const PER_PAGE_OPTIONS = [10, 20, 30, 40, 50];
 const DEFAULT_PER_PAGE = 20;
+const DEFAULT_PRODUCT_GRID_COLUMNS = 5;
+const DEFAULT_HOME_CATEGORY_SHOWCASE_COUNT = 3;
 
 function normalizePositiveInteger(value, fallback = 1) {
     const parsedValue = Number.parseInt(value, 10);
@@ -97,6 +99,28 @@ function normalizePositiveInteger(value, fallback = 1) {
 function normalizePerPage(value) {
     const parsedValue = normalizePositiveInteger(value, DEFAULT_PER_PAGE);
     return PER_PAGE_OPTIONS.includes(parsedValue) ? parsedValue : DEFAULT_PER_PAGE;
+}
+
+function normalizeStorefrontSettings(settings = {}) {
+    const productGridColumns = Math.min(
+        6,
+        Math.max(
+            2,
+            normalizePositiveInteger(settings.product_grid_columns, DEFAULT_PRODUCT_GRID_COLUMNS)
+        )
+    );
+    const homeCategoryShowcaseCount = Math.min(
+        8,
+        Math.max(
+            1,
+            normalizePositiveInteger(settings.home_category_showcase_count, DEFAULT_HOME_CATEGORY_SHOWCASE_COUNT)
+        )
+    );
+
+    return {
+        product_grid_columns: productGridColumns,
+        home_category_showcase_count: homeCategoryShowcaseCount
+    };
 }
 
 function buildPagination(totalItems, requestedPage, perPage) {
@@ -250,6 +274,10 @@ function buildProductReviewRedirect(slug, code) {
  */
 exports.getHomePage = async (req, res) => {
     try {
+        const storefrontSettings = normalizeStorefrontSettings(
+            req.storefrontSettings || res.locals.storefrontSettings || {}
+        );
+
         // Lấy danh sách banner đang hoạt động (cho carousel)
         const banners = await Banner.getActiveBanners().catch(err => {
             console.error('Banner error:', err);
@@ -257,7 +285,7 @@ exports.getHomePage = async (req, res) => {
         });
 
         // Lấy 3 danh mục hàng đầu
-        const categories = await Category.getTopCategories(3).catch(err => {
+        const categories = await Category.getTopCategories(storefrontSettings.home_category_showcase_count).catch(err => {
             console.error('Category error:', err);
             // Dữ liệu mẫu fallback nếu lỗi database
             return [
@@ -297,6 +325,7 @@ exports.getHomePage = async (req, res) => {
             categories,
             newProducts,
             bestSellers,
+            storefrontSettings,
             user: req.user || null
         });
     } catch (error) {

@@ -2,6 +2,22 @@
 
 <link rel="stylesheet" href="/css/product-list.css">
 
+<%
+    // Chuẩn bị số cột grid cho trang kết quả tìm kiếm
+    const storefrontConfig = storefrontSettings || {};
+    const productGridColumns = Math.min(6, Math.max(2, Number.parseInt(storefrontConfig.product_grid_columns, 10) || 5));
+    const productGridColumnsLg = Math.min(productGridColumns, 4);
+    const productGridColumnsMd = Math.min(productGridColumns, 3);
+%>
+
+<style>
+    :root {
+        --storefront-catalog-columns: <%= productGridColumns %>;
+        --storefront-catalog-columns-lg: <%= productGridColumnsLg %>;
+        --storefront-catalog-columns-md: <%= productGridColumnsMd %>;
+    }
+</style>
+<!-- ===== Trang kết quả tìm kiếm sản phẩm ===== -->
 <div class="catalog-page page-shell">
     <div class="container">
         <section class="page-intro page-intro--compact catalog-intro catalog-intro--compact catalog-intro--search">

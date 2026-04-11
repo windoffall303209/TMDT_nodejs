@@ -1,0 +1,106 @@
+<%- include('../partials/admin-header', { currentPage: 'storefront', pageStyles: ['/css/admin/storefront.css'] }) %>
+
+<!-- ===== Trang cấu hình storefront từ admin ===== -->
+<div class="admin-page">
+    <div class="container">
+        <div class="admin-page-header">
+            <div class="admin-page-header__left">
+                <h1>Cài Đặt Giao Diện Storefront</h1>
+                <p>Tùy chỉnh số cột hiển thị mà không cần sửa code.</p>
+            </div>
+        </div>
+
+        <% if (notice) { %>
+            <div class="storefront-notice storefront-notice--<%= noticeType === 'error' ? 'error' : (noticeType === 'warning' ? 'warning' : 'success') %>">
+                <%= notice %>
+            </div>
+        <% } %>
+
+        <div class="admin-section">
+            <h3 class="admin-section__title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="4" y1="21" x2="4" y2="14" />
+                    <line x1="4" y1="10" x2="4" y2="3" />
+                    <line x1="12" y1="21" x2="12" y2="12" />
+                    <line x1="12" y1="8" x2="12" y2="3" />
+                    <line x1="20" y1="21" x2="20" y2="16" />
+                    <line x1="20" y1="12" x2="20" y2="3" />
+                    <line x1="1" y1="14" x2="7" y2="14" />
+                    <line x1="9" y1="8" x2="15" y2="8" />
+                    <line x1="17" y1="16" x2="23" y2="16" />
+                </svg>
+                Bộ điều khiển hiển thị
+            </h3>
+            <p class="storefront-settings__description">
+                Sau khi lưu, storefront sẽ cập nhật ngay ở các trang sản phẩm và trang chủ.
+            </p>
+
+            <form action="/admin/storefront" method="POST" class="admin-form storefront-settings-form">
+                <div class="storefront-settings-grid">
+                    <div class="storefront-settings-card">
+                        <label class="admin-form__label" for="productGridColumns">
+                            Số sản phẩm mỗi hàng (desktop)
+                        </label>
+                        <input
+                            id="productGridColumns"
+                            type="number"
+                            name="product_grid_columns"
+                            class="admin-form__input"
+                            min="2"
+                            max="6"
+                            required
+                            value="<%= settings && settings.product_grid_columns ? settings.product_grid_columns : 5 %>"
+                        >
+                        <p class="storefront-settings-card__hint">
+                            Áp dụng cho grid sản phẩm ở trang danh sách sản phẩm và các section sản phẩm trên trang chủ.
+                        </p>
+                    </div>
+
+                    <div class="storefront-settings-card">
+                        <label class="admin-form__label" for="homeCategoryShowcaseCount">
+                            Số danh mục nổi bật trang chủ
+                        </label>
+                        <input
+                            id="homeCategoryShowcaseCount"
+                            type="number"
+                            name="home_category_showcase_count"
+                            class="admin-form__input"
+                            min="1"
+                            max="8"
+                            required
+                            value="<%= settings && settings.home_category_showcase_count ? settings.home_category_showcase_count : 3 %>"
+                        >
+                        <p class="storefront-settings-card__hint">
+                            Số danh mục xuất hiện trong khu vực danh mục nổi bật của trang chủ (lấy theo thứ tự hiển thị).
+                        </p>
+                    </div>
+                </div>
+
+                <div class="admin-form__actions">
+                    <button type="submit" class="admin-btn admin-btn--primary">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                        Lưu cài đặt
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="admin-section storefront-settings-summary">
+            <h3 class="admin-section__title">Giá trị đang áp dụng</h3>
+            <div class="storefront-settings-summary__items">
+                <div class="storefront-settings-summary__item">
+                    <span>Sản phẩm mỗi hàng</span>
+                    <strong><%= settings && settings.product_grid_columns ? settings.product_grid_columns : 5 %></strong>
+                </div>
+                <div class="storefront-settings-summary__item">
+                    <span>Danh mục nổi bật</span>
+                    <strong><%= settings && settings.home_category_showcase_count ? settings.home_category_showcase_count : 3 %></strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/admin-footer') %>

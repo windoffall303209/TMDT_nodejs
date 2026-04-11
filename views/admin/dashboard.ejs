@@ -2,7 +2,7 @@
 
 <div class="admin-page">
     <div class="container">
-        <!-- Page Header -->
+        <!-- Tiêu đề trang + nút làm mới dữ liệu -->
         <div class="admin-page-header">
             <div class="admin-page-header__left">
                 <h1>Bảng Điều Khiển</h1>
@@ -21,7 +21,7 @@
         </div>
 
         <% if (stats) { %>
-            <!-- Stats Cards -->
+            <!-- Cụm thẻ thống kê nhanh (KPI chính) -->
             <div class="stats-grid">
                 <div class="stat-card stat-card--purple">
                     <div class="stat-card__icon">
@@ -76,7 +76,7 @@
                 </div>
             </div>
 
-            <!-- Additional Stats Row -->
+            <!-- Hàng thống kê bổ sung -->
             <div class="stats-grid stats-grid--spaced">
                 <div class="stat-card">
                     <div class="stat-card__icon stat-card__icon--users">
@@ -200,7 +200,7 @@
             </div>
         <% } %>
 
-        <!-- Recent Orders -->
+        <!-- Bảng đơn hàng gần đây -->
         <% if (recentOrders && recentOrders.length > 0) { %>
             <div class="admin-section admin-section--spaced">
                 <div class="admin-section__header">
@@ -323,7 +323,7 @@
             </div>
         <% } %>
 
-        <!-- Quick Actions -->
+        <!-- Các thao tác nhanh tới module quản trị chính -->
         <div class="admin-section admin-section--spaced">
             <h3 class="admin-section__title">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

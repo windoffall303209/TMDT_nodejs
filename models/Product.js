@@ -359,7 +359,7 @@ ${this.getVariantAggregateSelect('p')}
         // Lọc theo khoảng giá
         // use_final_price: lọc theo giá sau khuyến mãi (giá hiển thị) thay vì giá gốc
         const finalPriceExpr = `CASE
-            WHEN s.type = 'percent' AND s.value IS NOT NULL
+            WHEN s.type = 'percentage' AND s.value IS NOT NULL
                 THEN p.price * (1 - s.value / 100)
             WHEN s.type = 'fixed' AND s.value IS NOT NULL
                 THEN GREATEST(0, p.price - s.value)

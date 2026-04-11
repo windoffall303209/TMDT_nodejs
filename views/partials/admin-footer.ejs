@@ -2,6 +2,7 @@
 </div>
 <% const extraAdminPageScripts = Array.isArray(typeof pageScripts !== 'undefined' ? pageScripts : null) ? pageScripts : []; %>
 
+<!-- ===== Footer Admin + scripts theo từng trang ===== -->
 <% const shouldHideAdminFooter = typeof hideAdminFooter !== 'undefined' && hideAdminFooter; %>
 <% if (!shouldHideAdminFooter) { %>
 <footer class="admin-footer">
@@ -9,10 +10,6 @@
         <div>
             <strong>WIND OF FALL Admin</strong>
             <p>Back office cho sản phẩm, đơn hàng, ưu đãi và chăm sóc khách hàng.</p>
-        </div>
-        <div class="admin-footer__meta">
-            <span>Storefront nội bộ</span>
-            <span>Thiết kế đồng bộ cùng user UI</span>
         </div>
     </div>
 </footer>

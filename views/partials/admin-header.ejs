@@ -8,6 +8,7 @@
         orders: { label: 'Đơn hàng', group: 'Vận hành bán hàng' },
         users: { label: 'Người dùng', group: 'Quản trị tài khoản' },
         banners: { label: 'Banner', group: 'Nội dung hiển thị' },
+        storefront: { label: 'Giao diện storefront', group: 'Nội dung hiển thị' },
         sales: { label: 'Khuyến mãi', group: 'Giá và ưu đãi' },
         vouchers: { label: 'Voucher', group: 'Giá và ưu đãi' },
         chat: { label: 'Chat khách hàng', group: 'Chăm sóc khách hàng' }
@@ -43,7 +44,9 @@
     <% }) %>
 </head>
 
+<!-- ===== Khung Admin: sidebar, topbar, vùng nội dung ===== -->
 <body class="admin-body admin-body--<%= currentPage %>">
+    <!-- Sidebar điều hướng bên trái -->
     <aside class="admin-sidebar" id="adminSidebar">
         <div class="admin-sidebar__brand">
             <a href="/admin/dashboard" class="admin-sidebar__brand-link">
@@ -119,6 +122,22 @@
                         <strong>Banner</strong>
                     </span>
                 </a>
+                <a href="/admin/storefront" class="<%= currentPage === 'storefront' ? 'active' : '' %>">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="4" y1="21" x2="4" y2="14" />
+                        <line x1="4" y1="10" x2="4" y2="3" />
+                        <line x1="12" y1="21" x2="12" y2="12" />
+                        <line x1="12" y1="8" x2="12" y2="3" />
+                        <line x1="20" y1="21" x2="20" y2="16" />
+                        <line x1="20" y1="12" x2="20" y2="3" />
+                        <line x1="1" y1="14" x2="7" y2="14" />
+                        <line x1="9" y1="8" x2="15" y2="8" />
+                        <line x1="17" y1="16" x2="23" y2="16" />
+                    </svg>
+                    <span class="admin-sidebar__nav-copy">
+                        <strong>Giao diện</strong>
+                    </span>
+                </a>
                 <a href="/admin/sales" class="<%= currentPage === 'sales' ? 'active' : '' %>">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="19" y1="5" x2="5" y2="19" />
@@ -183,6 +202,7 @@
         </div>
     </aside>
 
+    <!-- Thanh topbar (nút mobile + thao tác nhanh) -->
     <header class="admin-topbar">
         <button class="admin-topbar__toggle" id="adminMobileMenuBtn" aria-label="Mở menu">
             <span></span>

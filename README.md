@@ -63,10 +63,12 @@ mysql -u root -p tmdt_ecommerce < database/seed.sql
 ```bash
 mysql -u root -p tmdt_ecommerce < migrations/001_add_image_id_to_variants.sql
 mysql -u root -p tmdt_ecommerce < migrations/007_add_rich_media_to_chat_messages.sql
+mysql -u root -p tmdt_ecommerce < migrations/010_create_storefront_settings.sql
 ```
 
 Migration `001` thêm cột `image_id` cho bảng `product_variants`.
 Migration `007` thêm `message_type` và `message_metadata` cho chat để hỗ trợ media và card sản phẩm.
+Migration `010` tao bang `storefront_settings` de admin tu cai dat so cot san pham va so danh muc hien thi.
 
 ### 5. Tạo file môi trường
 

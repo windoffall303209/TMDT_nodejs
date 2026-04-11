@@ -3,11 +3,26 @@
 <link rel="stylesheet" href="/css/home.css">
 
 <%
+    const storefrontConfig = storefrontSettings || {};
+    const productGridColumns = Math.min(6, Math.max(2, Number.parseInt(storefrontConfig.product_grid_columns, 10) || 5));
+    const categoryShowcaseCount = Math.min(8, Math.max(1, Number.parseInt(storefrontConfig.home_category_showcase_count, 10) || 3));
+    const categoryColumnsDesktop = Math.min(categoryShowcaseCount, 4);
+    const categoryColumnsTablet = Math.min(categoryColumnsDesktop, 2);
+    const productColumnsTablet = Math.min(productGridColumns, 3);
     const heroVisual =
         (banners && banners[1] && banners[1].image_url) ||
         (newProducts && newProducts[0] && newProducts[0].primary_image) ||
         'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1400&q=80';
 %>
+
+<style>
+    :root {
+        --storefront-home-product-columns: <%= productGridColumns %>;
+        --storefront-home-product-columns-tablet: <%= productColumnsTablet %>;
+        --storefront-home-category-columns: <%= categoryColumnsDesktop %>;
+        --storefront-home-category-columns-tablet: <%= categoryColumnsTablet %>;
+    }
+</style>
 
 <% if (banners && banners.length > 0) { %>
 <div
@@ -140,7 +155,7 @@
 
         <% if (categories && categories.length > 0) { %>
             <div class="category-showcase">
-                <% categories.slice(0, 3).forEach((category, index) => { %>
+                <% categories.slice(0, categoryShowcaseCount).forEach((category, index) => { %>
                     <a href="/products/category/<%= category.slug %>" class="category-showcase__card category-showcase__card--<%= index + 1 %>">
                         <% if (category.image_url) { %>
                             <img src="<%= category.image_url %>" alt="<%= category.name %>">
@@ -235,7 +250,7 @@
         </div>
 
         <div class="home-products-grid home-products-grid--featured">
-            <% bestSellers.slice(0, 5).forEach(product => { %>
+            <% bestSellers.slice(0, productGridColumns).forEach(product => { %>
                 <%- include('../partials/product-card', { product }) %>
             <% }) %>
         </div>

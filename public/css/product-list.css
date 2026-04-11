@@ -120,7 +120,7 @@
 .catalog-grid,
 .products-grid {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(var(--storefront-catalog-columns, 5), minmax(0, 1fr));
     gap: 16px;
 }
 
@@ -187,7 +187,7 @@
 @media (max-width: 1320px) {
     .catalog-grid,
     .products-grid {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(var(--storefront-catalog-columns-lg, 4), minmax(0, 1fr));
     }
 }
 
@@ -199,7 +199,7 @@
 
     .catalog-grid,
     .products-grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(var(--storefront-catalog-columns-md, 3), minmax(0, 1fr));
     }
 }
 

@@ -1,6 +1,7 @@
 <%- include('../partials/admin-header', { currentPage: 'orders', pageStyles: ['/css/admin/order-detail.css'] }) %>
 
 <%
+    // Chuẩn hóa dữ liệu hiển thị chi tiết đơn hàng và tracking
     const shipment = order && order.shipment ? order.shipment : {};
     const trackingEvents = order && Array.isArray(order.tracking_events) ? order.tracking_events : [];
     const toDatetimeLocalValue = (value) => {
@@ -12,6 +13,7 @@
     };
 %>
 
+<!-- ===== Trang chi tiết đơn hàng trong admin ===== -->
 <div class="admin-page" data-order-id="<%= order ? order.id : '' %>">
     <div class="container">
         <a href="/admin/orders" class="back-link">

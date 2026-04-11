@@ -1,4 +1,5 @@
 <%
+    // Chuẩn hóa dữ liệu toolbar catalog: sort, per-page, query giữ lại
     const toolbarQuery = typeof paginationQuery !== 'undefined' ? (paginationQuery || {}) : {};
     const toolbarPath = typeof paginationPath !== 'undefined' ? (paginationPath || '/products') : '/products';
     const toolbarTotalItems = Number(typeof totalItems !== 'undefined' ? (totalItems || 0) : 0);
@@ -22,6 +23,7 @@
     ));
 %>
 
+<!-- ===== Thanh công cụ catalog (tổng số, sắp xếp, số lượng/trang) ===== -->
 <section class="catalog-toolbar">
     <div class="catalog-toolbar__summary">
         <span class="catalog-toolbar__count"><%= toolbarTotalItems.toLocaleString('vi-VN') %></span>

@@ -10,7 +10,9 @@
       "Bash(mysql -u root -padmin -e \"SELECT COUNT\\(*\\) as total FROM tmdt_ecommerce.products;\")",
       "Bash(mysql -u root -padmin -e \"SELECT category_id, COUNT\\(*\\) as count FROM tmdt_ecommerce.products GROUP BY category_id;\")",
       "Bash(node \"c:/Users/WIND-OF-FALL/Documents/Project/TMDT_nodejs/scripts/add-more-products.js\")",
-      "Bash(node \"c:/Users/WIND-OF-FALL/Documents/Project/TMDT_nodejs/scripts/test-chatbot-products.js\")"
+      "Bash(node \"c:/Users/WIND-OF-FALL/Documents/Project/TMDT_nodejs/scripts/test-chatbot-products.js\")",
+      "Bash(npm test:*)",
+      "Bash(python -)"
     ]
   }
 }

@@ -3,6 +3,7 @@
 <link rel="stylesheet" href="/css/product-detail.css">
 
 <%
+    // Chuẩn bị dữ liệu hiển thị chi tiết: ảnh chính, biến thể, trạng thái review
     let mainImage = product.primary_image;
     if (!mainImage && product.images && product.images.length > 0) {
         mainImage = product.images[0].image_url;
@@ -28,6 +29,7 @@
     const reviewBodyOpen = Boolean(reviewFeedback || viewOwnReviewOpen || editOwnReviewOpen || createReviewPanelOpen);
 %>
 
+<!-- ===== Trang chi tiết sản phẩm ===== -->
 <div class="product-detail-page page-shell">
     <div class="container">
         <div class="product-breadcrumb">
@@ -40,6 +42,7 @@
             <span><%= product.name %></span>
         </div>
 
+        <!-- Khối chính: gallery bên trái + thông tin mua hàng bên phải -->
         <div class="product-detail-grid">
             <div class="product-gallery">
                 <% if (product.images && product.images.length > 1) { %>
@@ -170,6 +173,7 @@
             </section>
         <% } %>
 
+        <!-- Khu vực đánh giá: thông báo, form tạo/sửa, danh sách review -->
         <section class="product-reviews">
             <button
                 type="button"
@@ -489,6 +493,7 @@
             </div>
         </section>
 
+        <!-- Sản phẩm liên quan cùng danh mục -->
         <% if (relatedProducts && relatedProducts.length > 0) { %>
             <section class="related-products">
                 <div class="home-section__header">

@@ -2,7 +2,7 @@
 
 <div class="admin-page">
     <div class="container">
-        <!-- Page Header -->
+        <!-- Tiêu đề trang + tổng số banner -->
         <div class="admin-page-header">
             <div class="admin-page-header__left">
                 <h1>Quản Lý Banner</h1>
@@ -10,7 +10,7 @@
             </div>
         </div>
 
-        <!-- Add Banner Form -->
+        <!-- Form thêm banner mới -->
         <div class="admin-section admin-section--collapsible">
             <h3 class="admin-section__title admin-section__title--toggle" data-admin-toggle="section">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -54,7 +54,7 @@
             </form>
         </div>
 
-        <!-- Banners Grid -->
+        <!-- Lưới banner hiện có -->
         <% if (banners && banners.length > 0) { %>
             <p style="margin-bottom:12px; color:#888; font-size:13px;">💡 Kéo thả để sắp xếp thứ tự banner. Thứ tự sẽ tự động lưu.</p>
             <div class="banners-grid" id="bannersGrid">
@@ -73,7 +73,7 @@
                                 </div>
                             <% } %>
                             <div class="banner-card__order">#<%= index + 1 %></div>
-                            <!-- Status badge -->
+                            <!-- Nhãn trạng thái hiển thị/ẩn -->
                             <div class="banner-card__status-badge" style="position:absolute; top:8px; left:8px; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; letter-spacing:.3px; <%= (banner.is_active === 0 || banner.is_active === false) ? 'background:rgba(244,67,54,.9); color:#fff;' : 'background:rgba(76,175,80,.9); color:#fff;' %>">
                                 <%= (banner.is_active === 0 || banner.is_active === false) ? 'Đang ẩn' : 'Đang hiện' %>
                             </div>
@@ -87,7 +87,7 @@
                                         </svg>
                                     </a>
                                 <% } %>
-                                <!-- Toggle active button -->
+                                <!-- Nút bật/tắt trạng thái banner -->
                                 <button data-banner-action="toggle" data-banner-id="<%= banner.id %>" class="banner-card__btn" title="<%= (banner.is_active === 0 || banner.is_active === false) ? 'Hiện banner' : 'Ẩn banner' %>">
                                     <% if (banner.is_active === 0 || banner.is_active === false) { %>
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -102,7 +102,7 @@
                                         </svg>
                                     <% } %>
                                 </button>
-                                <!-- Edit button -->
+                                <!-- Nút chỉnh sửa banner -->
                                 <button data-banner-action="edit" data-banner-id="<%= banner.id %>" class="banner-card__btn" title="Sửa banner">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>

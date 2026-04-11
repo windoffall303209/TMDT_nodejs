@@ -21,6 +21,7 @@ const Banner = require('../models/Banner');
 const Sale = require('../models/Sale');
 const Voucher = require('../models/Voucher');
 const Newsletter = require('../models/Newsletter');
+const StorefrontSetting = require('../models/StorefrontSetting');
 const pool = require('../config/database');
 const emailService = require('../services/emailService');
 const { attachUploadedImagesToProduct, parseVariantsPayload, syncVariants, validateVariants } = require('../services/adminProductVariantService');
@@ -30,6 +31,7 @@ const {
     importProductsFromWorkbook
 } = require('../services/productBulkImportService');
 const upload = require('../middleware/upload');
+const { invalidateStorefrontSettingsCache } = require('../middleware/storefrontSettings');
 const { scheduleProductVisualEmbeddingSync } = require('../services/productVisualEmbeddingService');
 const ProductImageEmbedding = require('../models/ProductImageEmbedding');
 
@@ -960,30 +962,6 @@ exports.getOrderDetail = async (req, res) => {
     }
 };
 
-/**
- * Cập nhật trạng thái đơn hàng
- *
- * @description Thay đổi trạng thái đơn hàng (pending, confirmed, shipping, delivered, cancelled)
- *
- * @param {Object} req - Request object từ Express
- * @param {Object} req.params.id - ID đơn hàng
- * @param {Object} req.body.status - Trạng thái mới
- * @param {Object} res - Response object từ Express
- *
- * @returns {JSON} Trả về JSON với thông báo thành công/thất bại
- */
-exports.updateOrderStatus = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { status } = req.body;
-
-        // Cập nhật trạng thái trong database
-        await Order.updateStatus(id, status);
-        res.json({ message: 'Order status updated successfully' });
-    } catch (error) {
-        res.status(400).json({ message: error.message });
-    }
-};
 
 // =============================================================================
 // QUẢN LÝ NGƯỜI DÙNG - Users Management
@@ -1884,63 +1862,53 @@ exports.deleteProductVariant = async (req, res) => {
 };
 
 // =============================================================================
-// QUẢN LÝ BANNER - Banners Management
+// CÀI ĐẶT GIAO DIỆN STOREFRONT - STOREFRONT SETTINGS
 // =============================================================================
 
-exports.getBanners = async (req, res) => {
+exports.getStorefrontSettings = async (req, res) => {
     try {
-        let banners = [];
-        try {
-            banners = await Banner.findAll();
-        } catch (err) {
-            console.error('Banners data error:', err);
-        }
-        res.render('admin/banners', {
-            banners,
+        const settings = await StorefrontSetting.getAll();
+
+        res.render('admin/storefront', {
+            settings,
+            notice: typeof req.query.notice === 'string' ? req.query.notice : '',
+            noticeType: typeof req.query.notice_type === 'string' ? req.query.notice_type : 'success',
             user: req.user,
-            currentPage: 'banners'
+            currentPage: 'storefront'
         });
     } catch (error) {
-        res.status(500).render('error', { message: 'Lỗi tải banners: ' + error.message, user: req.user });
+        res.status(500).render('error', {
+            message: 'Lỗi tải cài đặt giao diện: ' + error.message,
+            user: req.user
+        });
     }
 };
 
-exports.createBanner = async (req, res) => {
+exports.updateStorefrontSettings = async (req, res) => {
     try {
-        const { title, subtitle, description, link_url, button_text, display_order, start_date, end_date } = req.body;
-
-        let image_url = '';
-        if (req.file) {
-            image_url = req.file.cloudinaryUrl || `/uploads/${req.file.filename}`;
-        }
-
-        await Banner.create({
-            title,
-            subtitle,
-            description,
-            image_url,
-            link_url,
-            button_text,
-            display_order: parseInt(display_order) || 0,
-            start_date: start_date || null,
-            end_date: end_date || null
+        await StorefrontSetting.updateMany({
+            product_grid_columns: req.body.product_grid_columns,
+            home_category_showcase_count: req.body.home_category_showcase_count
         });
 
-        res.redirect('/admin/banners');
+        invalidateStorefrontSettingsCache();
+
+        return res.redirect(buildAdminNoticeRedirect(
+            '/admin/storefront',
+            'Đã lưu cài đặt giao diện storefront.'
+        ));
     } catch (error) {
-        res.status(400).json({ message: error.message });
+        return res.redirect(buildAdminNoticeRedirect(
+            '/admin/storefront',
+            error.message || 'Không thể lưu cài đặt giao diện storefront.',
+            'error'
+        ));
     }
 };
 
-exports.deleteBanner = async (req, res) => {
-    try {
-        const pool = require('../config/database');
-        await pool.execute('DELETE FROM banners WHERE id = ?', [req.params.id]);
-        res.json({ success: true, message: 'Banner deleted' });
-    } catch (error) {
-        res.status(400).json({ message: error.message });
-    }
-};
+// =============================================================================
+// QUẢN LÝ BANNER - Banners Management
+// =============================================================================
 
 exports.toggleBannerActive = async (req, res) => {
     try {

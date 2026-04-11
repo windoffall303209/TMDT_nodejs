@@ -3,7 +3,12 @@
 <link rel="stylesheet" href="/css/product-list.css">
 
 <%
+    // Chuẩn bị tiêu đề trang và số cột grid theo cấu hình storefront
     const currentCategory = typeof category !== 'undefined' ? category : null;
+    const storefrontConfig = storefrontSettings || {};
+    const productGridColumns = Math.min(6, Math.max(2, Number.parseInt(storefrontConfig.product_grid_columns, 10) || 5));
+    const productGridColumnsLg = Math.min(productGridColumns, 4);
+    const productGridColumnsMd = Math.min(productGridColumns, 3);
     const pageTitle = currentCategory
         ? currentCategory.name
         : (typeof query !== 'undefined' && query
@@ -14,6 +19,15 @@
         : ((typeof isSalePage !== 'undefined' && isSalePage) ? 'Ưu đãi' : 'Sản phẩm');
 %>
 
+<style>
+    :root {
+        --storefront-catalog-columns: <%= productGridColumns %>;
+        --storefront-catalog-columns-lg: <%= productGridColumnsLg %>;
+        --storefront-catalog-columns-md: <%= productGridColumnsMd %>;
+    }
+</style>
+
+<!-- ===== Trang danh sách sản phẩm tổng quát / sale / search context ===== -->
 <div class="catalog-page page-shell">
     <div class="container">
         <section class="page-intro page-intro--compact catalog-intro catalog-intro--compact">

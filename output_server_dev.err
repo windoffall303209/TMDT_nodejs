@@ -207,3 +207,7 @@ Enhanced OpenAI API request failed: AI request timed out after 8000ms
 Chat RAG background sync error (product): Embedding request timed out after 8000ms
 Chat RAG background sync error (product): Embedding request timed out after 8000ms
 Enhanced OpenAI API request failed: AI request timed out after 8000ms
+Chat RAG background sync error (product): Embedding request timed out after 8000ms
+Enhanced OpenAI API request failed: AI request timed out after 8000ms
+Chat RAG background sync error (product): Embedding request timed out after 8000ms
+Visual query embed error: Visual embedding request timed out after 10000ms

@@ -145,22 +145,22 @@ body.admin-body .container {
 }
 
 .admin-sidebar__nav a {
-    gap: 12px;
-    padding: 8px 10px;
+    gap: 10.5px;
+    padding: 6.3px 8.4px;
     border-left: none;
-    border-radius: 16px;
+    border-radius: 13.65px;
     color: var(--admin-text-secondary);
     background: transparent;
     position: relative;
     align-items: center;
-    min-height: 44px;
+    min-height: 36.75px;
 }
 
 .admin-sidebar__nav a::before {
     content: "";
     position: absolute;
     inset: 0;
-    border-radius: 16px;
+    border-radius: 13.65px;
     border: 1px solid transparent;
     transition: all 0.2s ease;
 }

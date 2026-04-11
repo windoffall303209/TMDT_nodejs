@@ -2,6 +2,22 @@
 
 <link rel="stylesheet" href="/css/product-list.css">
 
+<%
+    // Cấu hình hiển thị storefront lấy từ admin (số cột grid)
+    const storefrontConfig = storefrontSettings || {};
+    const productGridColumns = Math.min(6, Math.max(2, Number.parseInt(storefrontConfig.product_grid_columns, 10) || 5));
+    const productGridColumnsLg = Math.min(productGridColumns, 4);
+    const productGridColumnsMd = Math.min(productGridColumns, 3);
+%>
+
+<style>
+    :root {
+        --storefront-catalog-columns: <%= productGridColumns %>;
+        --storefront-catalog-columns-lg: <%= productGridColumnsLg %>;
+        --storefront-catalog-columns-md: <%= productGridColumnsMd %>;
+    }
+</style>
+<!-- ===== Trang danh mục sản phẩm ===== -->
 <div class="catalog-page page-shell">
     <div class="container">
         <section class="page-intro page-intro--compact catalog-intro catalog-intro--compact">
@@ -14,6 +30,7 @@
             </div>
         </section>
 
+        <!-- Lối tắt chuyển nhanh giữa các danh mục chính -->
         <div class="catalog-shortcuts">
             <a href="/products/category/nam" class="<%= category && category.slug === 'nam' ? 'active' : '' %>">Nam</a>
             <a href="/products/category/nu" class="<%= category && category.slug === 'nu' ? 'active' : '' %>">Nữ</a>
@@ -31,6 +48,7 @@
             resultsLabel: 'sản phẩm'
         }) %>
 
+        <!-- Grid sản phẩm / trạng thái rỗng -->
         <% if (products && products.length > 0) { %>
             <div class="products-grid catalog-grid" id="productsGrid">
                 <% products.forEach((product) => { %>
