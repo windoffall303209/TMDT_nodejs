@@ -1,5 +1,4 @@
 <%
-    // Chuẩn hóa dữ liệu toolbar catalog: sort, per-page, query giữ lại
     const toolbarQuery = typeof paginationQuery !== 'undefined' ? (paginationQuery || {}) : {};
     const toolbarPath = typeof paginationPath !== 'undefined' ? (paginationPath || '/products') : '/products';
     const toolbarTotalItems = Number(typeof totalItems !== 'undefined' ? (totalItems || 0) : 0);
@@ -23,7 +22,6 @@
     ));
 %>
 
-<!-- ===== Thanh công cụ catalog (tổng số, sắp xếp, số lượng/trang) ===== -->
 <section class="catalog-toolbar">
     <div class="catalog-toolbar__summary">
         <span class="catalog-toolbar__count"><%= toolbarTotalItems.toLocaleString('vi-VN') %></span>
@@ -48,6 +46,7 @@
                 <span>Sắp xếp</span>
                 <select name="sort" data-catalog-control="sort">
                     <option value="newest" <%= toolbarSort === 'newest' ? 'selected' : '' %>>Mới nhất</option>
+                    <option value="best-selling" <%= toolbarSort === 'best-selling' ? 'selected' : '' %>>Bán chạy</option>
                     <option value="price-asc" <%= toolbarSort === 'price-asc' ? 'selected' : '' %>>Giá tăng dần</option>
                     <option value="price-desc" <%= toolbarSort === 'price-desc' ? 'selected' : '' %>>Giá giảm dần</option>
                     <option value="name-asc" <%= toolbarSort === 'name-asc' ? 'selected' : '' %>>Tên A-Z</option>

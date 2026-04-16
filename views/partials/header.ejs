@@ -26,9 +26,21 @@
     const isProfilePage = currentPath === '/auth/profile';
     const isOrdersPage = currentPath === '/orders/history';
     const isCartPage = currentPath === '/cart';
+    const isForYouPage = currentPath === '/products/for-you';
+
+    function isCategoryBranchActive(branch) {
+        if (!branch || !categorySlug) {
+            return false;
+        }
+
+        if (branch.slug === categorySlug) {
+            return true;
+        }
+
+        return Array.isArray(branch.children) && branch.children.some((child) => child.slug === categorySlug);
+    }
 %>
 
-<!-- ===== Header: logo, ô tìm kiếm, tài khoản/giỏ hàng ===== -->
 <header class="header">
     <div class="header-main">
         <div class="container header-main__inner">
@@ -112,20 +124,31 @@
         </div>
     </div>
 
-    <!-- ===== Thanh điều hướng chính (desktop) ===== -->
     <div class="header-nav">
         <div class="container header-nav__inner">
             <nav class="main-nav">
                 <a href="/" class="<%= currentPath === '/' ? 'active' : '' %>">Trang chủ</a>
                 <% navigationCategories.forEach((headerCategory) => { %>
-                    <a href="/products/category/<%= headerCategory.slug %>" class="<%= categorySlug === headerCategory.slug ? 'active' : '' %>"><%= headerCategory.name %></a>
+                    <% const branchActive = isCategoryBranchActive(headerCategory); %>
+                    <div class="main-nav__item <%= Array.isArray(headerCategory.children) && headerCategory.children.length > 0 ? 'main-nav__item--has-dropdown' : '' %>">
+                        <a
+                            href="/products/category/<%= headerCategory.slug %>"
+                            class="main-nav__trigger <%= branchActive ? 'active' : '' %>"
+                            <%= Array.isArray(headerCategory.children) && headerCategory.children.length > 0 ? 'aria-haspopup="true" aria-expanded="false"' : '' %>
+                        ><%= headerCategory.name %></a>
+                        <% if (Array.isArray(headerCategory.children) && headerCategory.children.length > 0) { %>
+                            <div class="main-nav__dropdown">
+                                <% headerCategory.children.forEach((childCategory) => { %>
+                                    <a href="/products/category/<%= childCategory.slug %>" class="<%= categorySlug === childCategory.slug ? 'active' : '' %>"><%= childCategory.name %></a>
+                                <% }) %>
+                            </div>
+                        <% } %>
+                    </div>
                 <% }) %>
                 <a href="/products" class="<%= currentPath === '/products' ? 'active' : '' %>">Tất cả</a>
                 <a href="/products?sale=true" class="sale-link <%= isSalePageActive ? 'active' : '' %>">Sale tới 50%</a>
+                <a href="/products/for-you" class="<%= isForYouPage ? 'active' : '' %>">For You</a>
             </nav>
-            <div class="header-nav__promo">
-                <span>Hàng mới lên kệ mỗi Thứ 3 và Thứ 6</span>
-            </div>
         </div>
     </div>
 
@@ -143,7 +166,6 @@
 
 <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
 
-<!-- ===== Menu điều hướng dạng drawer trên mobile ===== -->
 <nav class="mobile-nav" id="mobileNav">
     <div class="mobile-nav__header">
         <div>
@@ -167,10 +189,20 @@
     <div class="mobile-nav__links">
         <a href="/" class="<%= currentPath === '/' ? 'active' : '' %>">Trang chủ</a>
         <% navigationCategories.forEach((headerCategory) => { %>
-            <a href="/products/category/<%= headerCategory.slug %>" class="<%= categorySlug === headerCategory.slug ? 'active' : '' %>"><%= headerCategory.name %></a>
+            <div class="mobile-nav__group">
+                <a href="/products/category/<%= headerCategory.slug %>" class="<%= isCategoryBranchActive(headerCategory) ? 'active' : '' %>"><%= headerCategory.name %></a>
+                <% if (Array.isArray(headerCategory.children) && headerCategory.children.length > 0) { %>
+                    <div class="mobile-nav__children">
+                        <% headerCategory.children.forEach((childCategory) => { %>
+                            <a href="/products/category/<%= childCategory.slug %>" class="<%= categorySlug === childCategory.slug ? 'active' : '' %>"><%= childCategory.name %></a>
+                        <% }) %>
+                    </div>
+                <% } %>
+            </div>
         <% }) %>
         <a href="/products">Tất cả sản phẩm</a>
         <a href="/products?sale=true" class="sale-link <%= isSalePageActive ? 'active' : '' %>">Khu sale</a>
+        <a href="/products/for-you" class="<%= isForYouPage ? 'active' : '' %>">For You</a>
     </div>
 
     <div class="mobile-nav__actions">

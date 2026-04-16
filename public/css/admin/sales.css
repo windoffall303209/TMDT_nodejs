@@ -87,6 +87,11 @@
     line-height: 1.5;
 }
 
+.admin-form__hint--warning {
+    color: #c04b32;
+    font-weight: 700;
+}
+
 .admin-form__textarea {
     width: 100%;
     min-height: 90px;

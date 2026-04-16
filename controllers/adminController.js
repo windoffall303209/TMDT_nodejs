@@ -30,6 +30,11 @@ const {
     exportProductsToWorkbookBuffer,
     importProductsFromWorkbook
 } = require('../services/productBulkImportService');
+const {
+    createCategoryImportTemplateBuffer,
+    exportCategoriesToWorkbookBuffer,
+    importCategoriesFromWorkbook
+} = require('../services/categoryBulkImportService');
 const upload = require('../middleware/upload');
 const { invalidateStorefrontSettingsCache } = require('../middleware/storefrontSettings');
 const { scheduleProductVisualEmbeddingSync } = require('../services/productVisualEmbeddingService');
@@ -100,6 +105,37 @@ function parseOptionalDate(value, fieldName) {
 
 function parseChecked(value) {
     return value === true || value === 'true' || value === 'on' || value === 1 || value === '1';
+}
+
+function normalizeDiscountValueOrThrow(type, value, entityLabel = 'Giá trị') {
+    const parsedValue = Number(value);
+
+    if (!Number.isFinite(parsedValue) || parsedValue <= 0) {
+        throw new Error(`${entityLabel} phải lớn hơn 0`);
+    }
+
+    if (type === 'percentage' && parsedValue >= 100) {
+        throw new Error(`${entityLabel} phần trăm phải nhỏ hơn 100%`);
+    }
+
+    return parsedValue;
+}
+
+function assertDateRangeValid(startDate, endDate, entityLabel = 'Khoảng thời gian') {
+    if (!startDate || !endDate) {
+        return;
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+        return;
+    }
+
+    if (start > end) {
+        throw new Error(`${entityLabel} không hợp lệ`);
+    }
 }
 
 function escapeHtml(value) {
@@ -201,14 +237,39 @@ function buildOrderTrackingPayload(body = {}) {
     return payload;
 }
 
-async function attachSaleAssignments(sales) {
+async function attachSaleAssignments(sales, totalActiveProducts = 0) {
     const saleIds = Array.isArray(sales) ? sales.map((sale) => sale.id) : [];
     const assignments = await Sale.getAssignedProductsMap(saleIds);
+    const now = new Date();
 
     return (sales || []).map((sale) => ({
         ...sale,
         assigned_products: assignments.get(sale.id) || [],
-        assigned_product_count: (assignments.get(sale.id) || []).length
+        assigned_product_count: (assignments.get(sale.id) || []).length,
+        applies_to_all_products: totalActiveProducts > 0 && (assignments.get(sale.id) || []).length >= totalActiveProducts,
+        status_meta: (() => {
+            const assignedProductCount = (assignments.get(sale.id) || []).length;
+            const startDate = sale.start_date ? new Date(sale.start_date) : null;
+            const endDate = sale.end_date ? new Date(sale.end_date) : null;
+
+            if (assignedProductCount === 0) {
+                return { key: 'unassigned', label: 'Chưa gán sản phẩm', tone: 'pending' };
+            }
+
+            if (!sale.is_active) {
+                return { key: 'paused', label: 'Tạm dừng', tone: 'cancelled' };
+            }
+
+            if (startDate && !Number.isNaN(startDate.getTime()) && now < startDate) {
+                return { key: 'upcoming', label: 'Sắp diễn ra', tone: 'pending' };
+            }
+
+            if (endDate && !Number.isNaN(endDate.getTime()) && now > endDate) {
+                return { key: 'expired', label: 'Hết hạn', tone: 'cancelled' };
+            }
+
+            return { key: 'active', label: 'Đang diễn ra', tone: 'delivered' };
+        })()
     }));
 }
 
@@ -525,6 +586,8 @@ exports.getCategories = async (req, res) => {
             parentCategories,
             categoryStats,
             searchQuery,
+            notice: typeof req.query.notice === 'string' ? req.query.notice : '',
+            noticeType: typeof req.query.notice_type === 'string' ? req.query.notice_type : 'success',
             user: req.user,
             currentPage: 'categories'
         });
@@ -551,6 +614,75 @@ exports.createCategory = async (req, res) => {
         res.redirect('/admin/categories');
     } catch (error) {
         res.status(400).json({ message: error.message });
+    }
+};
+
+exports.downloadCategoryImportTemplate = async (req, res) => {
+    try {
+        const buffer = createCategoryImportTemplateBuffer();
+        res.setHeader(
+            'Content-Type',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        );
+        res.setHeader(
+            'Content-Disposition',
+            'attachment; filename="windoffall-category-import-template.xlsx"'
+        );
+        res.send(buffer);
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+exports.exportCategories = async (req, res) => {
+    try {
+        const buffer = await exportCategoriesToWorkbookBuffer({
+            search: typeof req.query.search === 'string' ? req.query.search.trim() : ''
+        });
+        res.setHeader(
+            'Content-Type',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        );
+        res.setHeader(
+            'Content-Disposition',
+            'attachment; filename="windoffall-categories.xlsx"'
+        );
+        res.send(buffer);
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+exports.importCategories = async (req, res) => {
+    try {
+        const workbookPath = req.file?.path;
+
+        if (!workbookPath) {
+            return res.redirect(buildAdminNoticeRedirect(
+                '/admin/categories',
+                'Vui lòng tải lên file Excel danh mục.',
+                'error'
+            ));
+        }
+
+        const result = await importCategoriesFromWorkbook({ workbookPath });
+        const noticeMessage = result.failedCount > 0
+            ? `Đã import ${result.createdCount} danh mục mới, cập nhật ${result.updatedCount} danh mục, lỗi ${result.failedCount} dòng.`
+            : `Đã import ${result.createdCount} danh mục mới và cập nhật ${result.updatedCount} danh mục.`;
+
+        return res.redirect(buildAdminNoticeRedirect(
+            '/admin/categories',
+            noticeMessage,
+            result.failedCount > 0 ? 'warning' : 'success'
+        ));
+    } catch (error) {
+        return res.redirect(buildAdminNoticeRedirect(
+            '/admin/categories',
+            error.message || 'Không thể import danh mục.',
+            'error'
+        ));
+    } finally {
+        cleanupImportUploadFiles(req.file ? [req.file] : []);
     }
 };
 
@@ -591,6 +723,26 @@ exports.deleteCategory = async (req, res) => {
         }
         await Category.delete(id);
         res.json({ success: true, message: 'Đã xóa danh mục' });
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+};
+
+exports.deleteAllCategories = async (req, res) => {
+    try {
+        const result = await Category.deleteAllPermanently();
+
+        res.json({
+            success: true,
+            deletedCount: result.deletedCategories,
+            blockedCount: result.blockedCategories,
+            deletedProducts: result.deletedProducts,
+            message: result.totalCategories === 0
+                ? 'Không có danh mục nào trong database để xóa.'
+                : result.blockedCategories > 0
+                    ? `Đã xóa vĩnh viễn ${result.deletedCategories} danh mục và ${result.deletedProducts} sản phẩm liên quan. Còn ${result.blockedCategories} danh mục không thể xóa vì sản phẩm của chúng đã nằm trong lịch sử đơn hàng.`
+                    : `Đã xóa vĩnh viễn ${result.deletedCategories} danh mục khỏi database.`
+        });
     } catch (error) {
         res.status(400).json({ success: false, message: error.message });
     }
@@ -1208,7 +1360,7 @@ exports.getSales = async (req, res) => {
                 Product.findAll({ limit: ADMIN_PRODUCT_SELECTION_LIMIT, offset: 0, sort_by: 'name', sort_order: 'ASC' }),
                 Newsletter.countActive()
             ]);
-            sales = await attachSaleAssignments(salesData);
+            sales = await attachSaleAssignments(salesData, productsData.length);
             products = productsData;
             subscriberCount = totalSubscribers;
         } catch (err) {
@@ -1251,13 +1403,15 @@ exports.createSale = async (req, res) => {
         const { name, description, type, value, start_date, end_date } = req.body;
         const productIds = parseSelectedProductIds(req.body);
         const shouldNotifySubscribers = parseChecked(req.body.notify_subscribers);
+        const normalizedValue = normalizeDiscountValueOrThrow(type, value, 'Giá trị khuyến mãi');
+        assertDateRangeValid(start_date, end_date, 'Thời gian khuyến mãi');
 
         // Tạo khuyến mãi trong database
         const sale = await Sale.create({
             name,
             description,
             type,
-            value: parseFloat(value),
+            value: normalizedValue,
             start_date,
             end_date
         });
@@ -1304,12 +1458,14 @@ exports.updateSale = async (req, res) => {
 
         const { name, description, type, value, start_date, end_date, is_active } = req.body;
         const productIds = parseSelectedProductIds(req.body);
+        const normalizedValue = normalizeDiscountValueOrThrow(type, value, 'Giá trị khuyến mãi');
+        assertDateRangeValid(start_date, end_date, 'Thời gian khuyến mãi');
 
         await Sale.update(id, {
             name,
             description,
             type,
-            value: parseFloat(value),
+            value: normalizedValue,
             start_date: start_date || null,
             end_date: end_date || null,
             is_active: is_active === 'on' || is_active === true || is_active === 'true'
@@ -1335,7 +1491,7 @@ exports.deleteSale = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Khuyến mãi không tồn tại' });
         }
 
-        await Sale.assignProducts(id, []);
+        await Sale.clearAssignedProducts(id);
         await Sale.delete(id);
 
         res.json({ success: true, message: 'Đã ngừng khuyến mãi' });
@@ -1672,13 +1828,15 @@ exports.createVoucher = async (req, res) => {
         } = req.body;
         const productIds = parseSelectedProductIds(req.body);
         const shouldNotifySubscribers = parseChecked(req.body.notify_subscribers);
+        const normalizedValue = normalizeDiscountValueOrThrow(type, value, 'Giá trị voucher');
+        assertDateRangeValid(start_date, end_date, 'Thời gian voucher');
 
         const createdVoucher = await Voucher.create({
             code,
             name,
             description,
             type,
-            value: parseFloat(value),
+            value: normalizedValue,
             min_order_amount: parseFloat(min_order_amount) || 0,
             max_discount_amount: max_discount_amount ? parseFloat(max_discount_amount) : null,
             usage_limit: usage_limit ? parseInt(usage_limit) : null,
@@ -1727,13 +1885,15 @@ exports.updateVoucher = async (req, res) => {
             user_limit, start_date, end_date, is_active
         } = req.body;
         const productIds = parseSelectedProductIds(req.body);
+        const normalizedValue = normalizeDiscountValueOrThrow(type, value, 'Giá trị voucher');
+        assertDateRangeValid(start_date, end_date, 'Thời gian voucher');
 
         await Voucher.update(id, {
             code,
             name,
             description,
             type,
-            value: parseFloat(value),
+            value: normalizedValue,
             min_order_amount: parseFloat(min_order_amount) || 0,
             max_discount_amount: max_discount_amount ? parseFloat(max_discount_amount) : null,
             usage_limit: usage_limit ? parseInt(usage_limit) : null,

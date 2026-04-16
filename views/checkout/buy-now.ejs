@@ -4,8 +4,13 @@
 <link rel="stylesheet" href="/css/leaflet.css">
 
 <%
-    const productPrice = product.final_price || product.price;
-    const shippingFee = productPrice >= 500000 ? 0 : 30000;
+    const selectedQuantity = cart && Array.isArray(cart.items) && cart.items[0]
+        ? Number(cart.items[0].quantity || 1)
+        : 1;
+    const unitPrice = product.final_price || product.price;
+    const subtotal = Number(cart?.subtotal || (unitPrice * selectedQuantity));
+    const shippingFee = subtotal >= 500000 ? 0 : 30000;
+    const originalSubtotal = Number(product.price || 0) * selectedQuantity;
 %>
 
 <!-- ===== Trang mua ngay (checkout 1 sản phẩm) ===== -->
@@ -28,7 +33,7 @@
 
         <form action="/orders/buy-now/create" method="POST" id="buyNowForm">
             <input type="hidden" name="product_id" value="<%= product.id %>">
-            <input type="hidden" name="quantity" value="<%= cart.items[0].quantity %>">
+            <input type="hidden" name="quantity" value="<%= selectedQuantity %>">
             <input type="hidden" name="variant_id" value="<%= typeof variantId !== 'undefined' && variantId ? variantId : '' %>">
 
             <div class="checkout-grid">
@@ -57,13 +62,13 @@
                                         <% if (selectedVariant.size) { %>Size: <%= selectedVariant.size %><% } %>
                                     </div>
                                 <% } %>
-                                <div class="order-summary__item-qty">Số lượng: <%= cart.items[0].quantity %></div>
+                                <div class="order-summary__item-qty">Số lượng: <%= selectedQuantity %></div>
                             </div>
                             <div class="order-summary__item-price">
+                                <div class="order-summary__item-amount"><%= subtotal.toLocaleString('vi-VN') %>đ</div>
                                 <% if (product.price !== product.final_price && product.final_price) { %>
-                                    <div class="order-summary__item-old-price"><%= product.price.toLocaleString('vi-VN') %>đ</div>
+                                    <div class="order-summary__item-old-price"><%= originalSubtotal.toLocaleString('vi-VN') %>đ</div>
                                 <% } %>
-                                <div class="order-summary__item-amount"><%= productPrice.toLocaleString('vi-VN') %>đ</div>
                             </div>
                         </div>
                     </div>
@@ -238,16 +243,16 @@
                         <div class="order-summary__prices">
                             <div class="order-summary__row">
                                 <span class="order-summary__label">Giá sản phẩm</span>
-                                <span class="order-summary__value"><%= productPrice.toLocaleString('vi-VN') %>đ</span>
+                                <span class="order-summary__value"><%= subtotal.toLocaleString('vi-VN') %>đ</span>
                             </div>
                             <div class="order-summary__row">
                                 <span class="order-summary__label">Phí vận chuyển</span>
                                 <span id="shippingDisplay" class="order-summary__value <%= shippingFee === 0 ? 'order-summary__value--free' : '' %>"><%= shippingFee === 0 ? 'Miễn phí' : shippingFee.toLocaleString('vi-VN') + 'đ' %></span>
                             </div>
 
-                            <% if (productPrice < 500000) { %>
+                            <% if (subtotal < 500000) { %>
                                 <div class="order-summary__shipping-tip">
-                                    <p>Mua thêm <%= (500000 - productPrice).toLocaleString('vi-VN') %>đ để được freeship.</p>
+                                    <p>Mua thêm <%= (500000 - subtotal).toLocaleString('vi-VN') %>đ để được freeship.</p>
                                 </div>
                             <% } %>
 
@@ -266,11 +271,11 @@
 
                             <input type="hidden" name="shipping_fee" id="shippingFeeInput" value="<%= shippingFee %>">
                             <input type="hidden" name="discount_amount" id="discountInput" value="0">
-                            <input type="hidden" name="subtotal" value="<%= productPrice %>">
+                            <input type="hidden" name="subtotal" value="<%= subtotal %>">
 
                             <div class="order-summary__total">
                                 <span class="order-summary__total-label">Tổng cộng</span>
-                                <span id="totalAmount" class="order-summary__total-value"><%= (productPrice + shippingFee).toLocaleString('vi-VN') %>đ</span>
+                                <span id="totalAmount" class="order-summary__total-value"><%= (subtotal + shippingFee).toLocaleString('vi-VN') %>đ</span>
                             </div>
                         </div>
 
@@ -287,9 +292,9 @@
 <script type="application/json" id="checkoutBootstrapData"><%- JSON.stringify({
     mode: 'buy-now',
     productId: product.id,
-    quantity: 1,
+    quantity: selectedQuantity,
     variantId: typeof variantId !== 'undefined' && variantId ? variantId : null,
-    subtotal: productPrice,
+    subtotal,
     shippingFee,
     addresses: Array.isArray(addresses) ? addresses.map((addr) => ({
         id: addr.id,

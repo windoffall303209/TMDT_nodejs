@@ -107,6 +107,44 @@ function toDatetimeLocal(value) {
     return new Date(date.getTime() - timezoneOffset).toISOString().slice(0, 16);
 }
 
+function syncPercentageWarning(selectId, inputId, warningId) {
+    const typeElement = document.getElementById(selectId);
+    const valueInput = document.getElementById(inputId);
+    const warningElement = document.getElementById(warningId);
+
+    if (!typeElement || !valueInput) {
+        return;
+    }
+
+    const isPercentage = typeElement.value === 'percentage';
+    const valueNumber = Number(valueInput.value);
+    const isInvalid = isPercentage && Number.isFinite(valueNumber) && valueInput.value !== '' && valueNumber >= 100;
+
+    valueInput.setCustomValidity(isInvalid ? 'Giá trị phần trăm phải nhỏ hơn 100%.' : '');
+    if (warningElement) {
+        warningElement.hidden = !isInvalid;
+    }
+}
+
+function toggleSaleValueConstraints(selectId, inputId, warningId) {
+    const typeElement = document.getElementById(selectId);
+    const valueInput = document.getElementById(inputId);
+
+    if (!typeElement || !valueInput) {
+        return;
+    }
+
+    valueInput.min = '0.01';
+
+    if (typeElement.value === 'percentage') {
+        valueInput.max = '99.99';
+    } else {
+        valueInput.removeAttribute('max');
+    }
+
+    syncPercentageWarning(selectId, inputId, warningId);
+}
+
 function closeModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
@@ -146,6 +184,7 @@ function editSale(saleId) {
     form.elements.start_date.value = toDatetimeLocal(sale.start_date);
     form.elements.end_date.value = toDatetimeLocal(sale.end_date);
     form.elements.is_active.checked = Boolean(sale.is_active);
+    toggleSaleValueConstraints('editSaleType', 'editSaleValue', 'editSaleValueWarning');
 
     renderProductChecklist('editSaleProducts', sale.product_ids || [], {
         prefix: `edit-sale-${sale.id}`,
@@ -329,6 +368,8 @@ document.addEventListener('DOMContentLoaded', function() {
         prefix: 'create-sale',
         showSale: true
     });
+    toggleSaleValueConstraints('createSaleType', 'createSaleValue', 'createSaleValueWarning');
+    toggleSaleValueConstraints('editSaleType', 'editSaleValue', 'editSaleValueWarning');
 
     document.querySelectorAll('[data-admin-toggle="section"]').forEach((button) => {
         button.addEventListener('click', () => toggleSection(button));
@@ -370,6 +411,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.getElementById('editSaleForm')?.addEventListener('submit', submitEditSale);
     document.getElementById('saleEmailForm')?.addEventListener('submit', submitSaleEmailForm);
+    document.getElementById('createSaleType')?.addEventListener('change', () => toggleSaleValueConstraints('createSaleType', 'createSaleValue', 'createSaleValueWarning'));
+    document.getElementById('editSaleType')?.addEventListener('change', () => toggleSaleValueConstraints('editSaleType', 'editSaleValue', 'editSaleValueWarning'));
+    document.getElementById('createSaleValue')?.addEventListener('input', () => syncPercentageWarning('createSaleType', 'createSaleValue', 'createSaleValueWarning'));
+    document.getElementById('editSaleValue')?.addEventListener('input', () => syncPercentageWarning('editSaleType', 'editSaleValue', 'editSaleValueWarning'));
 
     ['editSaleModal', 'saleEmailModal'].forEach((modalId) => {
         const modal = document.getElementById(modalId);

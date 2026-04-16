@@ -27,6 +27,7 @@ jest.mock('../models/Category', () => ({
     update: jest.fn(),
     getUsageStats: jest.fn(),
     delete: jest.fn(),
+    deleteAllPermanently: jest.fn(),
     createsCircularReference: jest.fn()
 }));
 
@@ -40,6 +41,7 @@ jest.mock('../models/Sale', () => ({
     findAll: jest.fn(),
     create: jest.fn(),
     assignProducts: jest.fn(),
+    clearAssignedProducts: jest.fn(),
     findById: jest.fn(),
     update: jest.fn(),
     delete: jest.fn()
@@ -72,12 +74,27 @@ jest.mock('../services/productBulkImportService', () => ({
     importProductsFromWorkbook: jest.fn()
 }));
 
+jest.mock('../services/categoryBulkImportService', () => ({
+    createCategoryImportTemplateBuffer: jest.fn(() => Buffer.from('category-template')),
+    exportCategoriesToWorkbookBuffer: jest.fn(() => Promise.resolve(Buffer.from('category-export'))),
+    importCategoriesFromWorkbook: jest.fn(() => Promise.resolve({
+        totalRows: 2,
+        createdCount: 1,
+        updatedCount: 1,
+        failedCount: 0,
+        errors: []
+    }))
+}));
+
 jest.mock('../middleware/upload', () => ({}));
 
 const Category = require('../models/Category');
 const Product = require('../models/Product');
 const adminController = require('../controllers/adminController');
 const productBulkImportService = require('../services/productBulkImportService');
+const categoryBulkImportService = require('../services/categoryBulkImportService');
+const Sale = require('../models/Sale');
+const Voucher = require('../models/Voucher');
 
 function createRes() {
     const res = {};
@@ -208,6 +225,69 @@ describe('adminController category management', () => {
         });
         expect(Category.delete).not.toHaveBeenCalled();
     });
+
+    it('streams the category import template workbook', async () => {
+        const req = {};
+        const res = createRes();
+        res.setHeader = jest.fn();
+        res.send = jest.fn();
+
+        await adminController.downloadCategoryImportTemplate(req, res);
+
+        expect(categoryBulkImportService.createCategoryImportTemplateBuffer).toHaveBeenCalled();
+        expect(res.send).toHaveBeenCalledWith(Buffer.from('category-template'));
+    });
+
+    it('streams the current category export workbook', async () => {
+        const req = { query: { search: 'nu' } };
+        const res = createRes();
+        res.setHeader = jest.fn();
+        res.send = jest.fn();
+
+        await adminController.exportCategories(req, res);
+
+        expect(categoryBulkImportService.exportCategoriesToWorkbookBuffer).toHaveBeenCalledWith({
+            search: 'nu'
+        });
+        expect(res.send).toHaveBeenCalledWith(Buffer.from('category-export'));
+    });
+
+    it('imports category workbook and redirects with a success notice', async () => {
+        const req = {
+            file: { path: 'C:/temp/categories.xlsx' }
+        };
+        const res = createRes();
+
+        await adminController.importCategories(req, res);
+
+        expect(categoryBulkImportService.importCategoriesFromWorkbook).toHaveBeenCalledWith({
+            workbookPath: 'C:/temp/categories.xlsx'
+        });
+        expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('/admin/categories?notice='));
+    });
+
+    it('hard deletes all deletable categories and reports blocked ones', async () => {
+        Category.deleteAllPermanently.mockResolvedValue({
+            totalCategories: 12,
+            deletedCategories: 9,
+            blockedCategories: 3,
+            deletedProducts: 41
+        });
+
+        const req = {};
+        const res = createRes();
+
+        await adminController.deleteAllCategories(req, res);
+
+        expect(Category.deleteAllPermanently).toHaveBeenCalled();
+        expect(res.json).toHaveBeenCalledWith({
+            success: true,
+            deletedCount: 9,
+            blockedCount: 3,
+            deletedProducts: 41,
+            message: 'Đã xóa vĩnh viễn 9 danh mục và 41 sản phẩm liên quan. Còn 3 danh mục không thể xóa vì sản phẩm của chúng đã nằm trong lịch sử đơn hàng.'
+        });
+    });
 });
 
 describe('adminController bulk product import', () => {
@@ -317,6 +397,58 @@ describe('adminController bulk product import', () => {
             blockedCount: 4,
             message: 'Đã xóa vĩnh viễn 14 sản phẩm. Còn 4 sản phẩm không thể xóa vì đã nằm trong lịch sử đơn hàng.'
         });
+    });
+});
+
+describe('adminController sales and vouchers validation', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it('rejects creating percentage sales at 100%', async () => {
+        const req = {
+            body: {
+                name: 'Sale 100%',
+                type: 'percentage',
+                value: '100',
+                start_date: '2026-04-16T08:00',
+                end_date: '2026-04-18T08:00'
+            }
+        };
+        const res = createRes();
+
+        await adminController.createSale(req, res);
+
+        expect(Sale.create).not.toHaveBeenCalled();
+        expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('notice_type=error'));
+    });
+
+    it('rejects updating percentage vouchers at 100%', async () => {
+        Voucher.findById.mockResolvedValue({ id: 7, code: 'SAVE10' });
+
+        const req = {
+            params: { id: '7' },
+            body: {
+                code: 'SAVE10',
+                name: 'Sale qua muc',
+                type: 'percentage',
+                value: '100',
+                min_order_amount: '0',
+                user_limit: '1',
+                start_date: '2026-04-16T08:00',
+                end_date: '2026-04-18T08:00'
+            }
+        };
+        const res = createRes();
+
+        await adminController.updateVoucher(req, res);
+
+        expect(Voucher.update).not.toHaveBeenCalled();
+        expect(res.status).toHaveBeenCalledWith(400);
+        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+            success: false,
+            message: expect.stringContaining('100%')
+        }));
     });
 });
 

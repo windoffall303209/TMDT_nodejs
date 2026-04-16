@@ -534,13 +534,21 @@ body.address-form-open {
     font-size: 13px;
 }
 
+.order-summary__item-price {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
 .order-summary__item-old-price {
+    order: 2;
     color: var(--gray-500);
     font-size: 13px;
     text-decoration: line-through;
 }
 
 .order-summary__item-amount {
+    order: 1;
     margin-top: 4px;
     font-size: 18px;
     font-weight: 800;

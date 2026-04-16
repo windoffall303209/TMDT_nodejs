@@ -198,6 +198,34 @@ async function deleteCategory(categoryId) {
     }
 }
 
+async function deleteAllCategories() {
+    const confirmed = await showCategoryConfirm(
+        'Thao tác này sẽ xóa vĩnh viễn toàn bộ danh mục có thể xóa trong database, đồng thời xóa luôn sản phẩm, ảnh và biến thể thuộc các danh mục đó. Danh mục gắn với sản phẩm đã nằm trong lịch sử đơn hàng sẽ không thể xóa. Bạn có chắc muốn tiếp tục?',
+        'Xóa vĩnh viễn tất cả danh mục'
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/admin/categories/delete-all', {
+            method: 'POST',
+            credentials: 'same-origin'
+        });
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            throw new Error(result.message || 'Không thể xóa tất cả danh mục');
+        }
+
+        showCategoryToast(result.message || 'Đã xóa vĩnh viễn tất cả danh mục có thể xóa', 'success');
+        setTimeout(() => window.location.reload(), 1100);
+    } catch (error) {
+        showCategoryToast(error.message || 'Không thể xóa tất cả danh mục', 'error');
+    }
+}
+
 async function submitEditCategoryForm(event) {
     event.preventDefault();
 
@@ -278,6 +306,10 @@ function initAdminCategoriesPage() {
 
     document.querySelectorAll('[data-category-action="delete-category"]').forEach((button) => {
         button.addEventListener('click', () => deleteCategory(button.dataset.categoryId));
+    });
+
+    document.querySelectorAll('[data-category-action="delete-all-categories"]').forEach((button) => {
+        button.addEventListener('click', () => deleteAllCategories());
     });
 
     document.querySelectorAll('[data-category-modal-close]').forEach((button) => {

@@ -2,7 +2,8 @@ const Category = require('../models/Category');
 
 async function headerCategories(req, res, next) {
     try {
-        res.locals.headerCategories = await Category.findRootCategories();
+        const categories = await Category.findAll();
+        res.locals.headerCategories = Category.buildTree(categories);
     } catch (error) {
         console.error('Header categories error:', error);
         res.locals.headerCategories = [];

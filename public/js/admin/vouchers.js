@@ -139,6 +139,44 @@ function toggleMaxDiscount(selectId = 'voucherType', groupId = 'maxDiscountGroup
     }
 }
 
+function syncVoucherPercentageWarning(selectId = 'voucherType', inputId = 'voucherValue', warningId = 'voucherValueWarning') {
+    const typeElement = document.getElementById(selectId);
+    const valueInput = document.getElementById(inputId);
+    const warningElement = document.getElementById(warningId);
+
+    if (!typeElement || !valueInput) {
+        return;
+    }
+
+    const isPercentage = typeElement.value === 'percentage';
+    const valueNumber = Number(valueInput.value);
+    const isInvalid = isPercentage && Number.isFinite(valueNumber) && valueInput.value !== '' && valueNumber >= 100;
+
+    valueInput.setCustomValidity(isInvalid ? 'Giá trị phần trăm phải nhỏ hơn 100%.' : '');
+    if (warningElement) {
+        warningElement.hidden = !isInvalid;
+    }
+}
+
+function toggleVoucherValueConstraints(selectId = 'voucherType', inputId = 'voucherValue', warningId = 'voucherValueWarning') {
+    const typeElement = document.getElementById(selectId);
+    const valueInput = document.getElementById(inputId);
+
+    if (!typeElement || !valueInput) {
+        return;
+    }
+
+    valueInput.min = '0.01';
+
+    if (typeElement.value === 'percentage') {
+        valueInput.max = '99.99';
+    } else {
+        valueInput.removeAttribute('max');
+    }
+
+    syncVoucherPercentageWarning(selectId, inputId, warningId);
+}
+
 function editVoucher(voucherId) {
     const voucher = adminVouchersMap.get(Number(voucherId));
     const form = document.getElementById('editVoucherForm');
@@ -167,6 +205,7 @@ function editVoucher(voucherId) {
     });
 
     toggleMaxDiscount('editVoucherType', 'editMaxDiscountGroup');
+    toggleVoucherValueConstraints('editVoucherType', 'editVoucherValue', 'editVoucherValueWarning');
     openModal('editVoucherModal');
 }
 
@@ -369,6 +408,8 @@ document.addEventListener('DOMContentLoaded', function() {
         prefix: 'create-voucher'
     });
     toggleMaxDiscount();
+    toggleVoucherValueConstraints();
+    toggleVoucherValueConstraints('editVoucherType', 'editVoucherValue', 'editVoucherValueWarning');
 
     document.querySelectorAll('[data-admin-toggle="section"]').forEach((button) => {
         button.addEventListener('click', () => toggleSection(button));
@@ -414,8 +455,16 @@ document.addEventListener('DOMContentLoaded', function() {
         button.addEventListener('click', () => closeModal(button.dataset.voucherModalClose));
     });
 
-    document.getElementById('voucherType')?.addEventListener('change', () => toggleMaxDiscount());
-    document.getElementById('editVoucherType')?.addEventListener('change', () => toggleMaxDiscount('editVoucherType', 'editMaxDiscountGroup'));
+    document.getElementById('voucherType')?.addEventListener('change', () => {
+        toggleMaxDiscount();
+        toggleVoucherValueConstraints('voucherType', 'voucherValue', 'voucherValueWarning');
+    });
+    document.getElementById('editVoucherType')?.addEventListener('change', () => {
+        toggleMaxDiscount('editVoucherType', 'editMaxDiscountGroup');
+        toggleVoucherValueConstraints('editVoucherType', 'editVoucherValue', 'editVoucherValueWarning');
+    });
+    document.getElementById('voucherValue')?.addEventListener('input', () => syncVoucherPercentageWarning('voucherType', 'voucherValue', 'voucherValueWarning'));
+    document.getElementById('editVoucherValue')?.addEventListener('input', () => syncVoucherPercentageWarning('editVoucherType', 'editVoucherValue', 'editVoucherValueWarning'));
     document.getElementById('editVoucherForm')?.addEventListener('submit', submitEditVoucher);
     document.getElementById('voucherEmailForm')?.addEventListener('submit', submitVoucherEmailForm);
 

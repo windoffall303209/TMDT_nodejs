@@ -114,6 +114,11 @@
     line-height: 1.5;
 }
 
+.admin-form__hint--warning {
+    color: #c04b32;
+    font-weight: 700;
+}
+
 .admin-product-checklist__toolbar {
     display: flex;
     gap: 12px;

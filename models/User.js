@@ -17,6 +17,11 @@ const pool = require('../config/database');
 const bcrypt = require('bcryptjs');
 
 class User {
+    static async generateRandomPasswordHash() {
+        const crypto = require('crypto');
+        const randomPassword = crypto.randomBytes(24).toString('hex');
+        return bcrypt.hash(randomPassword, 10);
+    }
     // =============================================================================
     // ĐĂNG KÝ NGƯỜI DÙNG - CREATE USER
     // =============================================================================
@@ -87,6 +92,67 @@ class User {
         const query = 'SELECT * FROM users WHERE email = ?';
         const [rows] = await pool.execute(query, [email]);
         return rows[0] || null;
+    }
+
+    static async createGoogleUser({ email, full_name, avatar_url = null }) {
+        const password_hash = await this.generateRandomPasswordHash();
+        const [result] = await pool.execute(
+            `INSERT INTO users (
+                email,
+                password_hash,
+                full_name,
+                avatar_url,
+                email_verified,
+                email_verified_at,
+                marketing_consent
+            )
+            VALUES (?, ?, ?, ?, TRUE, NOW(), FALSE)`,
+            [email, password_hash, full_name, avatar_url]
+        );
+
+        return this.findById(result.insertId);
+    }
+
+    static async syncGoogleProfile(userId, { full_name, avatar_url = null }) {
+        await pool.execute(
+            `UPDATE users
+             SET full_name = COALESCE(NULLIF(full_name, ''), ?),
+                 avatar_url = COALESCE(NULLIF(avatar_url, ''), ?),
+                 email_verified = TRUE,
+                 email_verified_at = COALESCE(email_verified_at, NOW())
+             WHERE id = ?`,
+            [full_name || null, avatar_url || null, userId]
+        );
+
+        return this.findById(userId);
+    }
+
+    static async findOrCreateGoogleUser(profile = {}) {
+        const email = String(profile.email || '').trim().toLowerCase();
+        const fullName = String(profile.name || profile.full_name || '').trim() || email.split('@')[0] || 'Google User';
+        const avatarUrl = String(profile.picture || profile.avatar_url || '').trim() || null;
+
+        if (!email) {
+            throw new Error('Google account does not provide a valid email');
+        }
+
+        const existingUser = await this.findByEmail(email);
+        if (existingUser) {
+            if (existingUser.is_active === false || existingUser.is_active === 0) {
+                throw new Error('Tài khoản của bạn đã bị khóa. Vui lòng liên hệ hỗ trợ.');
+            }
+
+            return this.syncGoogleProfile(existingUser.id, {
+                full_name: fullName,
+                avatar_url: avatarUrl
+            });
+        }
+
+        return this.createGoogleUser({
+            email,
+            full_name: fullName,
+            avatar_url: avatarUrl
+        });
     }
 
     // =============================================================================

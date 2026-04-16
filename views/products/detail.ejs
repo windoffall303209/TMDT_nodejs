@@ -27,6 +27,21 @@
     const editOwnReviewOpen = Boolean(canEditReview && reviewFormErrorCodes.includes(reviewFeedbackCode));
     const createReviewPanelOpen = Boolean(canCreateReview && reviewFormErrorCodes.includes(reviewFeedbackCode));
     const reviewBodyOpen = Boolean(reviewFeedback || viewOwnReviewOpen || editOwnReviewOpen || createReviewPanelOpen);
+    const averageRating = Number(product.average_rating || 0);
+    const reviewCount = Number(product.review_count || 0);
+    const soldCount = Math.max(0, Number.parseInt(product.sold_count, 10) || 0);
+    const highlightedStars = Math.max(0, Math.min(5, Math.round(averageRating)));
+    const formatSoldCount = (value) => {
+        if (value >= 1000000) {
+            return `${(value / 1000000).toFixed(value % 1000000 === 0 ? 0 : 1)}M`;
+        }
+
+        if (value >= 1000) {
+            return `${(value / 1000).toFixed(value % 1000 === 0 ? 0 : 1)}k`;
+        }
+
+        return value.toLocaleString('vi-VN');
+    };
 %>
 
 <!-- ===== Trang chi tiết sản phẩm ===== -->
@@ -89,28 +104,29 @@
             </div>
 
             <div class="product-info">
-                <div class="product-info__eyebrow">
-                    <span>WIND OF FALL</span>
-                    <% if (product.category_name) { %>
-                        <a href="/products/category/<%= product.category_slug %>"><%= product.category_name %></a>
-                    <% } %>
-                </div>
-
-                <h1 class="product-info__title"><%= product.name %></h1>
+               <h1 class="product-info__title"><%= product.name %></h1>
                 <% if (product.sku) { %>
                     <p class="product-info__sku">SKU: <span><%= product.sku %></span></p>
                 <% } %>
 
-                <div class="product-info__trust">
-                    <span>Form dễ mặc</span>
-                    <span>Giao nhanh</span>
-                    <span>Đổi trả 30 ngày</span>
+                <div class="product-info__meta">
+                    <button type="button" class="product-info__rating-link" data-scroll-to-reviews>
+                        <span class="product-info__rating-stars" aria-hidden="true">
+                            <% [1, 2, 3, 4, 5].forEach((starIndex) => { %>
+                                <span class="product-info__rating-star <%= starIndex <= highlightedStars ? 'is-active' : '' %>">★</span>
+                            <% }) %>
+                        </span>
+                        <span class="product-info__rating-value"><%= averageRating > 0 ? averageRating.toFixed(1) : '0.0' %></span>
+                        <span class="product-info__rating-count">(<%= reviewCount.toLocaleString('vi-VN') %> đánh giá)</span>
+                    </button>
+                    <span class="product-info__meta-divider" aria-hidden="true">|</span>
+                    <span class="product-info__sold-count"><%= formatSoldCount(soldCount) %> đã bán</span>
                 </div>
 
                 <div class="product-info__price-box">
                     <% if (product.price !== product.final_price && product.final_price) { %>
-                        <p class="product-info__price-original"><%= product.price.toLocaleString('vi-VN') %>đ</p>
                         <p class="product-info__price-current" id="productPrice"><%= product.final_price.toLocaleString('vi-VN') %>đ</p>
+                        <p class="product-info__price-original"><%= product.price.toLocaleString('vi-VN') %>đ</p>
                         <span class="product-info__discount-badge">Giảm <%= Math.round((1 - product.final_price / product.price) * 100) %>%</span>
                     <% } else { %>
                         <p class="product-info__price-current" id="productPrice"><%= (product.final_price || product.price).toLocaleString('vi-VN') %>đ</p>
@@ -143,11 +159,13 @@
                     </div>
                 <% } %>
 
+                <p class="variant-stock" id="variantStock" aria-live="polite"></p>
+
                 <div class="product-info__quantity">
                     <label>Số lượng</label>
                     <div class="quantity-selector">
                         <button type="button" class="quantity-selector__btn" id="qtyMinus" aria-label="Giảm">−</button>
-                        <input type="number" class="quantity-selector__input" id="productQty" value="1" min="1" max="99">
+                        <input type="number" class="quantity-selector__input" id="productQty" value="1" min="1" inputmode="numeric">
                         <button type="button" class="quantity-selector__btn" id="qtyPlus" aria-label="Tăng">+</button>
                     </div>
                 </div>
@@ -174,7 +192,7 @@
         <% } %>
 
         <!-- Khu vực đánh giá: thông báo, form tạo/sửa, danh sách review -->
-        <section class="product-reviews">
+        <section class="product-reviews" id="productReviewsSection">
             <button
                 type="button"
                 class="product-reviews__toggle <%= reviewBodyOpen ? 'is-open' : '' %>"
@@ -438,9 +456,9 @@
                 <% if (reviews && reviews.length > 0) { %>
                     <div class="product-reviews__summary">
                         <div>
-                            <div class="product-reviews__score"><%= Number(product.average_rating || 0).toFixed(1) %></div>
+                            <div class="product-reviews__score"><%= averageRating.toFixed(1) %></div>
                             <div class="product-reviews__stars">★★★★★</div>
-                            <div class="product-reviews__count"><%= product.review_count || reviews.length %> đánh giá</div>
+                            <div class="product-reviews__count"><%= reviewCount || reviews.length %> đánh giá</div>
                         </div>
                     </div>
 
@@ -517,7 +535,10 @@
 <script type="application/json" id="productDetailBootstrap"><%- JSON.stringify({
     productId: product.id,
     variants: product.variants || [],
-    basePrice: product.final_price || product.price,
+    baseCurrentPrice: product.final_price || product.price,
+    baseOriginalPrice: product.price || 0,
+    hasDiscount: Boolean(product.price !== product.final_price && product.final_price),
+    productStock: Number.parseInt(product.stock_quantity, 10) || 0,
     images: (product.images || []).map(img => img.image_url),
     initialImage: product.primary_image || ((product.images && product.images[0]) ? product.images[0].image_url : null)
 }).replace(/</g, '\\u003c') %></script>

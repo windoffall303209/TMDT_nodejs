@@ -12,6 +12,10 @@ function toNumericPrice(value) {
     return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function formatCurrency(value) {
+    return `${toNumericPrice(value).toLocaleString('vi-VN')}đ`;
+}
+
 function readProductDetailBootstrap() {
     if (productDetailState.bootstrap) {
         return productDetailState.bootstrap;
@@ -25,7 +29,9 @@ function readProductDetailBootstrap() {
 
     try {
         productDetailState.bootstrap = JSON.parse(bootstrapElement.textContent);
-        productDetailState.bootstrap.basePrice = toNumericPrice(productDetailState.bootstrap.basePrice);
+        productDetailState.bootstrap.baseCurrentPrice = toNumericPrice(productDetailState.bootstrap.baseCurrentPrice);
+        productDetailState.bootstrap.baseOriginalPrice = toNumericPrice(productDetailState.bootstrap.baseOriginalPrice);
+        productDetailState.bootstrap.productStock = toNumericPrice(productDetailState.bootstrap.productStock);
         productDetailState.bootstrap.variants = Array.isArray(productDetailState.bootstrap.variants)
             ? productDetailState.bootstrap.variants.map((variant) => ({
                 ...variant,
@@ -149,6 +155,101 @@ function setSelectedClass(selector, activeButton) {
     });
 }
 
+function updatePriceDisplay(currentPrice, originalPrice = null, hasDiscount = false) {
+    const currentPriceElement = document.getElementById('productPrice');
+    const originalPriceElement = document.querySelector('.product-info__price-original');
+    const discountBadgeElement = document.querySelector('.product-info__discount-badge');
+
+    if (currentPriceElement) {
+        currentPriceElement.textContent = formatCurrency(currentPrice);
+    }
+
+    if (originalPriceElement) {
+        if (hasDiscount && originalPrice !== null && originalPrice > currentPrice) {
+            originalPriceElement.textContent = formatCurrency(originalPrice);
+            originalPriceElement.hidden = false;
+        } else {
+            originalPriceElement.hidden = true;
+        }
+    }
+
+    if (discountBadgeElement) {
+        if (hasDiscount && originalPrice !== null && originalPrice > currentPrice) {
+            const discountPercent = Math.max(1, Math.round((1 - (currentPrice / originalPrice)) * 100));
+            discountBadgeElement.textContent = `Giảm ${discountPercent}%`;
+            discountBadgeElement.hidden = false;
+        } else {
+            discountBadgeElement.hidden = true;
+        }
+    }
+}
+
+function updateVariantStockMessage(stockQuantity = null) {
+    const stockElement = document.getElementById('variantStock');
+    if (!stockElement) {
+        return;
+    }
+
+    if (stockQuantity === null || stockQuantity === undefined) {
+        stockElement.textContent = '';
+        delete stockElement.dataset.state;
+        return;
+    }
+
+    if (stockQuantity > 0) {
+        stockElement.textContent = `Còn ${stockQuantity.toLocaleString('vi-VN')} sản phẩm có sẵn`;
+        stockElement.dataset.state = 'in-stock';
+        return;
+    }
+
+    stockElement.textContent = 'Biến thể này đã hết hàng';
+    stockElement.dataset.state = 'out-of-stock';
+}
+
+function getCurrentStockLimit() {
+    const bootstrap = readProductDetailBootstrap();
+    const variants = bootstrap.variants || [];
+
+    if (variants.length === 0) {
+        return Math.max(0, bootstrap.productStock || 0);
+    }
+
+    if (!productDetailState.selectedVariantId) {
+        return null;
+    }
+
+    const selectedVariant = variants.find((variant) => variant.id === productDetailState.selectedVariantId);
+    return selectedVariant ? Math.max(0, selectedVariant.stock_quantity) : null;
+}
+
+function syncQuantityInputWithStock(showWarning = false) {
+    const qtyInput = document.getElementById('productQty');
+    const stockLimit = getCurrentStockLimit();
+
+    if (!qtyInput) {
+        return;
+    }
+
+    if (stockLimit === null) {
+        qtyInput.removeAttribute('max');
+        qtyInput.value = String(Math.max(1, parseInt(qtyInput.value, 10) || 1));
+        return;
+    }
+
+    const safeStockLimit = Math.max(0, stockLimit);
+    qtyInput.max = String(Math.max(1, safeStockLimit));
+
+    let nextValue = Math.max(1, parseInt(qtyInput.value, 10) || 1);
+    if (safeStockLimit > 0 && nextValue > safeStockLimit) {
+        nextValue = safeStockLimit;
+        if (showWarning) {
+            showNotification(`Số lượng tồn kho chỉ còn ${safeStockLimit.toLocaleString('vi-VN')} sản phẩm`, 'warning');
+        }
+    }
+
+    qtyInput.value = String(nextValue);
+}
+
 function resolveVariant() {
     const bootstrap = readProductDetailBootstrap();
     const variants = bootstrap.variants || [];
@@ -170,11 +271,11 @@ function resolveVariant() {
     if (match) {
         productDetailState.selectedVariantId = match.id;
 
-        const newPrice = bootstrap.basePrice + match.additional_price;
-        const priceElement = document.getElementById('productPrice');
-        if (priceElement) {
-            priceElement.textContent = `${newPrice.toLocaleString('vi-VN')}đ`;
-        }
+        updatePriceDisplay(
+            bootstrap.baseCurrentPrice + match.additional_price,
+            bootstrap.hasDiscount ? bootstrap.baseOriginalPrice + match.additional_price : null,
+            Boolean(bootstrap.hasDiscount)
+        );
 
         if (stockElement) {
             if (match.stock_quantity > 0) {
@@ -318,7 +419,7 @@ function handleVariantButtonClick(button) {
     if (qtyInput) qtyInput.value = 1;
 }
 
-function getSelectedVariantStock() {
+function getSelectedVariantStockLegacy() {
     const bootstrap = readProductDetailBootstrap();
     const variants = bootstrap.variants || [];
     if (variants.length === 0) return Infinity;
@@ -467,7 +568,7 @@ function getSelectedQuantity() {
     return qtyInput ? parseInt(qtyInput.value, 10) || 1 : 1;
 }
 
-function initQuantitySelector() {
+function initQuantitySelectorLegacy() {
     const qtyInput = document.getElementById('productQty');
     const qtyMinus = document.getElementById('qtyMinus');
     const qtyPlus = document.getElementById('qtyPlus');
@@ -708,7 +809,174 @@ function initDescriptionToggle() {
     initCollapsibleSection('descToggle', 'descBody');
 }
 
+function scrollToReviewsSection() {
+    const reviewSection = document.getElementById('productReviewsSection');
+    const reviewToggle = document.getElementById('reviewToggle');
+    const reviewBody = document.getElementById('reviewBody');
+
+    if (!reviewSection || !reviewToggle || !reviewBody) {
+        return;
+    }
+
+    if (!reviewBody.classList.contains('is-open')) {
+        setCollapsibleSectionState(reviewToggle, reviewBody, true);
+    }
+
+    reviewSection.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+    });
+}
+
+function resolveVariant() {
+    const bootstrap = readProductDetailBootstrap();
+    const variants = bootstrap.variants || [];
+    if (variants.length === 0) {
+        return;
+    }
+
+    const colors = [...new Set(variants.filter((variant) => variant.color).map((variant) => variant.color))];
+    const sizes = [...new Set(variants.filter((variant) => variant.size).map((variant) => variant.size))];
+    const hasColors = colors.length > 0;
+    const hasSizes = sizes.length > 0;
+
+    const match = variants.find((variant) => {
+        const colorMatch = !hasColors || variant.color === productDetailState.selectedColor;
+        const sizeMatch = !hasSizes || variant.size === productDetailState.selectedSize;
+        return colorMatch && sizeMatch;
+    });
+
+    if (match) {
+        productDetailState.selectedVariantId = match.id;
+        updatePriceDisplay(
+            bootstrap.baseCurrentPrice + match.additional_price,
+            bootstrap.hasDiscount ? bootstrap.baseOriginalPrice + match.additional_price : null,
+            Boolean(bootstrap.hasDiscount)
+        );
+        updateVariantStockMessage(match.stock_quantity);
+
+        if (match.variant_image_url) {
+            switchGalleryToImage(match.variant_image_url);
+        }
+    } else {
+        productDetailState.selectedVariantId = null;
+        updatePriceDisplay(
+            bootstrap.baseCurrentPrice,
+            bootstrap.hasDiscount ? bootstrap.baseOriginalPrice : null,
+            Boolean(bootstrap.hasDiscount)
+        );
+        updateVariantStockMessage(null);
+    }
+
+    syncQuantityInputWithStock(true);
+}
+
+function getSelectedVariantStock() {
+    const stockLimit = getCurrentStockLimit();
+    return stockLimit === null ? Infinity : stockLimit;
+}
+
+function initQuantitySelector() {
+    const qtyInput = document.getElementById('productQty');
+    const qtyMinus = document.getElementById('qtyMinus');
+    const qtyPlus = document.getElementById('qtyPlus');
+
+    if (!qtyInput) {
+        return;
+    }
+
+    qtyMinus?.addEventListener('click', () => {
+        const current = parseInt(qtyInput.value, 10) || 1;
+        if (current > 1) {
+            qtyInput.value = current - 1;
+        }
+    });
+
+    qtyPlus?.addEventListener('click', () => {
+        const current = parseInt(qtyInput.value, 10) || 1;
+        const maxStock = getCurrentStockLimit();
+
+        if (maxStock === null) {
+            qtyInput.value = current + 1;
+            return;
+        }
+
+        if (maxStock > 0 && current < maxStock) {
+            qtyInput.value = current + 1;
+            return;
+        }
+
+        showNotification(`Số lượng tồn kho chỉ còn ${Math.max(0, maxStock).toLocaleString('vi-VN')} sản phẩm`, 'warning');
+    });
+
+    qtyInput.addEventListener('input', () => {
+        qtyInput.value = qtyInput.value.replace(/[^0-9]/g, '');
+    });
+
+    qtyInput.addEventListener('blur', () => {
+        let value = parseInt(qtyInput.value, 10);
+        if (!value || value < 1) {
+            value = 1;
+        }
+
+        qtyInput.value = value;
+        syncQuantityInputWithStock(true);
+    });
+
+    qtyInput.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter') {
+            return;
+        }
+
+        event.preventDefault();
+        let value = parseInt(qtyInput.value, 10);
+        if (!value || value < 1) {
+            value = 1;
+        }
+
+        qtyInput.value = value;
+        syncQuantityInputWithStock(true);
+        qtyInput.blur();
+    });
+}
+
 function initProductDetailPage() {
+    const bootstrap = readProductDetailBootstrap();
+
+    initProductGallery();
+    initQuantitySelector();
+    initDescriptionToggle();
+    initCollapsibleSection('reviewToggle', 'reviewBody');
+    initCreateReviewControls();
+    initOwnReviewControls();
+    initReviewMediaInput();
+    clearTransientReviewQueryState();
+
+    updatePriceDisplay(
+        bootstrap.baseCurrentPrice,
+        bootstrap.hasDiscount ? bootstrap.baseOriginalPrice : null,
+        Boolean(bootstrap.hasDiscount)
+    );
+    syncQuantityInputWithStock();
+
+    document.querySelectorAll('.variant-btn').forEach((button) => {
+        button.addEventListener('click', () => handleVariantButtonClick(button));
+    });
+
+    document.querySelectorAll('[data-product-action="add-to-cart"]').forEach((button) => {
+        button.addEventListener('click', addToCartWithVariant);
+    });
+
+    document.querySelectorAll('[data-product-action="buy-now"]').forEach((button) => {
+        button.addEventListener('click', buyNowWithVariant);
+    });
+
+    document.querySelectorAll('[data-scroll-to-reviews]').forEach((button) => {
+        button.addEventListener('click', scrollToReviewsSection);
+    });
+}
+
+function initProductDetailPageLegacy() {
     readProductDetailBootstrap();
     initProductGallery();
     initQuantitySelector();
@@ -729,6 +997,10 @@ function initProductDetailPage() {
 
     document.querySelectorAll('[data-product-action="buy-now"]').forEach((button) => {
         button.addEventListener('click', buyNowWithVariant);
+    });
+
+    document.querySelectorAll('[data-scroll-to-reviews]').forEach((button) => {
+        button.addEventListener('click', scrollToReviewsSection);
     });
 }
 

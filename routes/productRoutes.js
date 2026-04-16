@@ -110,6 +110,7 @@ router.get('/suggest', async (req, res) => {
 
 // Product routes - all with optionalAuth to pass user info to views
 router.get('/', optionalAuth, productController.getProducts);
+router.get('/for-you', optionalAuth, productController.getForYou);
 router.get('/search', optionalAuth, productController.searchProducts);
 router.get('/category/:slug', optionalAuth, productController.getProductsByCategory);
 router.post('/:slug/reviews', verifyToken, handleReviewMediaUpload, productController.createProductReview);

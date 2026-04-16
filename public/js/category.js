@@ -107,8 +107,8 @@ function buildProductCard(product) {
         : '';
     const priceHtml = hasDiscount
         ? `
-            <span class="product-card__price-original">${price.toLocaleString('vi-VN')}đ</span>
             <span class="product-card__price product-card__price--sale">${finalPrice.toLocaleString('vi-VN')}đ</span>
+            <span class="product-card__price-original">${price.toLocaleString('vi-VN')}đ</span>
         `
         : `<span class="product-card__price">${price.toLocaleString('vi-VN')}đ</span>`;
 

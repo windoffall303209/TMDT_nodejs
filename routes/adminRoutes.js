@@ -19,6 +19,10 @@ router.post('/storefront', adminController.updateStorefrontSettings);
 
 // Categories
 router.get('/categories', adminController.getCategories);
+router.get('/categories/export', adminController.exportCategories);
+router.get('/categories/import-template', adminController.downloadCategoryImportTemplate);
+router.post('/categories/import', productImportUpload.single('import_file'), adminController.importCategories);
+router.post('/categories/delete-all', adminController.deleteAllCategories);
 router.post('/categories', adminController.createCategory);
 router.put('/categories/:id', adminController.updateCategory);
 router.delete('/categories/:id', adminController.deleteCategory);

@@ -46,6 +46,22 @@ function parseMoneyValue(value) {
     return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function resolveShippingFee(subtotal) {
+    if (typeof Order.calculateShippingFee === 'function') {
+        return parseMoneyValue(Order.calculateShippingFee(subtotal));
+    }
+
+    return parseMoneyValue(subtotal) >= 500000 ? 0 : 30000;
+}
+
+function getPayableAmount(subtotal, shippingFee = 0) {
+    return Math.max(0, parseMoneyValue(subtotal) + parseMoneyValue(shippingFee));
+}
+
+function clampDiscountAmount(discountAmount, subtotal, shippingFee = 0) {
+    return Math.max(0, Math.min(parseMoneyValue(discountAmount), getPayableAmount(subtotal, shippingFee)));
+}
+
 function parseCartItemIds(rawValue) {
     if (rawValue === undefined || rawValue === null || rawValue === '') {
         return null;
@@ -193,7 +209,9 @@ async function buildBuyNowVoucherItems(productId, quantity = 1, variantId = null
             quantity: quantityNumber,
             subtotal: unitPrice * quantityNumber
         }],
-        orderAmount: unitPrice * quantityNumber
+        subtotal: unitPrice * quantityNumber,
+        shippingFee: resolveShippingFee(unitPrice * quantityNumber),
+        orderAmount: getPayableAmount(unitPrice * quantityNumber, resolveShippingFee(unitPrice * quantityNumber))
     };
 }
 
@@ -338,13 +356,19 @@ exports.createOrder = async (req, res) => {
         let voucherId = null;
 
         if (voucher_code) {
-            const voucherResult = await Voucher.validate(voucher_code, req.user.id, cartData.subtotal, cartData.items);
+            const shippingFee = resolveShippingFee(cartData.subtotal);
+            const voucherResult = await Voucher.validate(
+                voucher_code,
+                req.user.id,
+                getPayableAmount(cartData.subtotal, shippingFee),
+                cartData.items
+            );
 
             if (!voucherResult.valid) {
                 return res.status(400).json({ message: voucherResult.message });
             }
 
-            discountAmount = voucherResult.discountAmount;
+            discountAmount = clampDiscountAmount(voucherResult.discountAmount, cartData.subtotal, shippingFee);
             voucherId = voucherResult.voucher.id;
         }
 
@@ -771,14 +795,16 @@ exports.createBuyNowOrder = async (req, res) => {
         let voucherId = null;
 
         if (voucher_code) {
+            const subtotal = (product.final_price || product.price) * quantityNumber;
+            const shippingFee = resolveShippingFee(subtotal);
             const voucherResult = await Voucher.validate(
                 voucher_code,
                 req.user.id,
-                (product.final_price || product.price) * quantityNumber,
+                getPayableAmount(subtotal, shippingFee),
                 [{
                     product_id: product.id,
                     quantity: quantityNumber,
-                    subtotal: (product.final_price || product.price) * quantityNumber
+                    subtotal
                 }]
             );
 
@@ -786,7 +812,7 @@ exports.createBuyNowOrder = async (req, res) => {
                 return res.status(400).json({ message: voucherResult.message });
             }
 
-            discountAmount = voucherResult.discountAmount;
+            discountAmount = clampDiscountAmount(voucherResult.discountAmount, subtotal, shippingFee);
             voucherId = voucherResult.voucher.id;
         }
 
@@ -861,11 +887,15 @@ exports.validateVoucher = async (req, res) => {
         const userId = req.user ? req.user.id : null;
         let orderAmount = parseFloat(order_amount) || 0;
         let voucherItems = [];
+        let subtotalAmount = parseFloat(order_amount) || 0;
+        let shippingFee = 0;
 
         if (mode === 'buy-now' || product_id) {
             const buyNowContext = await buildBuyNowVoucherItems(product_id, quantity, variant_id);
             orderAmount = buyNowContext.orderAmount;
             voucherItems = buyNowContext.items;
+            subtotalAmount = buyNowContext.subtotal;
+            shippingFee = buyNowContext.shippingFee;
         } else if (req.user) {
             const cart = await Cart.getOrCreate(req.user.id);
             const selectedCartItemIds = parseCartItemIds(selected_cart_item_ids);
@@ -873,7 +903,9 @@ exports.validateVoucher = async (req, res) => {
                 await Cart.calculateTotal(cart.id),
                 selectedCartItemIds
             );
-            orderAmount = cartData.subtotal;
+            subtotalAmount = cartData.subtotal;
+            shippingFee = resolveShippingFee(cartData.subtotal);
+            orderAmount = getPayableAmount(cartData.subtotal, shippingFee);
             voucherItems = cartData.items;
         }
 
@@ -904,7 +936,7 @@ exports.validateVoucher = async (req, res) => {
                 type: result.voucher.type,
                 value: result.voucher.value
             },
-            discount_amount: result.discountAmount
+            discount_amount: clampDiscountAmount(result.discountAmount, subtotalAmount, shippingFee)
         });
     } catch (error) {
         console.error('Validate voucher error:', error);

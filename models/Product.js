@@ -58,6 +58,18 @@ class Product {
             product.final_price = this.toNumber(product.final_price);
         }
 
+        if (Object.prototype.hasOwnProperty.call(product, 'average_rating') && product.average_rating !== null) {
+            product.average_rating = this.toNumber(product.average_rating);
+        }
+
+        if (Object.prototype.hasOwnProperty.call(product, 'review_count') && product.review_count !== null) {
+            product.review_count = Math.max(0, Number.parseInt(product.review_count, 10) || 0);
+        }
+
+        if (Object.prototype.hasOwnProperty.call(product, 'sold_count') && product.sold_count !== null) {
+            product.sold_count = Math.max(0, Number.parseInt(product.sold_count, 10) || 0);
+        }
+
         return product;
     }
 
@@ -83,10 +95,115 @@ class Product {
         products.forEach((product) => {
             this.normalizeProductNumbers(product);
             product.final_price = this.calculateFinalPrice(product.price, product.sale_type, product.sale_value);
+            product.promotion_status = product.promotion_status || 'none';
+            product.display_price = product.final_price;
+            product.is_on_sale = product.promotion_status === 'active';
+            product.has_upcoming_promotion = product.promotion_status === 'upcoming';
             product.card_image = this.getOptimizedCardImageUrl(product.primary_image);
         });
 
         return products;
+    }
+
+    static getActiveSaleCondition(saleAlias = 'sale_ref', nowExpression = 'NOW()') {
+        return `(
+            ${saleAlias}.id IS NOT NULL
+            AND ${saleAlias}.is_active = TRUE
+            AND (${saleAlias}.start_date IS NULL OR ${nowExpression} >= ${saleAlias}.start_date)
+            AND (${saleAlias}.end_date IS NULL OR ${nowExpression} <= ${saleAlias}.end_date)
+        )`;
+    }
+
+    static getUpcomingSaleCondition(saleAlias = 'sale_ref', nowExpression = 'NOW()') {
+        return `(
+            ${saleAlias}.id IS NOT NULL
+            AND ${saleAlias}.is_active = TRUE
+            AND ${saleAlias}.start_date IS NOT NULL
+            AND ${nowExpression} < ${saleAlias}.start_date
+        )`;
+    }
+
+    static getPromotionStatusExpression(saleAlias = 'sale_ref', nowExpression = 'NOW()') {
+        const activeCondition = this.getActiveSaleCondition(saleAlias, nowExpression);
+        const upcomingCondition = this.getUpcomingSaleCondition(saleAlias, nowExpression);
+
+        return `CASE
+            WHEN ${activeCondition} THEN 'active'
+            WHEN ${upcomingCondition} THEN 'upcoming'
+            ELSE 'none'
+        END`;
+    }
+
+    static getDisplayPriceExpression(productAlias = 'p', saleAlias = 'sale_ref', nowExpression = 'NOW()') {
+        const activeCondition = this.getActiveSaleCondition(saleAlias, nowExpression);
+
+        return `CASE
+            WHEN ${activeCondition} AND ${saleAlias}.type = 'percentage' AND ${saleAlias}.value IS NOT NULL
+                THEN ${productAlias}.price * (1 - LEAST(GREATEST(${saleAlias}.value, 0), 100) / 100)
+            WHEN ${activeCondition} AND ${saleAlias}.type = 'fixed' AND ${saleAlias}.value IS NOT NULL
+                THEN GREATEST(0, ${productAlias}.price - ${saleAlias}.value)
+            ELSE ${productAlias}.price
+        END`;
+    }
+
+    static getReviewAggregateSelect(productAlias = 'p') {
+        return `
+                   COALESCE((
+                       SELECT ROUND(AVG(r.rating), 1)
+                       FROM reviews r
+                       WHERE r.product_id = ${productAlias}.id
+                         AND r.is_approved = TRUE
+                   ), 0) as average_rating,
+                   (
+                       SELECT COUNT(*)
+                       FROM reviews r
+                       WHERE r.product_id = ${productAlias}.id
+                         AND r.is_approved = TRUE
+                   ) as review_count`;
+    }
+
+    static getListingSelectFields(productAlias = 'p', categoryAlias = 'c', saleAlias = 'sale_ref', nowExpression = 'NOW()') {
+        const activeCondition = this.getActiveSaleCondition(saleAlias, nowExpression);
+
+        return `
+                   ${productAlias}.*,
+                   ${categoryAlias}.name as category_name,
+                   ${categoryAlias}.slug as category_slug,
+                   (SELECT image_url FROM product_images WHERE product_id = ${productAlias}.id AND is_primary = TRUE LIMIT 1) as primary_image,
+                   (SELECT COUNT(*) FROM product_images WHERE product_id = ${productAlias}.id) as image_count,
+                   CASE WHEN ${activeCondition} THEN ${saleAlias}.type ELSE NULL END as sale_type,
+                   CASE WHEN ${activeCondition} THEN ${saleAlias}.value ELSE NULL END as sale_value,
+                   CASE WHEN ${activeCondition} THEN ${saleAlias}.name ELSE NULL END as sale_name,
+                   ${saleAlias}.start_date as promotion_start_date,
+                   ${saleAlias}.end_date as promotion_end_date,
+                   ${this.getPromotionStatusExpression(saleAlias, nowExpression)} as promotion_status,
+${this.getReviewAggregateSelect(productAlias)},
+${this.getVariantAggregateSelect(productAlias)}`;
+    }
+
+    static getPromotionFilterClause(promotionFilter, saleAlias = 'sale_ref', nowExpression = 'NOW()') {
+        const activeCondition = this.getActiveSaleCondition(saleAlias, nowExpression);
+        const upcomingCondition = this.getUpcomingSaleCondition(saleAlias, nowExpression);
+        const normalizedPromotions = this.normalizePromotionSelections(promotionFilter);
+
+        if (normalizedPromotions.length === 0) {
+            return '';
+        }
+
+        const promotionClauses = [];
+        if (normalizedPromotions.includes('active')) {
+            promotionClauses.push(activeCondition);
+        }
+
+        if (normalizedPromotions.includes('upcoming')) {
+            promotionClauses.push(upcomingCondition);
+        }
+
+        if (promotionClauses.length === 0) {
+            return '';
+        }
+
+        return ` AND (${promotionClauses.join(' OR ')})`;
     }
 
     static getAvailabilityOrderExpression(productAlias = 'p') {
@@ -190,6 +307,157 @@ class Product {
         }
 
         return ` AND (${groups.join(' OR ')})`;
+    }
+
+    static normalizePromotionSelections(promotionFilter) {
+        const rawValues = Array.isArray(promotionFilter) ? promotionFilter : [promotionFilter];
+        const normalizedPromotions = new Set();
+
+        rawValues.forEach((value) => {
+            const normalizedValue = String(value || '').trim();
+
+            if (normalizedValue === 'active_or_upcoming') {
+                normalizedPromotions.add('active');
+                normalizedPromotions.add('upcoming');
+                return;
+            }
+
+            if (normalizedValue === 'active' || normalizedValue === 'upcoming') {
+                normalizedPromotions.add(normalizedValue);
+            }
+        });
+
+        return [...normalizedPromotions];
+    }
+
+    static getEffectiveRatingThreshold(filters = {}) {
+        if (Array.isArray(filters.ratings) && filters.ratings.length > 0) {
+            const normalizedRatings = filters.ratings
+                .map((value) => Number.parseInt(value, 10))
+                .filter((value) => Number.isInteger(value) && value >= 1 && value <= 5);
+
+            if (normalizedRatings.length > 0) {
+                return Math.min(...normalizedRatings);
+            }
+        }
+
+        const parsedRating = Number.parseInt(filters.rating, 10);
+        return Number.isInteger(parsedRating) && parsedRating >= 1 && parsedRating <= 5
+            ? parsedRating
+            : null;
+    }
+
+    static buildCategoryFilterClause(filters = {}, params = [], productAlias = 'p') {
+        const categoryIds = Array.isArray(filters.category_ids)
+            ? filters.category_ids
+            : (filters.category_id ? [filters.category_id] : []);
+        const normalizedCategoryIds = [...new Set(
+            categoryIds
+                .map((value) => Number.parseInt(value, 10))
+                .filter((value) => Number.isInteger(value) && value > 0)
+        )];
+
+        if (normalizedCategoryIds.length === 0) {
+            return '';
+        }
+
+        if (normalizedCategoryIds.length === 1) {
+            params.push(normalizedCategoryIds[0]);
+            return ` AND ${productAlias}.category_id = ?`;
+        }
+
+        const placeholders = normalizedCategoryIds.map(() => '?').join(', ');
+        params.push(...normalizedCategoryIds);
+        return ` AND ${productAlias}.category_id IN (${placeholders})`;
+    }
+
+    static normalizePriceRanges(priceRanges = []) {
+        const rawRanges = Array.isArray(priceRanges) ? priceRanges : [priceRanges];
+        const normalizedRanges = [];
+        const seenRanges = new Set();
+
+        rawRanges.forEach((range) => {
+            let minValue = range?.min ?? null;
+            let maxValue = range?.max ?? null;
+
+            if (typeof range === 'string') {
+                const [rawMin = '', rawMax = ''] = range.split(':', 2);
+                minValue = rawMin;
+                maxValue = rawMax;
+            }
+
+            const parsedMin = minValue === '' || minValue === null || minValue === undefined
+                ? null
+                : Number(minValue);
+            const parsedMax = maxValue === '' || maxValue === null || maxValue === undefined
+                ? null
+                : Number(maxValue);
+
+            let normalizedMin = Number.isFinite(parsedMin) && parsedMin >= 0 ? parsedMin : null;
+            let normalizedMax = Number.isFinite(parsedMax) && parsedMax >= 0 ? parsedMax : null;
+
+            if (normalizedMin !== null && normalizedMax !== null && normalizedMin > normalizedMax) {
+                [normalizedMin, normalizedMax] = [normalizedMax, normalizedMin];
+            }
+
+            if (normalizedMin === null && normalizedMax === null) {
+                return;
+            }
+
+            const rangeKey = `${normalizedMin ?? ''}:${normalizedMax ?? ''}`;
+            if (seenRanges.has(rangeKey)) {
+                return;
+            }
+
+            seenRanges.add(rangeKey);
+            normalizedRanges.push({
+                min: normalizedMin,
+                max: normalizedMax
+            });
+        });
+
+        return normalizedRanges;
+    }
+
+    static buildPriceFilterClause(filters = {}, params = [], priceColumn = 'p.price') {
+        const normalizedPriceRanges = this.normalizePriceRanges(filters.price_ranges);
+
+        if (normalizedPriceRanges.length > 0) {
+            const priceClauses = normalizedPriceRanges.map((range) => {
+                const rangeClauses = [];
+
+                if (range.min !== null) {
+                    rangeClauses.push(`${priceColumn} >= ?`);
+                    params.push(range.min);
+                }
+
+                if (range.max !== null) {
+                    rangeClauses.push(`${priceColumn} <= ?`);
+                    params.push(range.max);
+                }
+
+                return rangeClauses.length > 1
+                    ? `(${rangeClauses.join(' AND ')})`
+                    : rangeClauses[0];
+            }).filter(Boolean);
+
+            if (priceClauses.length > 0) {
+                return ` AND (${priceClauses.join(' OR ')})`;
+            }
+        }
+
+        let clause = '';
+        if (filters.min_price !== undefined && filters.min_price !== null && filters.min_price !== '') {
+            clause += ` AND ${priceColumn} >= ?`;
+            params.push(filters.min_price);
+        }
+
+        if (filters.max_price !== undefined && filters.max_price !== null && filters.max_price !== '') {
+            clause += ` AND ${priceColumn} <= ?`;
+            params.push(filters.max_price);
+        }
+
+        return clause;
     }
 
     static groupReviewMediaByReviewId(mediaRows = []) {
@@ -1100,6 +1368,99 @@ ${this.getVariantAggregateSelect('p')}
         });
     }
 
+    static async getForYouRecommendations(userId, limit = 30) {
+        const normalizedUserId = Number.parseInt(userId, 10);
+        const safeLimit = Math.min(
+            60,
+            Math.max(1, Number.parseInt(limit, 10) || 30)
+        );
+
+        if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
+            return [];
+        }
+
+        const [purchaseRows] = await pool.execute(
+            `SELECT
+                p.category_id,
+                oi.product_id,
+                SUM(oi.quantity) AS purchased_quantity,
+                MAX(o.created_at) AS last_purchased_at
+             FROM orders o
+             JOIN order_items oi ON oi.order_id = o.id
+             JOIN products p ON p.id = oi.product_id
+             WHERE o.user_id = ?
+               AND o.status <> 'cancelled'
+             GROUP BY p.category_id, oi.product_id
+             ORDER BY purchased_quantity DESC, last_purchased_at DESC`,
+            [normalizedUserId]
+        );
+
+        if (!Array.isArray(purchaseRows) || purchaseRows.length === 0) {
+            return [];
+        }
+
+        const purchasedProductIds = new Set();
+        const categoryScores = new Map();
+
+        purchaseRows.forEach((row) => {
+            const productId = Number.parseInt(row.product_id, 10);
+            const categoryId = Number.parseInt(row.category_id, 10);
+            const purchasedQuantity = Math.max(1, Number.parseInt(row.purchased_quantity, 10) || 1);
+
+            if (Number.isInteger(productId) && productId > 0) {
+                purchasedProductIds.add(productId);
+            }
+
+            if (!Number.isInteger(categoryId) || categoryId <= 0) {
+                return;
+            }
+
+            categoryScores.set(
+                categoryId,
+                (categoryScores.get(categoryId) || 0) + purchasedQuantity
+            );
+        });
+
+        const rankedCategoryIds = [...categoryScores.entries()]
+            .sort((left, right) => right[1] - left[1])
+            .map(([categoryId]) => categoryId)
+            .slice(0, 6);
+
+        if (rankedCategoryIds.length === 0) {
+            return [];
+        }
+
+        const fetchLimit = Math.max(safeLimit * 3, safeLimit + 12);
+        const candidates = await this.findAll({
+            category_ids: rankedCategoryIds,
+            sort_by: 'sold_count',
+            sort_order: 'DESC',
+            prioritize_in_stock: true,
+            use_final_price: true,
+            limit: fetchLimit,
+            offset: 0
+        });
+
+        return candidates
+            .filter((product) => !purchasedProductIds.has(Number(product.id)))
+            .sort((left, right) => {
+                const leftCategoryScore = categoryScores.get(Number(left.category_id)) || 0;
+                const rightCategoryScore = categoryScores.get(Number(right.category_id)) || 0;
+
+                if (rightCategoryScore !== leftCategoryScore) {
+                    return rightCategoryScore - leftCategoryScore;
+                }
+
+                const soldCountDifference = (Number(right.sold_count) || 0) - (Number(left.sold_count) || 0);
+                if (soldCountDifference !== 0) {
+                    return soldCountDifference;
+                }
+
+                return new Date(right.created_at || 0).getTime() - new Date(left.created_at || 0).getTime();
+            })
+            .slice(0, safeLimit);
+    }
+
     // =============================================================================
     // LẤY SẢN PHẨM MỚI - GET NEW PRODUCTS
     // =============================================================================
@@ -1443,6 +1804,409 @@ ${this.getVariantAggregateSelect('p')}
             'UPDATE product_variants SET stock_quantity = stock_quantity - ? WHERE id = ?',
             [quantity, variantId]
         );
+    }
+
+    static async findAll(filters = {}) {
+        const displayPriceExpr = this.getDisplayPriceExpression('p', 'sale_ref');
+        const effectivePromotionFilter = filters.on_sale
+            ? 'active_or_upcoming'
+            : (filters.promotions?.length ? filters.promotions : filters.promotion);
+        const effectiveRatingThreshold = this.getEffectiveRatingThreshold(filters);
+        let query = `
+            SELECT
+${this.getListingSelectFields('p', 'c', 'sale_ref')}
+            FROM products p
+            LEFT JOIN categories c ON p.category_id = c.id
+            LEFT JOIN sales sale_ref ON p.sale_id = sale_ref.id
+            WHERE p.is_active = TRUE
+        `;
+
+        const params = [];
+
+        query += this.buildCategoryFilterClause(filters, params, 'p');
+
+        const priceCol = filters.use_final_price ? displayPriceExpr : 'p.price';
+        query += this.buildPriceFilterClause(filters, params, priceCol);
+
+        if (filters.search) {
+            query += this.buildSearchFilterClause(filters.search, params, 'p', {
+                accentSensitive: filters.accent_sensitive !== false
+            });
+        }
+
+        if (filters.is_featured) {
+            query += ' AND p.is_featured = TRUE';
+        }
+
+        if (effectiveRatingThreshold !== null) {
+            query += ` AND COALESCE((
+                SELECT AVG(r.rating)
+                FROM reviews r
+                WHERE r.product_id = p.id
+                  AND r.is_approved = TRUE
+            ), 0) >= ?`;
+            params.push(effectiveRatingThreshold);
+        }
+
+        query += this.getPromotionFilterClause(effectivePromotionFilter, 'sale_ref');
+
+        const sortField = filters.sort_by || 'created_at';
+        const sortOrder = (filters.sort_order || 'DESC').toUpperCase();
+        const prioritizeInStock = filters.prioritize_in_stock === true;
+        const allowedSortFields = ['created_at', 'price', 'name', 'sold_count', 'view_count'];
+        const allowedSortOrders = ['ASC', 'DESC'];
+
+        const orderSegments = [];
+        if (allowedSortFields.includes(sortField) && allowedSortOrders.includes(sortOrder)) {
+            if (sortField === 'price' && filters.use_final_price) {
+                orderSegments.push(`${displayPriceExpr} ${sortOrder}`);
+            } else {
+                orderSegments.push(`p.${sortField} ${sortOrder}`);
+            }
+        } else {
+            orderSegments.push('p.created_at DESC');
+        }
+
+        query += ` ORDER BY ${this.buildOrderByClause(orderSegments, {
+            prioritizeInStock,
+            productAlias: 'p'
+        })}`;
+
+        const limit = parseInt(filters.limit, 10) || 12;
+        const offset = parseInt(filters.offset, 10) || 0;
+        query += ` LIMIT ${limit} OFFSET ${offset}`;
+
+        const [rows] = await pool.query(query, params);
+        return this.hydrateListingProducts(rows);
+    }
+
+    static async count(filters = {}) {
+        const displayPriceExpr = this.getDisplayPriceExpression('p', 'sale_ref');
+        const effectivePromotionFilter = filters.on_sale
+            ? 'active_or_upcoming'
+            : (filters.promotions?.length ? filters.promotions : filters.promotion);
+        const effectiveRatingThreshold = this.getEffectiveRatingThreshold(filters);
+        let query = `
+            SELECT COUNT(*) AS total
+            FROM products p
+            LEFT JOIN sales sale_ref ON p.sale_id = sale_ref.id
+            WHERE p.is_active = TRUE
+        `;
+        const params = [];
+
+        query += this.buildCategoryFilterClause(filters, params, 'p');
+
+        const priceCol = filters.use_final_price ? displayPriceExpr : 'p.price';
+        query += this.buildPriceFilterClause(filters, params, priceCol);
+
+        if (filters.search) {
+            query += this.buildSearchFilterClause(filters.search, params, 'p');
+        }
+
+        if (filters.is_featured) {
+            query += ' AND p.is_featured = TRUE';
+        }
+
+        if (effectiveRatingThreshold !== null) {
+            query += ` AND COALESCE((
+                SELECT AVG(r.rating)
+                FROM reviews r
+                WHERE r.product_id = p.id
+                  AND r.is_approved = TRUE
+            ), 0) >= ?`;
+            params.push(effectiveRatingThreshold);
+        }
+
+        query += this.getPromotionFilterClause(effectivePromotionFilter, 'sale_ref');
+
+        if (filters.stock_status === 'in_stock') {
+            query += ' AND p.stock_quantity > 0';
+        } else if (filters.stock_status === 'out_of_stock') {
+            query += ' AND p.stock_quantity <= 0';
+        }
+
+        const [rows] = await pool.query(query, params);
+        return rows[0]?.total || 0;
+    }
+
+    static async getByIds(ids = []) {
+        const normalizedIds = Array.from(new Set(
+            (Array.isArray(ids) ? ids : [])
+                .map((id) => Number.parseInt(id, 10))
+                .filter((id) => Number.isInteger(id) && id > 0)
+        ));
+
+        if (!normalizedIds.length) {
+            return [];
+        }
+
+        const placeholders = normalizedIds.map(() => '?').join(', ');
+        const [rows] = await pool.query(
+            `SELECT
+${this.getListingSelectFields('p', 'c', 'sale_ref')}
+             FROM products p
+             LEFT JOIN categories c ON p.category_id = c.id
+             LEFT JOIN sales sale_ref ON p.sale_id = sale_ref.id
+             WHERE p.is_active = TRUE
+               AND p.id IN (${placeholders})`,
+            normalizedIds
+        );
+
+        const hydratedRows = this.hydrateListingProducts(rows);
+        const productMap = new Map(hydratedRows.map((product) => [product.id, product]));
+
+        return normalizedIds
+            .map((id) => productMap.get(id))
+            .filter(Boolean);
+    }
+
+    static async getActiveChatCatalog() {
+        const [rows] = await pool.query(
+            `SELECT
+${this.getListingSelectFields('p', 'c', 'sale_ref')}
+             FROM products p
+             LEFT JOIN categories c ON p.category_id = c.id
+             LEFT JOIN sales sale_ref ON p.sale_id = sale_ref.id
+             WHERE p.is_active = TRUE
+             ORDER BY ${this.buildOrderByClause(['p.created_at DESC'], {
+                 prioritizeInStock: true,
+                 productAlias: 'p'
+             })}`
+        );
+
+        return this.hydrateListingProducts(rows);
+    }
+
+    static async findById(id, options = {}) {
+        const { incrementView = true } = options;
+        const query = `
+            SELECT
+${this.getListingSelectFields('p', 'c', 'sale_ref')}
+            FROM products p
+            LEFT JOIN categories c ON p.category_id = c.id
+            LEFT JOIN sales sale_ref ON p.sale_id = sale_ref.id
+            WHERE p.id = ? AND p.is_active = TRUE
+        `;
+
+        const [rows] = await pool.execute(query, [id]);
+        const product = rows[0];
+
+        if (!product) {
+            return null;
+        }
+
+        this.normalizeProductNumbers(product);
+
+        const [images] = await pool.execute(
+            'SELECT * FROM product_images WHERE product_id = ? ORDER BY is_primary DESC, display_order ASC',
+            [id]
+        );
+        product.images = images;
+
+        const [variants] = await pool.execute(
+            `SELECT pv.*, pi.image_url AS variant_image_url
+             FROM product_variants pv
+             LEFT JOIN product_images pi ON pi.id = pv.image_id
+             WHERE pv.product_id = ?
+             ORDER BY pv.color, pv.size, pv.id`,
+            [id]
+        );
+        product.variants = this.normalizeVariantNumbers(variants);
+
+        const [reviews] = await pool.execute(
+            `SELECT r.*, u.full_name as user_name
+             FROM reviews r
+             JOIN users u ON r.user_id = u.id
+             WHERE r.product_id = ? AND r.is_approved = TRUE
+             ORDER BY r.created_at DESC
+             LIMIT 10`,
+            [id]
+        );
+        await this.attachReviewMediaToReviews(reviews);
+        product.reviews = reviews;
+        product.final_price = this.calculateFinalPrice(product.price, product.sale_type, product.sale_value);
+        product.promotion_status = product.promotion_status || 'none';
+
+        if (incrementView) {
+            await pool.execute('UPDATE products SET view_count = view_count + 1 WHERE id = ?', [id]);
+        }
+
+        return product;
+    }
+
+    static async search(searchQuery, limit = 20) {
+        const limitNum = parseInt(limit, 10) || 20;
+        const params = [];
+        const searchClause = this.buildSearchFilterClause(searchQuery, params, 'p');
+        const lowerSearch = String(searchQuery || '').trim().toLowerCase();
+        const exactPrefixTerm = `${lowerSearch}%`;
+        const looseSearchTerm = `%${lowerSearch}%`;
+
+        const terms = Array.from(new Set(
+            lowerSearch
+                .split(/\s+/)
+                .map((term) => term.trim())
+                .filter((term) => term.length >= 2)
+        )).slice(0, 8);
+
+        const safeName = 'BINARY LOWER(p.name)';
+        const safeDesc = 'BINARY LOWER(p.description)';
+        const nameMatchScore = terms.length > 0
+            ? terms.map(() => `(CASE WHEN ${safeName} LIKE ? THEN 1 ELSE 0 END)`).join(' + ')
+            : '0';
+        const nameMatchParams = terms.map((term) => `%${term}%`);
+
+        const query = `
+            SELECT
+${this.getListingSelectFields('p', 'c', 'sale_ref')}
+            FROM products p
+            LEFT JOIN categories c ON p.category_id = c.id
+            LEFT JOIN sales sale_ref ON p.sale_id = sale_ref.id
+            WHERE p.is_active = TRUE
+              ${searchClause}
+            ORDER BY ${this.buildOrderByClause([
+                `CASE
+                    WHEN ${safeName} LIKE ? THEN 0
+                    WHEN ${safeName} LIKE ? THEN 1
+                    WHEN ${safeDesc} LIKE ? THEN 3
+                    ELSE 2
+                END`,
+                `(${nameMatchScore}) DESC`,
+                'p.sold_count DESC'
+            ], {
+                prioritizeInStock: true,
+                productAlias: 'p'
+            })}
+            LIMIT ${limitNum}
+        `;
+
+        let [rows] = await pool.query(query, [
+            ...params,
+            ...nameMatchParams,
+            exactPrefixTerm,
+            looseSearchTerm,
+            looseSearchTerm
+        ]);
+
+        if (rows.length === 0) {
+            rows = await this.fuzzySearch(searchQuery, limitNum);
+        }
+
+        return this.hydrateListingProducts(rows);
+    }
+
+    static async fuzzySearch(searchQuery, limit = 20) {
+        const limitNum = parseInt(limit, 10) || 20;
+        const lowerQuery = String(searchQuery || '').trim().toLowerCase();
+        const words = lowerQuery.split(/\s+/).filter((word) => word.length >= 2);
+
+        if (words.length === 0) {
+            return await this.getBestSellers(limitNum);
+        }
+
+        const safeLike = (field) => `BINARY LOWER(${field}) LIKE ?`;
+        const buildVariantExistsClause = () => `EXISTS (
+            SELECT 1
+            FROM product_variants pv
+            WHERE pv.product_id = p.id
+              AND (
+                  ${safeLike('pv.color')}
+                  OR ${safeLike('pv.size')}
+                  OR ${safeLike('pv.sku')}
+              )
+        )`;
+        const buildFieldClause = () => `(
+            ${safeLike('p.name')}
+            OR ${safeLike('p.description')}
+            OR ${safeLike('p.sku')}
+            OR ${buildVariantExistsClause()}
+        )`;
+        const nameMatchClause = () => `(CASE WHEN ${safeLike('p.name')} THEN 1 ELSE 0 END)`;
+        const likeConditions = words.map(() => buildFieldClause()).join(' OR ');
+        const matchScoreClauses = words.map(() => nameMatchClause()).join(' + ');
+        const params = [];
+
+        const appendLikeParams = (word) => {
+            const likeTerm = `%${word}%`;
+            params.push(likeTerm, likeTerm, likeTerm, likeTerm, likeTerm, likeTerm);
+        };
+        const appendNameParam = (word) => {
+            params.push(`%${word}%`);
+        };
+
+        words.forEach((word) => appendNameParam(word));
+        words.forEach((word) => appendLikeParams(word));
+
+        const fuzzyQuery = `
+            SELECT
+${this.getListingSelectFields('p', 'c', 'sale_ref')},
+                   (
+                       ${matchScoreClauses}
+                   ) as match_score
+            FROM products p
+            LEFT JOIN categories c ON p.category_id = c.id
+            LEFT JOIN sales sale_ref ON p.sale_id = sale_ref.id
+            WHERE p.is_active = TRUE
+              AND (${likeConditions})
+            ORDER BY ${this.buildOrderByClause([
+                'match_score DESC',
+                'p.sold_count DESC'
+            ], {
+                prioritizeInStock: true,
+                productAlias: 'p'
+            })}
+            LIMIT ${limitNum}
+        `;
+
+        let [rows] = await pool.query(fuzzyQuery, params);
+
+        if (rows.length === 0) {
+            const soundexQuery = `
+                SELECT
+${this.getListingSelectFields('p', 'c', 'sale_ref')}
+                FROM products p
+                LEFT JOIN categories c ON p.category_id = c.id
+                LEFT JOIN sales sale_ref ON p.sale_id = sale_ref.id
+                WHERE p.is_active = TRUE
+                  AND SOUNDEX(p.name) = SOUNDEX(?)
+                ORDER BY ${this.buildOrderByClause(['p.sold_count DESC'], {
+                    prioritizeInStock: true,
+                    productAlias: 'p'
+                })}
+                LIMIT ${limitNum}
+            `;
+
+            [rows] = await pool.query(soundexQuery, [searchQuery]);
+        }
+
+        if (rows.length === 0) {
+            rows = await this.getBestSellers(limitNum);
+            rows.forEach((product) => {
+                product.is_suggestion = true;
+            });
+        }
+
+        return rows;
+    }
+
+    static calculateFinalPrice(originalPrice, saleType, saleValue) {
+        const basePrice = this.toNumber(originalPrice);
+        const normalizedSaleValue = this.toNumber(saleValue);
+
+        if (!saleType || !normalizedSaleValue) {
+            return basePrice;
+        }
+
+        switch (saleType) {
+            case 'percentage':
+                return Math.max(0, basePrice * (1 - Math.min(Math.max(normalizedSaleValue, 0), 100) / 100));
+            case 'fixed':
+                return Math.max(0, basePrice - normalizedSaleValue);
+            case 'bogo':
+                return basePrice;
+            default:
+                return basePrice;
+        }
     }
 
 }

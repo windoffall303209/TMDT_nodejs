@@ -19,6 +19,8 @@ const multer = require('multer');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
+const crypto = require('crypto');
+const axios = require('axios');
 const { uploadToCloudinary } = require('../config/cloudinary');
 
 function getAuthCookieOptions() {
@@ -28,6 +30,65 @@ function getAuthCookieOptions() {
         secure: process.env.NODE_ENV === 'production',
         maxAge: 24 * 60 * 60 * 1000
     };
+}
+
+function isGoogleAuthConfigured() {
+    return Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+}
+
+function getGoogleCallbackUrl(req) {
+    return process.env.GOOGLE_CALLBACK_URL
+        || `${req.protocol}://${req.get('host')}/auth/google/callback`;
+}
+
+function getGoogleAuthUrl(req, state) {
+    const params = new URLSearchParams({
+        client_id: process.env.GOOGLE_CLIENT_ID,
+        redirect_uri: getGoogleCallbackUrl(req),
+        response_type: 'code',
+        scope: 'openid email profile',
+        access_type: 'online',
+        prompt: 'select_account',
+        state
+    });
+
+    return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+}
+
+async function exchangeGoogleCodeForProfile(req, code) {
+    const tokenResponse = await axios.post(
+        'https://oauth2.googleapis.com/token',
+        new URLSearchParams({
+            code,
+            client_id: process.env.GOOGLE_CLIENT_ID,
+            client_secret: process.env.GOOGLE_CLIENT_SECRET,
+            redirect_uri: getGoogleCallbackUrl(req),
+            grant_type: 'authorization_code'
+        }).toString(),
+        {
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            }
+        }
+    );
+
+    const accessToken = tokenResponse.data?.access_token;
+    if (!accessToken) {
+        throw new Error('Không lấy được access token từ Google');
+    }
+
+    const profileResponse = await axios.get('https://www.googleapis.com/oauth2/v2/userinfo', {
+        headers: {
+            Authorization: `Bearer ${accessToken}`
+        }
+    });
+
+    const profile = profileResponse.data || {};
+    if (!profile.email) {
+        throw new Error('Google account không cung cấp email hợp lệ');
+    }
+
+    return profile;
 }
 
 // =============================================================================
@@ -291,7 +352,8 @@ exports.login = async (req, res) => {
         if (req.accepts('html')) {
             return res.render('auth/login', {
                 error: error.message,
-                email: req.body.email
+                email: req.body.email,
+                googleAuthEnabled: isGoogleAuthConfigured()
             });
         }
 
@@ -415,7 +477,74 @@ exports.showRegister = (req, res) => {
  * @param {Object} res - Response object từ Express
  */
 exports.showLogin = (req, res) => {
-    res.render('auth/login', { error: null, email: '' });
+    const requestedError = typeof req.query.error === 'string' ? req.query.error.trim() : '';
+    const requestedEmail = typeof req.query.email === 'string' ? req.query.email.trim() : '';
+
+    res.render('auth/login', {
+        error: requestedError || null,
+        email: requestedEmail,
+        googleAuthEnabled: isGoogleAuthConfigured()
+    });
+};
+
+exports.startGoogleLogin = async (req, res) => {
+    try {
+        if (!isGoogleAuthConfigured()) {
+            return res.redirect('/auth/login?error=' + encodeURIComponent('Đăng nhập Google chưa được cấu hình.'));
+        }
+
+        const state = crypto.randomBytes(24).toString('hex');
+        res.cookie('google_oauth_state', state, {
+            ...getAuthCookieOptions(),
+            maxAge: 10 * 60 * 1000
+        });
+
+        return res.redirect(getGoogleAuthUrl(req, state));
+    } catch (error) {
+        console.error('Google auth start error:', error);
+        return res.redirect('/auth/login?error=' + encodeURIComponent('Không thể bắt đầu đăng nhập Google.'));
+    }
+};
+
+exports.handleGoogleCallback = async (req, res) => {
+    const { maxAge, ...cookieOptions } = getAuthCookieOptions();
+
+    try {
+        if (!isGoogleAuthConfigured()) {
+            return res.redirect('/auth/login?error=' + encodeURIComponent('Đăng nhập Google chưa được cấu hình.'));
+        }
+
+        const { code, state, error } = req.query;
+        const expectedState = req.cookies?.google_oauth_state;
+
+        res.clearCookie('google_oauth_state', cookieOptions);
+
+        if (error) {
+            return res.redirect('/auth/login?error=' + encodeURIComponent('Đăng nhập Google đã bị hủy.'));
+        }
+
+        if (!code || !state || !expectedState || state !== expectedState) {
+            return res.redirect('/auth/login?error=' + encodeURIComponent('Phiên đăng nhập Google không hợp lệ.'));
+        }
+
+        const profile = await exchangeGoogleCodeForProfile(req, code);
+        const user = await User.findOrCreateGoogleUser(profile);
+        const token = generateToken(user);
+
+        res.cookie('token', token, getAuthCookieOptions());
+
+        if (req.sessionID) {
+            const Cart = require('../models/Cart');
+            await Cart.mergeGuestCart(user.id, req.sessionID).catch((mergeError) => {
+                console.error('Cart merge error:', mergeError);
+            });
+        }
+
+        return res.redirect('/');
+    } catch (error) {
+        console.error('Google auth callback error:', error);
+        return res.redirect('/auth/login?error=' + encodeURIComponent(error.message || 'Không thể đăng nhập với Google.'));
+    }
 };
 
 // =============================================================================

@@ -1,0 +1,480 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e4]:
+      - link "WIND OF FALL" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - img "WIND OF FALL" [ref=e6]
+        - generic [ref=e7]:
+          - strong [ref=e8]: WIND OF FALL
+          - generic [ref=e9]: Thời trang mặc đẹp mỗi ngày
+      - generic [ref=e11]:
+        - textbox "Tìm áo polo, váy midi, quần jean..." [ref=e12]
+        - button "Tìm kiếm" [ref=e13] [cursor=pointer]:
+          - img [ref=e14]
+      - generic [ref=e16]:
+        - link "Đăng nhập / Đăng ký" [ref=e17] [cursor=pointer]:
+          - /url: /auth/login
+          - img [ref=e18]
+          - generic [ref=e20]: Đăng nhập / Đăng ký
+        - link "0" [ref=e21] [cursor=pointer]:
+          - /url: /cart
+          - img [ref=e22]
+          - generic [ref=e25]: "0"
+    - navigation [ref=e28]:
+      - link "Trang chủ" [ref=e29] [cursor=pointer]:
+        - /url: /
+      - link "Nam" [ref=e30] [cursor=pointer]:
+        - /url: /products/category/nam
+      - link "Nữ" [ref=e31] [cursor=pointer]:
+        - /url: /products/category/nu
+      - link "Trẻ Em" [ref=e32] [cursor=pointer]:
+        - /url: /products/category/tre-em
+      - link "Tất cả" [ref=e33] [cursor=pointer]:
+        - /url: /products
+      - link "Sale tới 50%" [ref=e34] [cursor=pointer]:
+        - /url: /products?sale=true
+  - navigation [ref=e35]:
+    - generic [ref=e36]:
+      - generic [ref=e37]:
+        - generic [ref=e38]: WIND OF FALL
+        - strong [ref=e39]: Tìm outfit cho cả gia đình
+      - button "Đóng menu" [ref=e40] [cursor=pointer]: ×
+    - generic [ref=e42]:
+      - textbox "Tìm áo, váy, quần..." [ref=e43]
+      - button "Tìm kiếm" [ref=e44] [cursor=pointer]:
+        - img [ref=e45]
+    - generic [ref=e47]:
+      - link "Trang chủ" [ref=e48] [cursor=pointer]:
+        - /url: /
+      - link "Nam" [ref=e49] [cursor=pointer]:
+        - /url: /products/category/nam
+      - link "Nữ" [ref=e50] [cursor=pointer]:
+        - /url: /products/category/nu
+      - link "Trẻ Em" [ref=e51] [cursor=pointer]:
+        - /url: /products/category/tre-em
+      - link "Tất cả sản phẩm" [ref=e52] [cursor=pointer]:
+        - /url: /products
+      - link "Khu sale" [ref=e53] [cursor=pointer]:
+        - /url: /products?sale=true
+    - generic [ref=e54]:
+      - link "Đăng nhập" [ref=e55] [cursor=pointer]:
+        - /url: /auth/login
+      - link "Đăng ký" [ref=e56] [cursor=pointer]:
+        - /url: /auth/register
+      - link "Giỏ hàng" [ref=e57] [cursor=pointer]:
+        - /url: /cart
+    - paragraph [ref=e59]: Hỗ trợ tư vấn set đồ 1:1 qua hotline 1900 123 456
+  - main [ref=e60]:
+    - generic [ref=e62]:
+      - heading "Danh mục / Trẻ Em" [level=1] [ref=e65]:
+        - generic [ref=e66]: Danh mục
+        - generic [ref=e67]: /
+        - generic [ref=e68]: Trẻ Em
+      - generic [ref=e69]:
+        - complementary [ref=e70]:
+          - generic [ref=e72]:
+            - generic [ref=e73]:
+              - paragraph [ref=e75]: Bộ lọc
+              - link "Xóa" [ref=e76] [cursor=pointer]:
+                - /url: /products/category/tre-em
+            - generic [ref=e77]:
+              - generic [ref=e78]:
+                - heading "Danh mục" [level=3] [ref=e79]
+                - link "Tất cả Trẻ Em" [ref=e80] [cursor=pointer]:
+                  - /url: /products/category/tre-em
+              - paragraph [ref=e82]: Danh mục này hiện chưa có danh mục con.
+            - generic [ref=e83]:
+              - heading "Giá" [level=3] [ref=e84]
+              - generic [ref=e85]:
+                - generic [ref=e86] [cursor=pointer]:
+                  - checkbox "Dưới 200k" [ref=e87]
+                  - generic [ref=e88]: Dưới 200k
+                - generic [ref=e89] [cursor=pointer]:
+                  - checkbox "200k - 500k" [ref=e90]
+                  - generic [ref=e91]: 200k - 500k
+                - generic [ref=e92] [cursor=pointer]:
+                  - checkbox "500k - 1M" [ref=e93]
+                  - generic [ref=e94]: 500k - 1M
+                - generic [ref=e95] [cursor=pointer]:
+                  - checkbox "Từ 1M" [ref=e96]
+                  - generic [ref=e97]: Từ 1M
+              - generic [ref=e98]:
+                - generic [ref=e99]:
+                  - generic [ref=e100]: Từ
+                  - spinbutton "Từ" [ref=e101]
+                - generic [ref=e102]:
+                  - generic [ref=e103]: Đến
+                  - spinbutton "Đến" [ref=e104]
+              - button "Áp dụng giá" [ref=e106] [cursor=pointer]
+            - generic [ref=e107]:
+              - heading "Đánh giá" [level=3] [ref=e108]
+              - generic [ref=e109]:
+                - generic [ref=e110] [cursor=pointer]:
+                  - checkbox "Từ 4 sao trở lên" [ref=e111]
+                  - generic [ref=e112]: Từ 4 sao trở lên
+                - generic [ref=e113] [cursor=pointer]:
+                  - checkbox "Từ 3 sao trở lên" [ref=e114]
+                  - generic [ref=e115]: Từ 3 sao trở lên
+                - generic [ref=e116] [cursor=pointer]:
+                  - checkbox "Từ 2 sao trở lên" [ref=e117]
+                  - generic [ref=e118]: Từ 2 sao trở lên
+                - generic [ref=e119] [cursor=pointer]:
+                  - checkbox "Từ 1 sao trở lên" [ref=e120]
+                  - generic [ref=e121]: Từ 1 sao trở lên
+            - generic [ref=e122]:
+              - heading "Khuyến mãi" [level=3] [ref=e123]
+              - generic [ref=e124]:
+                - generic [ref=e125] [cursor=pointer]:
+                  - checkbox "Đang giảm" [ref=e126]
+                  - generic [ref=e127]: Đang giảm
+                - generic [ref=e128] [cursor=pointer]:
+                  - checkbox "Sắp giảm" [ref=e129]
+                  - generic [ref=e130]: Sắp giảm
+                - generic [ref=e131] [cursor=pointer]:
+                  - checkbox "Đang + sắp giảm" [ref=e132]
+                  - generic [ref=e133]: Đang + sắp giảm
+        - generic [ref=e134]:
+          - generic [ref=e135]:
+            - generic [ref=e136]:
+              - generic [ref=e137]: "513"
+              - generic [ref=e138]: sản phẩm
+            - generic [ref=e139]:
+              - generic [ref=e140]:
+                - generic [ref=e141]: Sắp xếp
+                - combobox "Sắp xếp" [ref=e142]:
+                  - option "Mới nhất" [selected]
+                  - option "Giá tăng dần"
+                  - option "Giá giảm dần"
+                  - option "Tên A-Z"
+                  - option "Tên Z-A"
+              - generic [ref=e143]:
+                - generic [ref=e144]: Hiển thị
+                - combobox "Hiển thị" [ref=e145]:
+                  - option "10 / trang"
+                  - option "20 / trang" [selected]
+                  - option "30 / trang"
+                  - option "40 / trang"
+                  - option "50 / trang"
+          - generic [ref=e146]:
+            - article [ref=e147]:
+              - link "Quần Kaki Kid Cơ Bản Thêm vào giỏ Quần Kaki Kid Cơ Bản 99.000đ" [ref=e148] [cursor=pointer]:
+                - /url: /products/quan-kaki-kid-co-ban
+                - generic [ref=e149]:
+                  - img "Quần Kaki Kid Cơ Bản" [ref=e150]
+                  - button "Thêm vào giỏ" [ref=e151]:
+                    - img [ref=e152]
+                    - generic [ref=e156]: Thêm vào giỏ
+                - generic [ref=e157]:
+                  - heading "Quần Kaki Kid Cơ Bản" [level=3] [ref=e158]
+                  - generic [ref=e162]: 99.000đ
+            - article [ref=e163]:
+              - link "Áo Len Trẻ Em Dệt Tổ Ong Thêm vào giỏ Áo Len Trẻ Em Dệt Tổ Ong 399.000đ" [ref=e164] [cursor=pointer]:
+                - /url: /products/ao-len-be-trai-det-to-ong
+                - generic [ref=e165]:
+                  - img "Áo Len Trẻ Em Dệt Tổ Ong" [ref=e166]
+                  - button "Thêm vào giỏ" [ref=e167]:
+                    - img [ref=e168]
+                    - generic [ref=e172]: Thêm vào giỏ
+                - generic [ref=e173]:
+                  - heading "Áo Len Trẻ Em Dệt Tổ Ong" [level=3] [ref=e174]
+                  - generic [ref=e178]: 399.000đ
+            - article [ref=e179]:
+              - link "Quần Shorts Bé Gái Cơ Bản Xếp Li Thêm vào giỏ Quần Shorts Bé Gái Cơ Bản Xếp Li 149.000đ" [ref=e180] [cursor=pointer]:
+                - /url: /products/quan-shorts-be-gai-co-ban-xep-li
+                - generic [ref=e181]:
+                  - img "Quần Shorts Bé Gái Cơ Bản Xếp Li" [ref=e182]
+                  - button "Thêm vào giỏ" [ref=e183]:
+                    - img [ref=e184]
+                    - generic [ref=e188]: Thêm vào giỏ
+                - generic [ref=e189]:
+                  - heading "Quần Shorts Bé Gái Cơ Bản Xếp Li" [level=3] [ref=e190]
+                  - generic [ref=e194]: 149.000đ
+            - article [ref=e195]:
+              - link "Áo Thu Đông Trẻ Em Giữ Nhiệt Cổ 3cm Thêm vào giỏ Áo Thu Đông Trẻ Em Giữ Nhiệt Cổ 3cm 129.000đ" [ref=e196] [cursor=pointer]:
+                - /url: /products/ao-thu-dong-tre-em-giu-nhiet-co-3cm-5283108
+                - generic [ref=e197]:
+                  - img "Áo Thu Đông Trẻ Em Giữ Nhiệt Cổ 3cm" [ref=e198]
+                  - button "Thêm vào giỏ" [ref=e199]:
+                    - img [ref=e200]
+                    - generic [ref=e204]: Thêm vào giỏ
+                - generic [ref=e205]:
+                  - heading "Áo Thu Đông Trẻ Em Giữ Nhiệt Cổ 3cm" [level=3] [ref=e206]
+                  - generic [ref=e210]: 129.000đ
+            - article [ref=e211]:
+              - link "Áo Thu Đông Trẻ Em Giữ Nhiệt Cổ Tròn Thêm vào giỏ Áo Thu Đông Trẻ Em Giữ Nhiệt Cổ Tròn 29.000đ" [ref=e212] [cursor=pointer]:
+                - /url: /products/ao-thu-dong-tre-em-giu-nhiet-co-tron-
+                - generic [ref=e213]:
+                  - img "Áo Thu Đông Trẻ Em Giữ Nhiệt Cổ Tròn" [ref=e214]
+                  - button "Thêm vào giỏ" [ref=e215]:
+                    - img [ref=e216]
+                    - generic [ref=e220]: Thêm vào giỏ
+                - generic [ref=e221]:
+                  - heading "Áo Thu Đông Trẻ Em Giữ Nhiệt Cổ Tròn" [level=3] [ref=e222]
+                  - generic [ref=e226]: 29.000đ
+            - article [ref=e227]:
+              - link "Áo Phông Trẻ Em Bamboo Dài Tay Cao Cổ Thêm vào giỏ Áo Phông Trẻ Em Bamboo Dài Tay Cao Cổ 199.000đ" [ref=e228] [cursor=pointer]:
+                - /url: /products/ao-phong-dai-tay-cao-co
+                - generic [ref=e229]:
+                  - img "Áo Phông Trẻ Em Bamboo Dài Tay Cao Cổ" [ref=e230]
+                  - button "Thêm vào giỏ" [ref=e231]:
+                    - img [ref=e232]
+                    - generic [ref=e236]: Thêm vào giỏ
+                - generic [ref=e237]:
+                  - heading "Áo Phông Trẻ Em Bamboo Dài Tay Cao Cổ" [level=3] [ref=e238]
+                  - generic [ref=e242]: 199.000đ
+            - article [ref=e243]:
+              - link "Áo Body Giữ Nhiệt Trẻ Em Thêu Chú Gấu Thêm vào giỏ Áo Body Giữ Nhiệt Trẻ Em Thêu Chú Gấu 199.000đ" [ref=e244] [cursor=pointer]:
+                - /url: /products/ao-body-giu-nhiet-tre-em-theu-chu-gau
+                - generic [ref=e245]:
+                  - img "Áo Body Giữ Nhiệt Trẻ Em Thêu Chú Gấu" [ref=e246]
+                  - button "Thêm vào giỏ" [ref=e247]:
+                    - img [ref=e248]
+                    - generic [ref=e252]: Thêm vào giỏ
+                - generic [ref=e253]:
+                  - heading "Áo Body Giữ Nhiệt Trẻ Em Thêu Chú Gấu" [level=3] [ref=e254]
+                  - generic [ref=e258]: 199.000đ
+            - article [ref=e259]:
+              - link "Áo Body Giữ Nhiệt Trẻ Em Cổ Cao Cơ Bản Thêm vào giỏ Áo Body Giữ Nhiệt Trẻ Em Cổ Cao Cơ Bản 249.000đ" [ref=e260] [cursor=pointer]:
+                - /url: /products/ao-body-giu-nhiet-tre-em-co-cao-co-ban
+                - generic [ref=e261]:
+                  - img "Áo Body Giữ Nhiệt Trẻ Em Cổ Cao Cơ Bản" [ref=e262]
+                  - button "Thêm vào giỏ" [ref=e263]:
+                    - img [ref=e264]
+                    - generic [ref=e268]: Thêm vào giỏ
+                - generic [ref=e269]:
+                  - heading "Áo Body Giữ Nhiệt Trẻ Em Cổ Cao Cơ Bản" [level=3] [ref=e270]
+                  - generic [ref=e274]: 249.000đ
+            - article [ref=e275]:
+              - link "Áo Body Giữ Nhiệt XTRA.HEAT™ Cổ Tròn In Hình Thêm vào giỏ Áo Body Giữ Nhiệt XTRA.HEAT™ Cổ Tròn In Hình 199.000đ" [ref=e276] [cursor=pointer]:
+                - /url: /products/ao-body-giu-nhiet-xtraheat-co-tron-in-hinh
+                - generic [ref=e277]:
+                  - img "Áo Body Giữ Nhiệt XTRA.HEAT™ Cổ Tròn In Hình" [ref=e278]
+                  - button "Thêm vào giỏ" [ref=e279]:
+                    - img [ref=e280]
+                    - generic [ref=e284]: Thêm vào giỏ
+                - generic [ref=e285]:
+                  - heading "Áo Body Giữ Nhiệt XTRA.HEAT™ Cổ Tròn In Hình" [level=3] [ref=e286]
+                  - generic [ref=e290]: 199.000đ
+            - article [ref=e291]:
+              - link "Áo polo trẻ em Kid Camp Thêm vào giỏ Áo polo trẻ em Kid Camp 100.000đ" [ref=e292] [cursor=pointer]:
+                - /url: /products/polo-kid-camp
+                - generic [ref=e293]:
+                  - img "Áo polo trẻ em Kid Camp" [ref=e294]
+                  - button "Thêm vào giỏ" [ref=e295]:
+                    - img [ref=e296]
+                    - generic [ref=e300]: Thêm vào giỏ
+                - generic [ref=e301]:
+                  - heading "Áo polo trẻ em Kid Camp" [level=3] [ref=e302]
+                  - generic [ref=e306]: 100.000đ
+            - article [ref=e307]:
+              - link "Áo polo s.cafe pique trẻ em có túi ngực Thêm vào giỏ Áo polo s.cafe pique trẻ em có túi ngực 99.500đ" [ref=e308] [cursor=pointer]:
+                - /url: /products/ao-polo-tre-em-co-tui-nguc-in-hinh-thu
+                - generic [ref=e309]:
+                  - img "Áo polo s.cafe pique trẻ em có túi ngực" [ref=e310]
+                  - button "Thêm vào giỏ" [ref=e311]:
+                    - img [ref=e312]
+                    - generic [ref=e316]: Thêm vào giỏ
+                - generic [ref=e317]:
+                  - heading "Áo polo s.cafe pique trẻ em có túi ngực" [level=3] [ref=e318]
+                  - generic [ref=e322]: 99.500đ
+            - article [ref=e323]:
+              - link "Polo Trẻ Em Cafe Bo 3 Màu Thêm vào giỏ Polo Trẻ Em Cafe Bo 3 Màu 49.000đ" [ref=e324] [cursor=pointer]:
+                - /url: /products/polo-tre-em-cafe-bo-3-mau
+                - generic [ref=e325]:
+                  - img "Polo Trẻ Em Cafe Bo 3 Màu" [ref=e326]
+                  - button "Thêm vào giỏ" [ref=e327]:
+                    - img [ref=e328]
+                    - generic [ref=e332]: Thêm vào giỏ
+                - generic [ref=e333]:
+                  - heading "Polo Trẻ Em Cafe Bo 3 Màu" [level=3] [ref=e334]
+                  - generic [ref=e338]: 49.000đ
+            - article [ref=e339]:
+              - link "Áo Polo Thể Thao Nam Airycool Lé Sườn Phối Màu (SAM7043 ) Thêm vào giỏ Áo Polo Thể Thao Nam Airycool Lé Sườn Phối Màu (SAM7043 ) 174.500đ" [ref=e340] [cursor=pointer]:
+                - /url: /products/ao-polo-the-thao-nam-airycool-le-suon-phoi-mau-sam7043-
+                - generic [ref=e341]:
+                  - img "Áo Polo Thể Thao Nam Airycool Lé Sườn Phối Màu (SAM7043 )" [ref=e342]
+                  - button "Thêm vào giỏ" [ref=e343]:
+                    - img [ref=e344]
+                    - generic [ref=e348]: Thêm vào giỏ
+                - generic [ref=e349]:
+                  - heading "Áo Polo Thể Thao Nam Airycool Lé Sườn Phối Màu (SAM7043 )" [level=3] [ref=e350]
+                  - generic [ref=e354]: 174.500đ
+            - article [ref=e355]:
+              - link "Áo Polo Trẻ Em Waffle Co Giãn Dây Dệt Vai Thêm vào giỏ Áo Polo Trẻ Em Waffle Co Giãn Dây Dệt Vai 124.500đ" [ref=e356] [cursor=pointer]:
+                - /url: /products/ao-polo-tre-em-waffle-phoi-day-det-vai
+                - generic [ref=e357]:
+                  - img "Áo Polo Trẻ Em Waffle Co Giãn Dây Dệt Vai" [ref=e358]
+                  - button "Thêm vào giỏ" [ref=e359]:
+                    - img [ref=e360]
+                    - generic [ref=e364]: Thêm vào giỏ
+                - generic [ref=e365]:
+                  - heading "Áo Polo Trẻ Em Waffle Co Giãn Dây Dệt Vai" [level=3] [ref=e366]
+                  - generic [ref=e370]: 124.500đ
+            - article [ref=e371]:
+              - link "Áo Phao Kid Trần Trám Siêu Ấm Thêm vào giỏ Áo Phao Kid Trần Trám Siêu Ấm 599.000đ" [ref=e372] [cursor=pointer]:
+                - /url: /products/ao-phao-kid-tran-tram-sieu-am
+                - generic [ref=e373]:
+                  - img "Áo Phao Kid Trần Trám Siêu Ấm" [ref=e374]
+                  - button "Thêm vào giỏ" [ref=e375]:
+                    - img [ref=e376]
+                    - generic [ref=e380]: Thêm vào giỏ
+                - generic [ref=e381]:
+                  - heading "Áo Phao Kid Trần Trám Siêu Ấm" [level=3] [ref=e382]
+                  - generic [ref=e386]: 599.000đ
+            - article [ref=e387]:
+              - link "Áo Phao Trẻ Em Siêu Nhẹ Thêm vào giỏ Áo Phao Trẻ Em Siêu Nhẹ 49.000đ" [ref=e388] [cursor=pointer]:
+                - /url: /products/ao-phao-kid-sieu-nhe
+                - generic [ref=e389]:
+                  - img "Áo Phao Trẻ Em Siêu Nhẹ" [ref=e390]
+                  - button "Thêm vào giỏ" [ref=e391]:
+                    - img [ref=e392]
+                    - generic [ref=e396]: Thêm vào giỏ
+                - generic [ref=e397]:
+                  - heading "Áo Phao Trẻ Em Siêu Nhẹ" [level=3] [ref=e398]
+                  - generic [ref=e402]: 49.000đ
+            - article [ref=e403]:
+              - link "Áo phao trẻ em 3s plus Siêu ấm - Siêu nhẹ - Siêu gọn Thêm vào giỏ Áo phao trẻ em 3s plus Siêu ấm - Siêu nhẹ - Siêu gọn 99.000đ" [ref=e404] [cursor=pointer]:
+                - /url: /products/ao-phao-tre-em-3s-plus-sieu-am-sieu-nhe-sieu-gon
+                - generic [ref=e405]:
+                  - img "Áo phao trẻ em 3s plus Siêu ấm - Siêu nhẹ - Siêu gọn" [ref=e406]
+                  - button "Thêm vào giỏ" [ref=e407]:
+                    - img [ref=e408]
+                    - generic [ref=e412]: Thêm vào giỏ
+                - generic [ref=e413]:
+                  - heading "Áo phao trẻ em 3s plus Siêu ấm - Siêu nhẹ - Siêu gọn" [level=3] [ref=e414]
+                  - generic [ref=e418]: 99.000đ
+            - article [ref=e419]:
+              - link "Áo Phao Trẻ Em 3S Siêu Nhẹ Tay Raglan Thêm vào giỏ Áo Phao Trẻ Em 3S Siêu Nhẹ Tay Raglan 469.000đ" [ref=e420] [cursor=pointer]:
+                - /url: /products/ao-phao-tre-em-3s-sieu-nhe-tay-raglan
+                - generic [ref=e421]:
+                  - img "Áo Phao Trẻ Em 3S Siêu Nhẹ Tay Raglan" [ref=e422]
+                  - button "Thêm vào giỏ" [ref=e423]:
+                    - img [ref=e424]
+                    - generic [ref=e428]: Thêm vào giỏ
+                - generic [ref=e429]:
+                  - heading "Áo Phao Trẻ Em 3S Siêu Nhẹ Tay Raglan" [level=3] [ref=e430]
+                  - generic [ref=e434]: 469.000đ
+            - article [ref=e435]:
+              - link "Áo Phao Trẻ Em Siêu Nhẹ Có Mũ Siêu Ấm Thêm vào giỏ Áo Phao Trẻ Em Siêu Nhẹ Có Mũ Siêu Ấm 49.000đ" [ref=e436] [cursor=pointer]:
+                - /url: /products/ao-phao-tre-em-sieu-nhe-co-mu
+                - generic [ref=e437]:
+                  - img "Áo Phao Trẻ Em Siêu Nhẹ Có Mũ Siêu Ấm" [ref=e438]
+                  - button "Thêm vào giỏ" [ref=e439]:
+                    - img [ref=e440]
+                    - generic [ref=e444]: Thêm vào giỏ
+                - generic [ref=e445]:
+                  - heading "Áo Phao Trẻ Em Siêu Nhẹ Có Mũ Siêu Ấm" [level=3] [ref=e446]
+                  - generic [ref=e450]: 49.000đ
+            - article [ref=e451]:
+              - link "Áo Phông Kid Sườn Phối Gió Thêm vào giỏ Áo Phông Kid Sườn Phối Gió 99.000đ" [ref=e452] [cursor=pointer]:
+                - /url: /products/ao-phong-kid-suon-phoi-gio
+                - generic [ref=e453]:
+                  - img "Áo Phông Kid Sườn Phối Gió" [ref=e454]
+                  - button "Thêm vào giỏ" [ref=e455]:
+                    - img [ref=e456]
+                    - generic [ref=e460]: Thêm vào giỏ
+                - generic [ref=e461]:
+                  - heading "Áo Phông Kid Sườn Phối Gió" [level=3] [ref=e462]
+                  - generic [ref=e466]: 99.000đ
+          - generic [ref=e467]:
+            - paragraph [ref=e468]: Trang 1 / 26
+            - navigation "Phân trang sản phẩm" [ref=e469]:
+              - link "1" [ref=e470] [cursor=pointer]:
+                - /url: /products/category/tre-em?page=1&per_page=20
+              - link "2" [ref=e471] [cursor=pointer]:
+                - /url: /products/category/tre-em?page=2&per_page=20
+              - link "3" [ref=e472] [cursor=pointer]:
+                - /url: /products/category/tre-em?page=3&per_page=20
+              - generic [ref=e473]: ...
+              - link "26" [ref=e474] [cursor=pointer]:
+                - /url: /products/category/tre-em?page=26&per_page=20
+              - link "Sau" [ref=e475] [cursor=pointer]:
+                - /url: /products/category/tre-em?page=2&per_page=20
+  - contentinfo [ref=e476]:
+    - generic [ref=e478]:
+      - generic [ref=e479]:
+        - paragraph [ref=e480]: Newsletter
+        - heading "Nhập email để nhận ưu đãi và bộ sưu tập mới sớm hơn" [level=3] [ref=e481]
+        - paragraph [ref=e482]: Cập nhật BST mới, voucher độc quyền và gợi ý phối đồ theo mùa.
+      - generic [ref=e483]:
+        - generic [ref=e484]:
+          - textbox "Email của bạn" [ref=e485]
+          - button "Đăng ký ngay" [ref=e486] [cursor=pointer]
+        - button "Tạm ẩn" [ref=e487] [cursor=pointer]
+    - generic [ref=e489]:
+      - generic [ref=e490]:
+        - strong [ref=e491]: Free ship 499K
+        - paragraph [ref=e492]: Giao nhanh tại thành phố lớn, theo dõi hành trình đơn hàng rõ ràng.
+      - generic [ref=e493]:
+        - strong [ref=e494]: Đổi trả 30 ngày
+        - paragraph [ref=e495]: Hỗ trợ đổi size, đổi màu và hoàn tiền theo chính sách minh bạch.
+      - generic [ref=e496]:
+        - strong [ref=e497]: Tư vấn chọn đồ
+        - paragraph [ref=e498]: Hotline và chat luôn sẵn sàng để chốt size và set outfit phù hợp.
+    - generic [ref=e500]:
+      - generic [ref=e501]:
+        - generic [ref=e502]:
+          - generic [ref=e503]: WF
+          - strong [ref=e504]: WIND OF FALL
+        - paragraph [ref=e505]: Thương hiệu thời trang everyday theo tinh thần hiện đại, gọn gàng và dễ mặc. Chúng tôi ưu tiên chất liệu, phom dáng và trải nghiệm mua sắm mượt mà trên mọi thiết bị.
+        - generic [ref=e506]:
+          - link "Facebook" [ref=e507] [cursor=pointer]:
+            - /url: "#"
+          - link "Instagram" [ref=e508] [cursor=pointer]:
+            - /url: "#"
+          - link "TikTok" [ref=e509] [cursor=pointer]:
+            - /url: "#"
+      - generic [ref=e510]:
+        - heading "Mua sắm" [level=4] [ref=e511]
+        - list [ref=e512]:
+          - listitem [ref=e513]:
+            - link "Thời trang nam" [ref=e514] [cursor=pointer]:
+              - /url: /products/category/nam
+          - listitem [ref=e515]:
+            - link "Thời trang nữ" [ref=e516] [cursor=pointer]:
+              - /url: /products/category/nu
+          - listitem [ref=e517]:
+            - link "Trẻ em" [ref=e518] [cursor=pointer]:
+              - /url: /products/category/tre-em
+          - listitem [ref=e519]:
+            - link "Khu sale" [ref=e520] [cursor=pointer]:
+              - /url: /products?sale=true
+      - generic [ref=e521]:
+        - heading "Hỗ trợ khách hàng" [level=4] [ref=e522]
+        - list [ref=e523]:
+          - listitem [ref=e524]:
+            - link "Vận chuyển" [ref=e525] [cursor=pointer]:
+              - /url: /policy/shipping
+          - listitem [ref=e526]:
+            - link "Đổi trả" [ref=e527] [cursor=pointer]:
+              - /url: /policy/return
+          - listitem [ref=e528]:
+            - link "Thanh toán" [ref=e529] [cursor=pointer]:
+              - /url: /policy/payment
+          - listitem [ref=e530]:
+            - link "Bảo mật thông tin" [ref=e531] [cursor=pointer]:
+              - /url: /policy/privacy
+      - generic [ref=e532]:
+        - heading "Liên hệ" [level=4] [ref=e533]
+        - list [ref=e534]:
+          - listitem [ref=e535]:
+            - 'link "Hotline: 1900 123 456" [ref=e536] [cursor=pointer]':
+              - /url: tel:1900123456
+          - listitem [ref=e537]:
+            - link "info@windoffall.vn" [ref=e538] [cursor=pointer]:
+              - /url: mailto:info@windoffall.vn
+          - listitem [ref=e539]:
+            - link "123 Nguyễn Huệ, Quận 1, TP.HCM" [ref=e540] [cursor=pointer]:
+              - /url: "#"
+          - listitem [ref=e541]:
+            - link "Mở cửa 8:00 - 22:00 mỗi ngày" [ref=e542] [cursor=pointer]:
+              - /url: "#"
+    - generic [ref=e544]:
+      - paragraph [ref=e545]: © 2026 WIND OF FALL. All rights reserved.
+      - generic [ref=e546]:
+        - generic [ref=e547]: COD
+        - generic [ref=e548]: VNPay
+        - generic [ref=e549]: MoMo
+        - generic [ref=e550]: Visa
+  - button [ref=e552] [cursor=pointer]:
+    - img [ref=e553]

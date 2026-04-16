@@ -144,6 +144,7 @@ function parseWorkbook(workbookPath) {
             productKey: normalizeText(row.product_key),
             name: normalizeText(row.name),
             slug: normalizeText(row.slug),
+            categorySlug: normalizeText(row.category_slug),
             categoryId: normalizeText(row.category_id),
             categoryName: normalizeText(row.category_name),
             description: normalizeText(row.description),
@@ -178,7 +179,7 @@ function parseWorkbook(workbookPath) {
 function buildInstructionRows() {
     return [
         ['Sheet', 'Purpose', 'Required columns', 'Notes'],
-        ['Products', 'One row per product', 'product_key, name, category_name/category_id, price', 'product_key links all sheets together'],
+        ['Products', 'One row per product', 'product_key, name, category_slug/category_name/category_id, price', 'Prefer category_slug. product_key links all sheets together'],
         ['Images', 'One row per product image', 'product_key, image_file or image_url', 'Use image_file when the real file is inside the uploaded ZIP'],
         ['Variants', 'One row per variant', 'product_key, size or color', 'Variant image can reuse a file already listed in Images'],
         ['ZIP', 'Image source bundle', 'N/A', 'Upload a .zip containing the image files referenced by image_file']
@@ -196,35 +197,66 @@ function createWorkbookBuffer({ productsRows, imagesRows, variantsRows }) {
 
 function buildCategoryMaps(categories = []) {
     const byId = new Map();
+    const bySlug = new Map();
     const byName = new Map();
 
     categories.forEach((category) => {
-        byId.set(String(category.id), category.id);
-        byName.set(normalizeLookupKey(category.name), category.id);
+        byId.set(String(category.id), category);
+        bySlug.set(normalizeLookupKey(category.slug), category);
+
+        const nameKey = normalizeLookupKey(category.name);
+        const nameMatches = byName.get(nameKey) || [];
+        nameMatches.push(category);
+        byName.set(nameKey, nameMatches);
     });
 
-    return { byId, byName };
+    return { byId, bySlug, byName };
 }
 
 function resolveCategoryId(productRow, categoryMaps) {
-    if (productRow.categoryId) {
-        const resolvedCategoryId = categoryMaps.byId.get(String(productRow.categoryId));
-        if (!resolvedCategoryId) {
-            throw new Error(`Category ID "${productRow.categoryId}" was not found`);
+    let resolvedFromSlug = null;
+    let resolvedFromName = null;
+    let resolvedFromId = null;
+
+    if (productRow.categorySlug) {
+        resolvedFromSlug = categoryMaps.bySlug.get(normalizeLookupKey(productRow.categorySlug)) || null;
+        if (!resolvedFromSlug) {
+            throw new Error(`Category slug "${productRow.categorySlug}" was not found`);
         }
-        return resolvedCategoryId;
     }
 
-    if (!productRow.categoryName) {
+    if (productRow.categoryName) {
+        const matches = categoryMaps.byName.get(normalizeLookupKey(productRow.categoryName)) || [];
+        if (matches.length === 1) {
+            [resolvedFromName] = matches;
+        } else if (matches.length > 1) {
+            throw new Error(
+                `Category name "${productRow.categoryName}" is ambiguous; please provide category_slug or category_id`
+            );
+        } else if (!productRow.categorySlug && !productRow.categoryId) {
+            throw new Error(`Category "${productRow.categoryName}" was not found`);
+        }
+    }
+
+    if (productRow.categoryId) {
+        resolvedFromId = categoryMaps.byId.get(String(productRow.categoryId)) || null;
+        if (!resolvedFromId && !resolvedFromSlug && !resolvedFromName) {
+            throw new Error(`Category ID "${productRow.categoryId}" was not found`);
+        }
+    }
+
+    const chosenCategory = resolvedFromSlug || resolvedFromName || resolvedFromId;
+    if (!chosenCategory) {
         throw new Error('Category is required');
     }
 
-    const resolvedCategoryId = categoryMaps.byName.get(normalizeLookupKey(productRow.categoryName));
-    if (!resolvedCategoryId) {
-        throw new Error(`Category "${productRow.categoryName}" was not found`);
+    if (resolvedFromSlug && resolvedFromName && Number(resolvedFromSlug.id) !== Number(resolvedFromName.id)) {
+        throw new Error(
+            `Category slug "${productRow.categorySlug}" does not match category name "${productRow.categoryName}"`
+        );
     }
 
-    return resolvedCategoryId;
+    return chosenCategory.id;
 }
 
 function createZipImageIndex(zipPath) {
@@ -623,6 +655,7 @@ async function exportProductsToWorkbookBuffer(options = {}) {
             product_key: productKey,
             name: product.name || '',
             slug: product.slug || '',
+            category_slug: product.category_slug || '',
             category_name: product.category_name || '',
             category_id: product.category_id ?? '',
             description: product.description || '',
@@ -666,6 +699,7 @@ function createProductImportTemplateBuffer() {
             product_key: 'NU-CROPTOP-01',
             name: 'Ao Croptop Nu',
             slug: '',
+            category_slug: 'nu',
             category_name: 'Nu',
             category_id: '',
             description: 'Ao croptop tay ngan co V',
@@ -679,6 +713,7 @@ function createProductImportTemplateBuffer() {
             product_key: 'NU-VAY-MIDI-01',
             name: 'Vay Midi Xoe',
             slug: '',
+            category_slug: 'nu',
             category_name: 'Nu',
             category_id: '',
             description: 'Vay midi hoa tiet',

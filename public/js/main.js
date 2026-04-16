@@ -108,8 +108,11 @@ function initHeaderScrollState() {
         return;
     }
 
+    const root = document.documentElement;
+
     const applyState = () => {
         header.classList.toggle('header--scrolled', window.scrollY > 32);
+        root.style.setProperty('--live-header-height', `${Math.round(header.getBoundingClientRect().height)}px`);
     };
 
     let ticking = false;
@@ -128,6 +131,137 @@ function initHeaderScrollState() {
     applyState();
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', applyState);
+}
+
+function initDesktopCategoryDropdowns() {
+    const navItems = Array.from(document.querySelectorAll('.main-nav__item--has-dropdown'));
+    if (!navItems.length) {
+        return;
+    }
+
+    const hoverMedia = window.matchMedia('(hover: hover) and (pointer: fine)');
+    const openDelay = 70;
+    const closeDelay = 220;
+
+    const clearTimers = (item) => {
+        if (item._dropdownOpenTimer) {
+            window.clearTimeout(item._dropdownOpenTimer);
+            item._dropdownOpenTimer = null;
+        }
+
+        if (item._dropdownCloseTimer) {
+            window.clearTimeout(item._dropdownCloseTimer);
+            item._dropdownCloseTimer = null;
+        }
+    };
+
+    const closeItem = (item) => {
+        if (!item) {
+            return;
+        }
+
+        item.classList.remove('is-open');
+        const trigger = item.querySelector('.main-nav__trigger[aria-expanded]');
+        if (trigger) {
+            trigger.setAttribute('aria-expanded', 'false');
+        }
+    };
+
+    const openItem = (item) => {
+        navItems.forEach((navItem) => {
+            if (navItem !== item) {
+                clearTimers(navItem);
+                closeItem(navItem);
+            }
+        });
+
+        item.classList.add('is-open');
+        const trigger = item.querySelector('.main-nav__trigger[aria-expanded]');
+        if (trigger) {
+            trigger.setAttribute('aria-expanded', 'true');
+        }
+    };
+
+    const scheduleOpen = (item) => {
+        if (!hoverMedia.matches) {
+            return;
+        }
+
+        clearTimers(item);
+        item._dropdownOpenTimer = window.setTimeout(() => {
+            openItem(item);
+        }, openDelay);
+    };
+
+    const scheduleClose = (item) => {
+        clearTimers(item);
+        item._dropdownCloseTimer = window.setTimeout(() => {
+            closeItem(item);
+        }, closeDelay);
+    };
+
+    navItems.forEach((item) => {
+        const trigger = item.querySelector('.main-nav__trigger');
+        const dropdown = item.querySelector('.main-nav__dropdown');
+        if (!trigger || !dropdown) {
+            return;
+        }
+
+        item.addEventListener('pointerenter', () => {
+            scheduleOpen(item);
+        });
+
+        item.addEventListener('pointerleave', () => {
+            if (!hoverMedia.matches) {
+                closeItem(item);
+                return;
+            }
+
+            scheduleClose(item);
+        });
+
+        item.addEventListener('focusin', () => {
+            clearTimers(item);
+            openItem(item);
+        });
+
+        item.addEventListener('focusout', (event) => {
+            if (item.contains(event.relatedTarget)) {
+                return;
+            }
+
+            scheduleClose(item);
+        });
+
+        item.addEventListener('keydown', (event) => {
+            if (event.key !== 'Escape') {
+                return;
+            }
+
+            clearTimers(item);
+            closeItem(item);
+            trigger.focus();
+        });
+    });
+
+    const syncHoverMode = () => {
+        if (hoverMedia.matches) {
+            return;
+        }
+
+        navItems.forEach((item) => {
+            clearTimers(item);
+            closeItem(item);
+        });
+    };
+
+    if (typeof hoverMedia.addEventListener === 'function') {
+        hoverMedia.addEventListener('change', syncHoverMode);
+    } else if (typeof hoverMedia.addListener === 'function') {
+        hoverMedia.addListener(syncHoverMode);
+    }
+
+    window.addEventListener('resize', syncHoverMode);
 }
 
 function initProductCardActions() {
@@ -161,6 +295,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initMobileMenu();
     initHeaderScrollState();
+    initDesktopCategoryDropdowns();
 
     runWhenBrowserIdle(() => {
         updateCartCount();

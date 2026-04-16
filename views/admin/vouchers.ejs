@@ -112,7 +112,8 @@
                 <div class="admin-form__row">
                     <div class="admin-form__group">
                         <label class="admin-form__label">Giá trị <span>*</span></label>
-                        <input type="number" name="value" required step="0.01" class="admin-form__input" placeholder="VD: 10 (cho 10%)">
+                        <input type="number" id="voucherValue" name="value" required min="0.01" max="99.99" step="0.01" class="admin-form__input" placeholder="VD: 10 (cho 10%)">
+                        <p class="admin-form__hint admin-form__hint--warning" id="voucherValueWarning" hidden>Giá trị phần trăm phải nhỏ hơn 100%.</p>
                     </div>
                     <div class="admin-form__group">
                         <label class="admin-form__label">Đơn hàng tối thiểu</label>
@@ -384,7 +385,8 @@
             <div class="admin-form__row">
                 <div class="admin-form__group">
                     <label class="admin-form__label">Giá trị <span>*</span></label>
-                    <input type="number" name="value" required step="0.01" class="admin-form__input">
+                    <input type="number" id="editVoucherValue" name="value" required min="0.01" max="99.99" step="0.01" class="admin-form__input">
+                    <p class="admin-form__hint admin-form__hint--warning" id="editVoucherValueWarning" hidden>Giá trị phần trăm phải nhỏ hơn 100%.</p>
                 </div>
                 <div class="admin-form__group">
                     <label class="admin-form__label">Đơn hàng tối thiểu</label>

@@ -1337,7 +1337,7 @@ async function applyVoucher() {
 
     discountInput.value = currentDiscount;
 
-    const total = checkoutSubtotal + checkoutShippingFee - currentDiscount;
+    const total = Math.max(0, checkoutSubtotal + checkoutShippingFee - currentDiscount);
     totalEl.textContent = total.toLocaleString('vi-VN') + 'đ';
 }
 

@@ -90,6 +90,19 @@ const PER_PAGE_OPTIONS = [10, 20, 30, 40, 50];
 const DEFAULT_PER_PAGE = 20;
 const DEFAULT_PRODUCT_GRID_COLUMNS = 5;
 const DEFAULT_HOME_CATEGORY_SHOWCASE_COUNT = 3;
+const PROMOTION_FILTER_OPTIONS = new Set(['active', 'upcoming', 'active_or_upcoming']);
+const CATALOG_RATING_OPTIONS = [4, 3, 2, 1];
+const CATALOG_PRICE_RANGES = [
+    { label: 'Dưới 200k', min: null, max: 200000 },
+    { label: '200k - 500k', min: 200000, max: 500000 },
+    { label: '500k - 1M', min: 500000, max: 1000000 },
+    { label: 'Từ 1M', min: 1000000, max: null }
+];
+const CATEGORY_FALLBACK_MAP = {
+    nam: { id: 1, name: 'Thời Trang Nam', slug: 'nam', description: 'Quần áo và phụ kiện nam' },
+    nu: { id: 2, name: 'Thời Trang Nữ', slug: 'nu', description: 'Quần áo và phụ kiện nữ' },
+    'tre-em': { id: 3, name: 'Thời Trang Trẻ Em', slug: 'tre-em', description: 'Quần áo trẻ em' }
+};
 
 function normalizePositiveInteger(value, fallback = 1) {
     const parsedValue = Number.parseInt(value, 10);
@@ -135,6 +148,498 @@ function buildPagination(totalItems, requestedPage, perPage) {
         currentPage,
         perPage: safePerPage,
         offset: (currentPage - 1) * safePerPage
+    };
+}
+
+function parseCatalogSort(sort) {
+    switch (String(sort || '').trim()) {
+        case 'best-selling':
+            return { currentSort: 'best-selling', sort_by: 'sold_count', sort_order: 'DESC' };
+        case 'price-asc':
+            return { currentSort: 'price-asc', sort_by: 'price', sort_order: 'ASC' };
+        case 'price-desc':
+            return { currentSort: 'price-desc', sort_by: 'price', sort_order: 'DESC' };
+        case 'name-asc':
+            return { currentSort: 'name-asc', sort_by: 'name', sort_order: 'ASC' };
+        case 'name-desc':
+            return { currentSort: 'name-desc', sort_by: 'name', sort_order: 'DESC' };
+        case 'newest':
+        default:
+            return { currentSort: 'newest', sort_by: 'created_at', sort_order: 'DESC' };
+    }
+}
+
+function normalizeNonNegativeNumber(value) {
+    if (value === undefined || value === null || value === '') {
+        return null;
+    }
+
+    const parsedValue = Number.parseFloat(value);
+    return Number.isFinite(parsedValue) && parsedValue >= 0 ? parsedValue : null;
+}
+
+function normalizePriceRange(minPrice, maxPrice) {
+    let normalizedMin = normalizeNonNegativeNumber(minPrice);
+    let normalizedMax = normalizeNonNegativeNumber(maxPrice);
+
+    if (normalizedMin !== null && normalizedMax !== null && normalizedMin > normalizedMax) {
+        [normalizedMin, normalizedMax] = [normalizedMax, normalizedMin];
+    }
+
+    return {
+        minPrice: normalizedMin,
+        maxPrice: normalizedMax
+    };
+}
+
+function normalizeArrayQuery(value) {
+    const rawValues = Array.isArray(value) ? value : [value];
+
+    return [...new Set(
+        rawValues
+            .map((item) => String(item ?? '').trim())
+            .filter(Boolean)
+    )];
+}
+
+function normalizeRatingFilters(value) {
+    return [...new Set(
+        normalizeArrayQuery(value)
+            .map((item) => Number.parseInt(item, 10))
+            .filter((item) => [1, 2, 3, 4, 5].includes(item))
+    )].sort((left, right) => right - left);
+}
+
+function normalizePromotionFilters(promotion, sale) {
+    const normalizedPromotions = normalizeArrayQuery(promotion)
+        .filter((item) => PROMOTION_FILTER_OPTIONS.has(item));
+
+    if (normalizedPromotions.length > 0) {
+        return normalizedPromotions;
+    }
+
+    return String(sale || '').trim() === 'true' ? ['active_or_upcoming'] : [];
+}
+
+function normalizePriceRangeFilters(value) {
+    const ranges = [];
+    const seenRanges = new Set();
+
+    normalizeArrayQuery(value).forEach((item) => {
+        const [rawMin = '', rawMax = ''] = item.split(':', 2);
+        const normalizedRange = normalizePriceRange(rawMin, rawMax);
+        const rangeKey = `${normalizedRange.minPrice ?? ''}:${normalizedRange.maxPrice ?? ''}`;
+
+        if ((normalizedRange.minPrice === null && normalizedRange.maxPrice === null) || seenRanges.has(rangeKey)) {
+            return;
+        }
+
+        seenRanges.add(rangeKey);
+        ranges.push({
+            key: rangeKey,
+            min: normalizedRange.minPrice,
+            max: normalizedRange.maxPrice
+        });
+    });
+
+    return ranges;
+}
+
+function buildEffectivePriceRanges(presetRanges = [], minPrice = null, maxPrice = null) {
+    const ranges = [...presetRanges];
+    const hasManualRange = minPrice !== null || maxPrice !== null;
+
+    if (!hasManualRange) {
+        return ranges;
+    }
+
+    const manualRangeKey = `${minPrice ?? ''}:${maxPrice ?? ''}`;
+    if (ranges.some((range) => range.key === manualRangeKey)) {
+        return ranges;
+    }
+
+    ranges.push({
+        key: manualRangeKey,
+        min: minPrice,
+        max: maxPrice
+    });
+
+    return ranges;
+}
+
+function createCatalogCategoryMaps(categories = []) {
+    const categoryById = new Map();
+    const categoryBySlug = new Map();
+    const childrenMap = new Map();
+
+    categories.forEach((item) => {
+        if (!item) {
+            return;
+        }
+
+        categoryById.set(String(item.id), item);
+        categoryBySlug.set(String(item.slug), item);
+
+        const parentKey = item.parent_id ? String(item.parent_id) : 'root';
+        const siblings = childrenMap.get(parentKey) || [];
+        siblings.push(item);
+        childrenMap.set(parentKey, siblings);
+    });
+
+    const descendantCache = new Map();
+
+    function getRootCategory(item) {
+        let current = item || null;
+        let guard = 0;
+
+        while (current && current.parent_id && guard < 20) {
+            const parent = categoryById.get(String(current.parent_id)) || null;
+            if (!parent) {
+                break;
+            }
+
+            current = parent;
+            guard += 1;
+        }
+
+        return current;
+    }
+
+    function getChildren(parentId) {
+        const key = parentId ? String(parentId) : 'root';
+        return childrenMap.get(key) || [];
+    }
+
+    function getDescendantIds(categoryId) {
+        const cacheKey = String(categoryId);
+        if (descendantCache.has(cacheKey)) {
+            return descendantCache.get(cacheKey);
+        }
+
+        const descendantIds = new Set([Number(categoryId)]);
+        const pendingIds = [Number(categoryId)];
+
+        while (pendingIds.length > 0) {
+            const currentId = pendingIds.shift();
+            getChildren(currentId).forEach((child) => {
+                const childId = Number(child.id);
+                if (descendantIds.has(childId)) {
+                    return;
+                }
+
+                descendantIds.add(childId);
+                pendingIds.push(childId);
+            });
+        }
+
+        const result = [...descendantIds];
+        descendantCache.set(cacheKey, result);
+        return result;
+    }
+
+    return {
+        categoryById,
+        categoryBySlug,
+        childrenMap,
+        getChildren,
+        getRootCategory,
+        getDescendantIds
+    };
+}
+
+function normalizeCategoryFilters(value, categories = []) {
+    const allowedSlugs = new Set(
+        (Array.isArray(categories) ? categories : [])
+            .map((item) => String(item?.slug || '').trim())
+            .filter(Boolean)
+    );
+
+    return normalizeArrayQuery(value).filter((slug) => (
+        allowedSlugs.size === 0 || allowedSlugs.has(slug)
+    ));
+}
+
+function resolveCategoryFilterIds(selectedCategorySlugs = [], categoryMaps, defaultCategoryIds = []) {
+    const categoryIds = new Set(
+        (Array.isArray(defaultCategoryIds) ? defaultCategoryIds : [])
+            .map((item) => Number(item))
+            .filter((item) => Number.isInteger(item) && item > 0)
+    );
+
+    if (!Array.isArray(selectedCategorySlugs) || selectedCategorySlugs.length === 0) {
+        return [...categoryIds];
+    }
+
+    const resolvedIds = new Set();
+
+    selectedCategorySlugs.forEach((slug) => {
+        const category = categoryMaps.categoryBySlug.get(String(slug));
+        if (!category) {
+            return;
+        }
+
+        categoryMaps.getDescendantIds(category.id).forEach((categoryId) => {
+            resolvedIds.add(categoryId);
+        });
+    });
+
+    return [...resolvedIds];
+}
+
+function isSaleFilterActive(promotions = []) {
+    const promotionSet = new Set(Array.isArray(promotions) ? promotions : []);
+    return (
+        promotionSet.has('active_or_upcoming') ||
+        (promotionSet.has('active') && promotionSet.has('upcoming'))
+    );
+}
+
+function getFallbackCategories() {
+    return Object.values(CATEGORY_FALLBACK_MAP);
+}
+
+async function findCategoryBySlugWithFallback(slug) {
+    if (!slug) {
+        return null;
+    }
+
+    try {
+        const category = await Category.findBySlug(slug);
+        if (category) {
+            return category;
+        }
+    } catch (error) {
+        console.error('Category findBySlug error:', error);
+    }
+
+    return CATEGORY_FALLBACK_MAP[slug] || null;
+}
+
+async function loadCatalogCategories() {
+    try {
+        const categories = await Category.findAll();
+        if (Array.isArray(categories) && categories.length > 0) {
+            return categories;
+        }
+    } catch (error) {
+        console.error('Category findAll error:', error);
+    }
+
+    return getFallbackCategories();
+}
+
+function buildCatalogQueryState({
+    categorySlug = '',
+    categorySlugs = [],
+    priceRanges = [],
+    minPrice = null,
+    maxPrice = null,
+    rating = null,
+    ratings = [],
+    promotion = '',
+    promotions = [],
+    currentSort = 'newest',
+    perPage = DEFAULT_PER_PAGE,
+    q = '',
+    search = ''
+} = {}) {
+    const query = {};
+
+    const normalizedCategorySlugs = categorySlugs.length > 0
+        ? categorySlugs
+        : (categorySlug ? [categorySlug] : []);
+    const normalizedRatings = ratings.length > 0
+        ? ratings.map((item) => String(item))
+        : (rating !== null ? [String(rating)] : []);
+    const normalizedPromotions = promotions.length > 0
+        ? promotions
+        : (promotion ? [promotion] : []);
+
+    if (normalizedCategorySlugs.length > 0) query.category = normalizedCategorySlugs;
+    if (Array.isArray(priceRanges) && priceRanges.length > 0) query.price_range = priceRanges;
+    if (minPrice !== null) query.min_price = String(minPrice);
+    if (maxPrice !== null) query.max_price = String(maxPrice);
+    if (normalizedRatings.length > 0) query.rating = normalizedRatings;
+    if (normalizedPromotions.length > 0) query.promotion = normalizedPromotions;
+    if (currentSort && currentSort !== 'newest') query.sort = currentSort;
+    if (perPage && perPage !== DEFAULT_PER_PAGE) query.per_page = String(perPage);
+    if (q) query.q = q;
+    if (search) query.search = search;
+
+    return query;
+}
+
+function getProductDisplayPrice(product) {
+    const priceCandidates = [
+        product?.display_price,
+        product?.final_price,
+        product?.price
+    ];
+
+    for (const candidate of priceCandidates) {
+        const parsedValue = Number(candidate);
+        if (Number.isFinite(parsedValue)) {
+            return parsedValue;
+        }
+    }
+
+    return 0;
+}
+
+function getProductAverageRating(product) {
+    const parsedValue = Number(product?.average_rating);
+    return Number.isFinite(parsedValue) ? parsedValue : 0;
+}
+
+function getProductPromotionStatus(product) {
+    return String(product?.promotion_status || 'none').trim();
+}
+
+function matchesPromotionFilter(product, promotions = []) {
+    const selectedPromotions = Array.isArray(promotions)
+        ? promotions
+        : (promotions ? [promotions] : []);
+
+    if (selectedPromotions.length === 0) {
+        return true;
+    }
+
+    const promotionStatus = getProductPromotionStatus(product);
+    return selectedPromotions.some((promotion) => (
+        promotion === 'active_or_upcoming'
+            ? (promotionStatus === 'active' || promotionStatus === 'upcoming')
+            : promotionStatus === promotion
+    ));
+}
+
+function matchesCatalogFilters(product, filters = {}) {
+    if (!product) {
+        return false;
+    }
+
+    const categoryIds = Array.isArray(filters.category_ids)
+        ? filters.category_ids
+        : (filters.category_id ? [filters.category_id] : []);
+    if (categoryIds.length > 0 && !categoryIds.some((categoryId) => Number(product.category_id) === Number(categoryId))) {
+        return false;
+    }
+
+    const displayPrice = getProductDisplayPrice(product);
+    const priceRanges = Array.isArray(filters.price_ranges) ? filters.price_ranges : [];
+    if (priceRanges.length > 0) {
+        const isMatchedPriceRange = priceRanges.some((range) => {
+            const minValue = range?.min ?? null;
+            const maxValue = range?.max ?? null;
+
+            if (minValue !== null && displayPrice < Number(minValue)) {
+                return false;
+            }
+
+            if (maxValue !== null && displayPrice > Number(maxValue)) {
+                return false;
+            }
+
+            return true;
+        });
+
+        if (!isMatchedPriceRange) {
+            return false;
+        }
+    } else {
+        if (filters.min_price !== undefined && filters.min_price !== null && displayPrice < Number(filters.min_price)) {
+            return false;
+        }
+
+        if (filters.max_price !== undefined && filters.max_price !== null && displayPrice > Number(filters.max_price)) {
+            return false;
+        }
+    }
+
+    const ratingFilters = Array.isArray(filters.ratings)
+        ? filters.ratings
+        : (filters.rating !== undefined && filters.rating !== null ? [filters.rating] : []);
+    if (ratingFilters.length > 0) {
+        const averageRating = getProductAverageRating(product);
+        const isMatchedRating = ratingFilters.some((ratingValue) => averageRating >= Number(ratingValue));
+        if (!isMatchedRating) {
+            return false;
+        }
+    }
+
+    return matchesPromotionFilter(product, filters.promotions || filters.promotion);
+}
+
+function compareCatalogProducts(left, right, currentSort) {
+    if (currentSort === 'best-selling') {
+        return (Number(right?.sold_count) || 0) - (Number(left?.sold_count) || 0);
+    }
+
+    if (currentSort === 'price-asc') {
+        return getProductDisplayPrice(left) - getProductDisplayPrice(right);
+    }
+
+    if (currentSort === 'price-desc') {
+        return getProductDisplayPrice(right) - getProductDisplayPrice(left);
+    }
+
+    if (currentSort === 'name-asc') {
+        return String(left?.name || '').localeCompare(String(right?.name || ''), 'vi', { sensitivity: 'base' });
+    }
+
+    if (currentSort === 'name-desc') {
+        return String(right?.name || '').localeCompare(String(left?.name || ''), 'vi', { sensitivity: 'base' });
+    }
+
+    const leftCreatedAt = new Date(left?.created_at || 0).getTime();
+    const rightCreatedAt = new Date(right?.created_at || 0).getTime();
+    return rightCreatedAt - leftCreatedAt;
+}
+
+function sortCatalogProducts(products = [], currentSort = 'newest') {
+    return [...products].sort((left, right) => {
+        const primaryComparison = compareCatalogProducts(left, right, currentSort);
+        if (primaryComparison !== 0) {
+            return primaryComparison;
+        }
+
+        return Number(right?.id || 0) - Number(left?.id || 0);
+    });
+}
+
+function buildCatalogViewData({
+    category = null,
+    categories = [],
+    products = [],
+    currentSort = 'newest',
+    pagination,
+    paginationPath,
+    paginationQuery,
+    user = null,
+    isSalePage = false,
+    query = '',
+    search = '',
+    filters = {}
+} = {}) {
+    return {
+        category,
+        categories,
+        products,
+        currentSort,
+        currentPage: pagination.currentPage,
+        totalPages: pagination.totalPages,
+        totalItems: pagination.totalItems,
+        perPage: pagination.perPage,
+        perPageOptions: PER_PAGE_OPTIONS,
+        paginationPath,
+        paginationQuery,
+        path: paginationPath,
+        filters,
+        filterRatingOptions: CATALOG_RATING_OPTIONS,
+        filterPriceRanges: CATALOG_PRICE_RANGES,
+        query,
+        search,
+        user,
+        isSalePage
     };
 }
 
@@ -473,86 +978,79 @@ exports.updateProductReview = async (req, res) => {
  */
 exports.getProducts = async (req, res) => {
     try {
-        // Lấy các tham số lọc từ query string
         const {
-            category,       // Slug danh mục
-            search,         // Từ khóa tìm kiếm
-            min_price,      // Giá tối thiểu
-            max_price,      // Giá tối đa
-            sort,           // Sắp xếp (price-asc, price-desc, name-asc, name-desc, newest)
-            page = 1,       // Số trang (mặc định: 1)
-            per_page,       // Số sản phẩm mỗi trang
-            sale            // Lọc sản phẩm đang khuyến mãi
+            category,
+            search,
+            price_range,
+            min_price,
+            max_price,
+            sort,
+            page = 1,
+            per_page,
+            rating,
+            promotion,
+            sale
         } = req.query;
-
-        // Xử lý sort parameter
-        let sort_by = 'created_at';
-        let sort_order = 'DESC';
-
-        if (sort) {
-            switch (sort) {
-                case 'price-asc':
-                    sort_by = 'price';
-                    sort_order = 'ASC';
-                    break;
-                case 'price-desc':
-                    sort_by = 'price';
-                    sort_order = 'DESC';
-                    break;
-                case 'name-asc':
-                    sort_by = 'name';
-                    sort_order = 'ASC';
-                    break;
-                case 'name-desc':
-                    sort_by = 'name';
-                    sort_order = 'DESC';
-                    break;
-                case 'newest':
-                default:
-                    sort_by = 'created_at';
-                    sort_order = 'DESC';
-                    break;
-            }
-        }
 
         const requestedPage = normalizePositiveInteger(page, 1);
         const normalizedPerPage = normalizePerPage(per_page);
+        const sortOption = parseCatalogSort(sort);
+        const normalizedPromotions = normalizePromotionFilters(promotion, sale);
+        const normalizedRatings = normalizeRatingFilters(rating);
+        const normalizedPricePresets = normalizePriceRangeFilters(price_range);
+        const { minPrice, maxPrice } = normalizePriceRange(min_price, max_price);
+        const effectivePriceRanges = buildEffectivePriceRanges(normalizedPricePresets, minPrice, maxPrice);
+        const categories = await loadCatalogCategories();
+        const categoryMaps = createCatalogCategoryMaps(categories);
+        const selectedCategorySlugs = normalizeCategoryFilters(category, categories);
+        const selectedCategories = selectedCategorySlugs
+            .map((slug) => categoryMaps.categoryBySlug.get(String(slug)))
+            .filter(Boolean);
+        const effectiveCategoryIds = resolveCategoryFilterIds(selectedCategorySlugs, categoryMaps);
+        const selectedCategory = selectedCategories.length === 1 ? selectedCategories[0] : null;
 
-        // Xây dựng object filter
         const baseFilters = {
-            sort_by,
-            sort_order,
-            prioritize_in_stock: true
+            sort_by: sortOption.sort_by,
+            sort_order: sortOption.sort_order,
+            prioritize_in_stock: true,
+            use_final_price: true
         };
 
-        // Lọc theo danh mục nếu có
-        if (category) {
-            const cat = await Category.findBySlug(category).catch(() => null);
-            if (cat) baseFilters.category_id = cat.id;
+        if (effectiveCategoryIds.length === 1) {
+            baseFilters.category_id = effectiveCategoryIds[0];
+        } else if (effectiveCategoryIds.length > 1) {
+            baseFilters.category_ids = effectiveCategoryIds;
         }
 
-        // Lọc theo từ khóa tìm kiếm
-        if (search) baseFilters.search = search;
+        if (search) {
+            baseFilters.search = search;
+        }
 
-        // Lọc theo khoảng giá
-        if (min_price) baseFilters.min_price = parseFloat(min_price);
-        if (max_price) baseFilters.max_price = parseFloat(max_price);
+        if (effectivePriceRanges.length > 0) {
+            baseFilters.price_ranges = effectivePriceRanges;
+        }
 
-        // Lọc sản phẩm đang khuyến mãi
-        if (sale === 'true') baseFilters.on_sale = true;
+        if (normalizedRatings.length > 0) {
+            baseFilters.ratings = normalizedRatings;
+            baseFilters.rating = Math.min(...normalizedRatings);
+        }
 
-        // Lấy danh sách sản phẩm với error handling
-        let products = [];
-        let categories = [];
+        if (normalizedPromotions.length > 0) {
+            baseFilters.promotions = normalizedPromotions;
+            baseFilters.promotion = normalizedPromotions.length === 1
+                ? normalizedPromotions[0]
+                : normalizedPromotions;
+        }
+
         let totalItems = 0;
-        let pagination = buildPagination(totalItems, requestedPage, normalizedPerPage);
-
         try {
             totalItems = await Product.count(baseFilters);
-            pagination = buildPagination(totalItems, requestedPage, normalizedPerPage);
-        } catch (err) {
-            console.error('Product count error:', err);
+        } catch (error) {
+            console.error('Product count error:', error);
         }
+
+        let pagination = buildPagination(totalItems, requestedPage, normalizedPerPage);
+        let products = [];
 
         try {
             products = await Product.findAll({
@@ -560,32 +1058,45 @@ exports.getProducts = async (req, res) => {
                 limit: pagination.perPage,
                 offset: pagination.offset
             });
-        } catch (err) {
-            console.error('Product findAll error:', err);
-            // Dữ liệu mẫu fallback
+        } catch (error) {
+            console.error('Product findAll error:', error);
             products = [
-                { id: 1, name: 'Áo Polo Classic Nam', slug: 'ao-polo-classic', price: 450000, final_price: 225000, primary_image: 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600' },
-                { id: 2, name: 'Đầm Maxi Hoa', slug: 'dam-maxi-hoa', price: 750000, final_price: 592500, primary_image: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=600' },
-                { id: 3, name: 'Áo Thun Basic', slug: 'ao-thun-basic', price: 250000, final_price: 250000, primary_image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600' },
-                { id: 4, name: 'Váy Công Sở', slug: 'vay-cong-so', price: 420000, final_price: 420000, primary_image: 'https://images.unsplash.com/photo-1594633313593-bab3825d0caf?w=600' }
-            ];
+                { id: 1, name: 'Áo Polo Classic Nam', slug: 'ao-polo-classic', price: 450000, final_price: 225000, display_price: 225000, primary_image: 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600', average_rating: 4.8, sold_count: 1200, review_count: 8, promotion_status: 'active' },
+                { id: 2, name: 'Đầm Maxi Hoa', slug: 'dam-maxi-hoa', price: 750000, final_price: 592500, display_price: 592500, primary_image: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=600', average_rating: 4.6, sold_count: 340, review_count: 6, promotion_status: 'active' },
+                { id: 3, name: 'Áo Thun Basic', slug: 'ao-thun-basic', price: 250000, final_price: 250000, display_price: 250000, primary_image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600', average_rating: 0, sold_count: 0, review_count: 0, promotion_status: 'none' },
+                { id: 4, name: 'Váy Công Sở', slug: 'vay-cong-so', price: 420000, final_price: 420000, display_price: 420000, primary_image: 'https://images.unsplash.com/photo-1594633313593-bab3825d0caf?w=600', average_rating: 4.9, sold_count: 78, review_count: 5, promotion_status: 'upcoming' }
+            ].filter((product) => matchesCatalogFilters(product, baseFilters));
+
             if (totalItems === 0) {
                 totalItems = products.length;
                 pagination = buildPagination(totalItems, requestedPage, normalizedPerPage);
+                products = products.slice(pagination.offset, pagination.offset + pagination.perPage);
             }
         }
 
-        // Lấy danh sách danh mục cho sidebar
-        try {
-            categories = await Category.findAll();
-        } catch (err) {
-            console.error('Category findAll error:', err);
-            categories = [
-                { id: 1, name: 'Thời Trang Nam', slug: 'nam', product_count: 5 },
-                { id: 2, name: 'Thời Trang Nữ', slug: 'nu', product_count: 5 },
-                { id: 3, name: 'Thời Trang Trẻ Em', slug: 'tre-em', product_count: 4 }
-            ];
-        }
+        const filterState = {
+            category: selectedCategorySlugs,
+            price_ranges: normalizedPricePresets.map((range) => range.key),
+            min_price: minPrice !== null ? String(minPrice) : '',
+            max_price: maxPrice !== null ? String(maxPrice) : '',
+            rating: normalizedRatings.map((value) => String(value)),
+            promotion: normalizedPromotions,
+            currentSort: sortOption.currentSort,
+            perPage: pagination.perPage,
+            search: search || ''
+        };
+        const paginationQuery = buildCatalogQueryState({
+            categorySlugs: selectedCategorySlugs,
+            priceRanges: normalizedPricePresets.map((range) => range.key),
+            minPrice,
+            maxPrice,
+            ratings: normalizedRatings,
+            promotions: normalizedPromotions,
+            currentSort: sortOption.currentSort,
+            perPage: pagination.perPage,
+            search
+        });
+        const isSalePage = isSaleFilterActive(normalizedPromotions);
 
         // Return JSON if requested (for AJAX)
         if (req.headers.accept && req.headers.accept.includes('application/json')) {
@@ -599,25 +1110,43 @@ exports.getProducts = async (req, res) => {
         }
 
         // Render trang danh sách sản phẩm
-        res.render('products/list', {
-            products,
+        res.render('products/list', buildCatalogViewData({
+            category: selectedCategory,
             categories,
-            category: null,                  // Không có category cụ thể
-            filters: req.query,              // Giữ lại filter để hiển thị
-            currentPage: pagination.currentPage,
-            currentSort: sort || 'newest',
-            totalItems: pagination.totalItems,
-            totalPages: pagination.totalPages,
-            perPage: pagination.perPage,
-            perPageOptions: PER_PAGE_OPTIONS,
+            products,
+            currentSort: sortOption.currentSort,
+            pagination,
             paginationPath: '/products',
-            paginationQuery: req.query,
+            paginationQuery,
             user: req.user || null,
-            isSalePage: sale === 'true'      // Đánh dấu đây là trang sale
-        });
+            isSalePage,
+            search,
+            filters: filterState
+        }));
     } catch (error) {
         console.error('Product listing error:', error);
         res.status(500).render('error', { message: 'Lỗi tải danh sách sản phẩm: ' + error.message, user: req.user || null });
+    }
+};
+
+exports.getForYou = async (req, res) => {
+    try {
+        const recommendations = req.user
+            ? await Product.getForYouRecommendations(req.user.id, 30)
+            : [];
+
+        res.render('products/for-you', {
+            products: recommendations,
+            hasPurchaseHistory: recommendations.length > 0,
+            user: req.user || null,
+            path: '/products/for-you'
+        });
+    } catch (error) {
+        console.error('For You error:', error);
+        res.status(500).render('error', {
+            message: 'Lỗi tải gợi ý dành cho bạn: ' + error.message,
+            user: req.user || null
+        });
     }
 };
 
@@ -722,7 +1251,19 @@ exports.getProductDetail = async (req, res) => {
  */
 exports.searchProducts = async (req, res) => {
     try {
-        const { q, page = 1, per_page } = req.query;
+        const {
+            q,
+            page = 1,
+            per_page,
+            sort,
+            category,
+            price_range,
+            min_price,
+            max_price,
+            rating,
+            promotion,
+            sale
+        } = req.query;
 
         // Redirect về trang danh sách nếu không có từ khóa
         if (!q) {
@@ -731,25 +1272,71 @@ exports.searchProducts = async (req, res) => {
 
         const requestedPage = normalizePositiveInteger(page, 1);
         const normalizedPerPage = normalizePerPage(per_page);
+        const sortOption = parseCatalogSort(sort);
+        const normalizedPromotions = normalizePromotionFilters(promotion, sale);
+        const normalizedRatings = normalizeRatingFilters(rating);
+        const normalizedPricePresets = normalizePriceRangeFilters(price_range);
+        const { minPrice, maxPrice } = normalizePriceRange(min_price, max_price);
+        const effectivePriceRanges = buildEffectivePriceRanges(normalizedPricePresets, minPrice, maxPrice);
+        const categories = await loadCatalogCategories();
+        const categoryMaps = createCatalogCategoryMaps(categories);
+        const selectedCategorySlugs = normalizeCategoryFilters(category, categories);
+        const selectedCategories = selectedCategorySlugs
+            .map((slug) => categoryMaps.categoryBySlug.get(String(slug)))
+            .filter(Boolean);
+        const effectiveCategoryIds = resolveCategoryFilterIds(selectedCategorySlugs, categoryMaps);
+        const selectedCategory = selectedCategories.length === 1 ? selectedCategories[0] : null;
         const activeProductCount = await Product.count().catch(() => 0);
         const searchPoolSize = Math.max(activeProductCount, normalizedPerPage, 20);
         const allProducts = await Product.search(q, searchPoolSize);
-        const pagination = buildPagination(allProducts.length, requestedPage, normalizedPerPage);
-        const products = allProducts.slice(pagination.offset, pagination.offset + pagination.perPage);
+        const filteredProducts = sortCatalogProducts(
+            allProducts.filter((product) => matchesCatalogFilters(product, {
+                category_ids: effectiveCategoryIds,
+                price_ranges: effectivePriceRanges,
+                ratings: normalizedRatings,
+                promotions: normalizedPromotions
+            })),
+            sortOption.currentSort
+        );
+        const pagination = buildPagination(filteredProducts.length, requestedPage, normalizedPerPage);
+        const products = filteredProducts.slice(pagination.offset, pagination.offset + pagination.perPage);
+        const filterState = {
+            category: selectedCategorySlugs,
+            price_ranges: normalizedPricePresets.map((range) => range.key),
+            min_price: minPrice !== null ? String(minPrice) : '',
+            max_price: maxPrice !== null ? String(maxPrice) : '',
+            rating: normalizedRatings.map((value) => String(value)),
+            promotion: normalizedPromotions,
+            currentSort: sortOption.currentSort,
+            perPage: pagination.perPage,
+            q
+        };
+        const paginationQuery = buildCatalogQueryState({
+            categorySlugs: selectedCategorySlugs,
+            priceRanges: normalizedPricePresets.map((range) => range.key),
+            minPrice,
+            maxPrice,
+            ratings: normalizedRatings,
+            promotions: normalizedPromotions,
+            currentSort: sortOption.currentSort,
+            perPage: pagination.perPage,
+            q
+        });
 
         // Render trang kết quả
-        res.render('products/search-results', {
+        res.render('products/search-results', buildCatalogViewData({
+            category: selectedCategory,
+            categories,
             products,
-            query: q,
-            currentPage: pagination.currentPage,
-            totalPages: pagination.totalPages,
-            totalItems: pagination.totalItems,
-            perPage: pagination.perPage,
-            perPageOptions: PER_PAGE_OPTIONS,
+            currentSort: sortOption.currentSort,
+            pagination,
             paginationPath: '/products/search',
-            paginationQuery: req.query,
-            user: req.user || null
-        });
+            paginationQuery,
+            user: req.user || null,
+            isSalePage: isSaleFilterActive(normalizedPromotions),
+            query: q,
+            filters: filterState
+        }));
     } catch (error) {
         console.error('Search error:', error);
         res.status(500).render('error', { message: 'Search failed' });
@@ -774,20 +1361,23 @@ exports.searchProducts = async (req, res) => {
 exports.getProductsByCategory = async (req, res) => {
     try {
         const { slug } = req.params;
-        const { sort, page = 1, per_page } = req.query;
+        const {
+            sort,
+            page = 1,
+            per_page,
+            category: categoryFilters,
+            price_range,
+            min_price,
+            max_price,
+            rating,
+            promotion,
+            sale
+        } = req.query;
 
         // Tìm danh mục theo slug
-        let category = await Category.findBySlug(slug);
-
-        // Fallback sang dữ liệu mẫu nếu không tìm thấy trong database
-        if (!category) {
-            const categoryMap = {
-                'nam': { id: 1, name: 'Thời Trang Nam', slug: 'nam', description: 'Quần áo và phụ kiện nam' },
-                'nu': { id: 2, name: 'Thời Trang Nữ', slug: 'nu', description: 'Quần áo và phụ kiện nữ' },
-                'tre-em': { id: 3, name: 'Thời Trang Trẻ Em', slug: 'tre-em', description: 'Quần áo trẻ em' }
-            };
-            category = categoryMap[slug] || null;
-        }
+        let category = await findCategoryBySlugWithFallback(slug);
+        const categories = await loadCatalogCategories();
+        const categoryMaps = createCatalogCategoryMaps(categories);
 
         // Trả về 404 nếu không tìm thấy danh mục
         if (!category) {
@@ -797,46 +1387,64 @@ exports.getProductsByCategory = async (req, res) => {
             });
         }
 
-        // Xử lý sort parameter
-        let sort_by = 'created_at';
-        let sort_order = 'DESC';
-
-        if (sort) {
-            switch (sort) {
-                case 'price-asc':
-                    sort_by = 'price';
-                    sort_order = 'ASC';
-                    break;
-                case 'price-desc':
-                    sort_by = 'price';
-                    sort_order = 'DESC';
-                    break;
-                case 'name-asc':
-                    sort_by = 'name';
-                    sort_order = 'ASC';
-                    break;
-                case 'name-desc':
-                    sort_by = 'name';
-                    sort_order = 'DESC';
-                    break;
-                case 'newest':
-                default:
-                    sort_by = 'created_at';
-                    sort_order = 'DESC';
-                    break;
-            }
-        }
-
         const requestedPage = normalizePositiveInteger(page, 1);
         const normalizedPerPage = normalizePerPage(per_page);
+        const sortOption = parseCatalogSort(sort);
+        const normalizedPromotions = normalizePromotionFilters(promotion, sale);
+        const normalizedRatings = normalizeRatingFilters(rating);
+        const normalizedPricePresets = normalizePriceRangeFilters(price_range);
+        const { minPrice, maxPrice } = normalizePriceRange(min_price, max_price);
+        const scopedRootCategory = category.parent_id
+            ? (categoryMaps.getRootCategory(category) || category)
+            : category;
+        const scopedCategories = scopedRootCategory
+            ? categoryMaps.getChildren(scopedRootCategory.id)
+            : [];
+        const normalizedScopedCategorySlugs = normalizeCategoryFilters(categoryFilters, scopedCategories);
+        const selectedCategorySlugs = normalizedScopedCategorySlugs.length > 0
+            ? normalizedScopedCategorySlugs
+            : (category.parent_id ? [category.slug] : []);
+        const defaultCategoryIds = category.parent_id
+            ? [category.id]
+            : categoryMaps.getDescendantIds(category.id);
+        const effectiveCategoryIds = resolveCategoryFilterIds(selectedCategorySlugs, categoryMaps, defaultCategoryIds);
+        const effectivePriceRanges = buildEffectivePriceRanges(normalizedPricePresets, minPrice, maxPrice);
 
         // Lấy sản phẩm thuộc danh mục
         let products = [];
         let totalItems = 0;
         let pagination = buildPagination(totalItems, requestedPage, normalizedPerPage);
+        const baseFilters = {
+            sort_by: sortOption.sort_by,
+            sort_order: sortOption.sort_order,
+            prioritize_in_stock: true,
+            use_final_price: true
+        };
+
+        if (effectiveCategoryIds.length === 1) {
+            baseFilters.category_id = effectiveCategoryIds[0];
+        } else if (effectiveCategoryIds.length > 1) {
+            baseFilters.category_ids = effectiveCategoryIds;
+        }
+
+        if (effectivePriceRanges.length > 0) {
+            baseFilters.price_ranges = effectivePriceRanges;
+        }
+
+        if (normalizedRatings.length > 0) {
+            baseFilters.ratings = normalizedRatings;
+            baseFilters.rating = Math.min(...normalizedRatings);
+        }
+
+        if (normalizedPromotions.length > 0) {
+            baseFilters.promotions = normalizedPromotions;
+            baseFilters.promotion = normalizedPromotions.length === 1
+                ? normalizedPromotions[0]
+                : normalizedPromotions;
+        }
 
         try {
-            totalItems = await Product.count({ category_id: category.id });
+            totalItems = await Product.count(baseFilters);
             pagination = buildPagination(totalItems, requestedPage, normalizedPerPage);
         } catch (err) {
             console.error('Product count error:', err);
@@ -844,12 +1452,9 @@ exports.getProductsByCategory = async (req, res) => {
 
         try {
             products = await Product.findAll({
-                category_id: category.id,
+                ...baseFilters,
                 limit: pagination.perPage,
-                offset: pagination.offset,
-                sort_by,
-                sort_order,
-                prioritize_in_stock: true
+                offset: pagination.offset
             });
         } catch (err) {
             console.error('Product findAll error:', err);
@@ -868,20 +1473,40 @@ exports.getProductsByCategory = async (req, res) => {
             });
         }
 
-        // Render trang danh mục
-        res.render('products/category', {
-            category,
-            products,
-            currentSort: sort || 'newest',
-            currentPage: pagination.currentPage,
-            totalPages: pagination.totalPages,
-            totalItems: pagination.totalItems,
-            perPage: pagination.perPage,
-            perPageOptions: PER_PAGE_OPTIONS,
-            paginationPath: `/products/category/${category.slug}`,
-            paginationQuery: req.query,
-            user: req.user || null
+        const filterState = {
+            category: selectedCategorySlugs,
+            price_ranges: normalizedPricePresets.map((range) => range.key),
+            min_price: minPrice !== null ? String(minPrice) : '',
+            max_price: maxPrice !== null ? String(maxPrice) : '',
+            rating: normalizedRatings.map((value) => String(value)),
+            promotion: normalizedPromotions,
+            currentSort: sortOption.currentSort,
+            perPage: pagination.perPage
+        };
+        const paginationQuery = buildCatalogQueryState({
+            categorySlugs: selectedCategorySlugs,
+            priceRanges: normalizedPricePresets.map((range) => range.key),
+            minPrice,
+            maxPrice,
+            ratings: normalizedRatings,
+            promotions: normalizedPromotions,
+            currentSort: sortOption.currentSort,
+            perPage: pagination.perPage
         });
+
+        // Render trang danh mục
+        res.render('products/category', buildCatalogViewData({
+            category,
+            categories,
+            products,
+            currentSort: sortOption.currentSort,
+            pagination,
+            paginationPath: `/products/category/${category.slug}`,
+            paginationQuery,
+            user: req.user || null,
+            isSalePage: isSaleFilterActive(normalizedPromotions),
+            filters: filterState
+        }));
     } catch (error) {
         console.error('Category products error:', error);
         res.status(500).render('error', {

@@ -98,7 +98,7 @@ function updateTotals() {
         discountRow.style.display = currentDiscount > 0 ? 'flex' : 'none';
     }
 
-    const total = subtotal + shippingFee - currentDiscount;
+    const total = Math.max(0, subtotal + shippingFee - currentDiscount);
     document.getElementById('totalAmount').textContent = `${total.toLocaleString('vi-VN')}đ`;
 }
 
