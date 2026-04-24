@@ -17,6 +17,7 @@
 const pool = require('../config/database');
 
 class Product {
+    // Lấy optimized card ảnh URL.
     static getOptimizedCardImageUrl(imageUrl) {
         if (!imageUrl || typeof imageUrl !== 'string') {
             return imageUrl;
@@ -32,11 +33,13 @@ class Product {
         );
     }
 
+    // Thao tác với to number.
     static toNumber(value, fallback = 0) {
         const numericValue = Number(value);
         return Number.isFinite(numericValue) ? numericValue : fallback;
     }
 
+    // Chuẩn hóa sản phẩm numbers.
     static normalizeProductNumbers(product) {
         if (!product || typeof product !== 'object') {
             return product;
@@ -73,6 +76,7 @@ class Product {
         return product;
     }
 
+    // Chuẩn hóa biến thể numbers.
     static normalizeVariantNumbers(variants = []) {
         variants.forEach((variant) => {
             if (!variant || typeof variant !== 'object') {
@@ -91,6 +95,7 @@ class Product {
         return variants;
     }
 
+    // Thao tác với hydrate listing sản phẩm.
     static hydrateListingProducts(products = []) {
         products.forEach((product) => {
             this.normalizeProductNumbers(product);
@@ -105,6 +110,7 @@ class Product {
         return products;
     }
 
+    // Lấy đang bật khuyến mãi condition.
     static getActiveSaleCondition(saleAlias = 'sale_ref', nowExpression = 'NOW()') {
         return `(
             ${saleAlias}.id IS NOT NULL
@@ -114,6 +120,7 @@ class Product {
         )`;
     }
 
+    // Lấy upcoming khuyến mãi condition.
     static getUpcomingSaleCondition(saleAlias = 'sale_ref', nowExpression = 'NOW()') {
         return `(
             ${saleAlias}.id IS NOT NULL
@@ -123,6 +130,7 @@ class Product {
         )`;
     }
 
+    // Lấy promotion trạng thái expression.
     static getPromotionStatusExpression(saleAlias = 'sale_ref', nowExpression = 'NOW()') {
         const activeCondition = this.getActiveSaleCondition(saleAlias, nowExpression);
         const upcomingCondition = this.getUpcomingSaleCondition(saleAlias, nowExpression);
@@ -134,6 +142,7 @@ class Product {
         END`;
     }
 
+    // Lấy display giá expression.
     static getDisplayPriceExpression(productAlias = 'p', saleAlias = 'sale_ref', nowExpression = 'NOW()') {
         const activeCondition = this.getActiveSaleCondition(saleAlias, nowExpression);
 
@@ -146,6 +155,7 @@ class Product {
         END`;
     }
 
+    // Lấy review aggregate select.
     static getReviewAggregateSelect(productAlias = 'p') {
         return `
                    COALESCE((
@@ -162,6 +172,7 @@ class Product {
                    ) as review_count`;
     }
 
+    // Lấy listing select fields.
     static getListingSelectFields(productAlias = 'p', categoryAlias = 'c', saleAlias = 'sale_ref', nowExpression = 'NOW()') {
         const activeCondition = this.getActiveSaleCondition(saleAlias, nowExpression);
 
@@ -181,6 +192,7 @@ ${this.getReviewAggregateSelect(productAlias)},
 ${this.getVariantAggregateSelect(productAlias)}`;
     }
 
+    // Lấy promotion filter clause.
     static getPromotionFilterClause(promotionFilter, saleAlias = 'sale_ref', nowExpression = 'NOW()') {
         const activeCondition = this.getActiveSaleCondition(saleAlias, nowExpression);
         const upcomingCondition = this.getUpcomingSaleCondition(saleAlias, nowExpression);
@@ -206,10 +218,12 @@ ${this.getVariantAggregateSelect(productAlias)}`;
         return ` AND (${promotionClauses.join(' OR ')})`;
     }
 
+    // Lấy availability đơn hàng expression.
     static getAvailabilityOrderExpression(productAlias = 'p') {
         return `CASE WHEN ${productAlias}.stock_quantity > 0 THEN 0 ELSE 1 END`;
     }
 
+    // Tạo dữ liệu đơn hàng theo clause.
     static buildOrderByClause(orderSegments = [], options = {}) {
         const {
             prioritizeInStock = false,
@@ -228,6 +242,7 @@ ${this.getVariantAggregateSelect(productAlias)}`;
         return clauses.join(', ');
     }
 
+    // Lấy biến thể aggregate select.
     static getVariantAggregateSelect(productAlias = 'p') {
         return `
                    (
@@ -242,6 +257,7 @@ ${this.getVariantAggregateSelect(productAlias)}`;
                    ) as variant_sizes`;
     }
 
+    // Tạo dữ liệu search filter clause.
     static buildSearchFilterClause(searchValue, params = [], productAlias = 'p', options = {}) {
         const normalizedSearch = String(searchValue || '').trim();
         if (!normalizedSearch) {
@@ -309,6 +325,7 @@ ${this.getVariantAggregateSelect(productAlias)}`;
         return ` AND (${groups.join(' OR ')})`;
     }
 
+    // Chuẩn hóa promotion selections.
     static normalizePromotionSelections(promotionFilter) {
         const rawValues = Array.isArray(promotionFilter) ? promotionFilter : [promotionFilter];
         const normalizedPromotions = new Set();
@@ -330,6 +347,7 @@ ${this.getVariantAggregateSelect(productAlias)}`;
         return [...normalizedPromotions];
     }
 
+    // Lấy effective rating threshold.
     static getEffectiveRatingThreshold(filters = {}) {
         if (Array.isArray(filters.ratings) && filters.ratings.length > 0) {
             const normalizedRatings = filters.ratings
@@ -347,6 +365,7 @@ ${this.getVariantAggregateSelect(productAlias)}`;
             : null;
     }
 
+    // Tạo dữ liệu danh mục filter clause.
     static buildCategoryFilterClause(filters = {}, params = [], productAlias = 'p') {
         const categoryIds = Array.isArray(filters.category_ids)
             ? filters.category_ids
@@ -371,6 +390,7 @@ ${this.getVariantAggregateSelect(productAlias)}`;
         return ` AND ${productAlias}.category_id IN (${placeholders})`;
     }
 
+    // Chuẩn hóa giá ranges.
     static normalizePriceRanges(priceRanges = []) {
         const rawRanges = Array.isArray(priceRanges) ? priceRanges : [priceRanges];
         const normalizedRanges = [];
@@ -419,6 +439,7 @@ ${this.getVariantAggregateSelect(productAlias)}`;
         return normalizedRanges;
     }
 
+    // Tạo dữ liệu giá filter clause.
     static buildPriceFilterClause(filters = {}, params = [], priceColumn = 'p.price') {
         const normalizedPriceRanges = this.normalizePriceRanges(filters.price_ranges);
 
@@ -460,6 +481,7 @@ ${this.getVariantAggregateSelect(productAlias)}`;
         return clause;
     }
 
+    // Thao tác với group review media theo review ID.
     static groupReviewMediaByReviewId(mediaRows = []) {
         const mediaMap = new Map();
 
@@ -482,6 +504,7 @@ ${this.getVariantAggregateSelect(productAlias)}`;
         return mediaMap;
     }
 
+    // Lấy review media theo review ID.
     static async getReviewMediaByReviewIds(reviewIds = [], executor = pool) {
         if (!Array.isArray(reviewIds) || reviewIds.length === 0) {
             return new Map();
@@ -499,6 +522,7 @@ ${this.getVariantAggregateSelect(productAlias)}`;
         return this.groupReviewMediaByReviewId(rows);
     }
 
+    // Thao tác với attach review media to reviews.
     static async attachReviewMediaToReviews(reviews = [], executor = pool) {
         if (!Array.isArray(reviews) || reviews.length === 0) {
             return reviews;
@@ -518,6 +542,7 @@ ${this.getVariantAggregateSelect(productAlias)}`;
         return reviews;
     }
 
+    // Chuẩn hóa review media input.
     static normalizeReviewMediaInput(mediaItems = []) {
         if (!Array.isArray(mediaItems)) {
             return [];
@@ -538,6 +563,7 @@ ${this.getVariantAggregateSelect(productAlias)}`;
             .filter((media) => media.mediaType && media.mediaUrl);
     }
 
+    // Thao tác với insert review media.
     static async insertReviewMedia(connection, reviewId, mediaItems = []) {
         const normalizedMedia = this.normalizeReviewMediaInput(mediaItems);
 
@@ -679,7 +705,7 @@ ${this.getVariantAggregateSelect('p')}
             productAlias: 'p'
         })}`;
 
-        // Phân trang
+        // Phuong thuc trang
         const limit = parseInt(filters.limit) || 12;
         const offset = parseInt(filters.offset) || 0;
         query += ` LIMIT ${limit} OFFSET ${offset}`;
@@ -689,6 +715,7 @@ ${this.getVariantAggregateSelect('p')}
         return this.hydrateListingProducts(rows);
     }
 
+    // Đếm tổng số bản ghi.
     static async count(filters = {}) {
         let query = 'SELECT COUNT(*) AS total FROM products p WHERE p.is_active = TRUE';
         const params = [];
@@ -736,11 +763,13 @@ ${this.getVariantAggregateSelect('p')}
         return rows[0]?.total || 0;
     }
 
+    // Đếm tất cả records.
     static async countAllRecords() {
         const [rows] = await pool.query('SELECT COUNT(*) AS total FROM products');
         return rows[0]?.total || 0;
     }
 
+    // Lấy theo ID.
     static async getByIds(ids = []) {
         const normalizedIds = Array.from(new Set(
             (Array.isArray(ids) ? ids : [])
@@ -780,6 +809,7 @@ ${this.getVariantAggregateSelect('p')}
             .filter(Boolean);
     }
 
+    // Lấy đang bật chat catalog.
     static async getActiveChatCatalog() {
         const [rows] = await pool.query(
             `SELECT p.*,
@@ -870,7 +900,7 @@ ${this.getVariantAggregateSelect('p')}
 
         // Lấy đánh giá đã được duyệt kèm thông tin người dùng
         const [reviews] = await pool.execute(`
-            SELECT r.*, u.full_name as user_name
+            SELECT r.*, u.full_name as user_name, u.avatar_url as user_avatar
             FROM reviews r
             JOIN users u ON r.user_id = u.id
             WHERE r.product_id = ? AND r.is_approved = TRUE
@@ -922,6 +952,7 @@ ${this.getVariantAggregateSelect('p')}
         return null;
     }
 
+    // Lấy review context.
     static async getReviewContext(productId, userId) {
         if (!productId || !userId) {
             return {
@@ -957,7 +988,7 @@ ${this.getVariantAggregateSelect('p')}
              JOIN order_items oi ON oi.order_id = o.id
              WHERE o.user_id = ?
                AND oi.product_id = ?
-               AND o.status = 'delivered'
+               AND o.status IN ('delivered', 'completed')
              ORDER BY o.created_at DESC
              LIMIT 1`,
             [userId, productId]
@@ -970,6 +1001,7 @@ ${this.getVariantAggregateSelect('p')}
         };
     }
 
+    // Tạo review.
     static async createReview({ productId, userId, orderId, rating, comment = '', isVerified = true, isApproved = true, media = [] }) {
         const trimmedComment = typeof comment === 'string' ? comment.trim() : '';
         const normalizedRating = Number.parseInt(rating, 10);
@@ -1014,6 +1046,7 @@ ${this.getVariantAggregateSelect('p')}
         }
     }
 
+    // Cập nhật review.
     static async updateReview({ reviewId, userId, rating, comment = '', removeMediaIds = [], media = [] }) {
         const normalizedRating = Number.parseInt(rating, 10);
         const trimmedComment = typeof comment === 'string' ? comment.trim() : '';
@@ -1205,8 +1238,10 @@ ${this.getVariantAggregateSelect('p')}
             return await this.getBestSellers(limitNum);
         }
 
+        // Xử lý an toàn like.
         const safeLike = (field) => `BINARY LOWER(${field}) LIKE ?`;
 
+        // Tạo dữ liệu biến thể exists clause.
         const buildVariantExistsClause = () => `EXISTS (
             SELECT 1
             FROM product_variants pv
@@ -1217,20 +1252,24 @@ ${this.getVariantAggregateSelect('p')}
                   OR ${safeLike('pv.sku')}
               )
         )`;
+        // Tạo dữ liệu field clause.
         const buildFieldClause = () => `(
             ${safeLike('p.name')}
             OR ${safeLike('p.description')}
             OR ${safeLike('p.sku')}
             OR ${buildVariantExistsClause()}
         )`;
+        // Xử lý name match clause.
         const nameMatchClause = () => `(CASE WHEN ${safeLike('p.name')} THEN 1 ELSE 0 END)`;
         const likeConditions = words.map(() => buildFieldClause()).join(' OR ');
         const matchScoreClauses = words.map(() => nameMatchClause()).join(' + ');
         const params = [];
+        // Xử lý append like tham số.
         const appendLikeParams = (word) => {
             const likeTerm = `%${word}%`;
             params.push(likeTerm, likeTerm, likeTerm, likeTerm, likeTerm, likeTerm);
         };
+        // Xử lý append name param.
         const appendNameParam = (word) => {
             params.push(`%${word}%`);
         };
@@ -1368,6 +1407,7 @@ ${this.getVariantAggregateSelect('p')}
         });
     }
 
+    // Lấy for you recommendations.
     static async getForYouRecommendations(userId, limit = 30) {
         const normalizedUserId = Number.parseInt(userId, 10);
         const safeLimit = Math.min(
@@ -1379,20 +1419,43 @@ ${this.getVariantAggregateSelect('p')}
             return [];
         }
 
+        const [recentOrders] = await pool.execute(
+            `SELECT id, created_at
+             FROM orders
+             WHERE user_id = ?
+               AND status IN ('pending', 'confirmed', 'processing', 'shipping', 'delivered', 'completed')
+             ORDER BY created_at DESC, id DESC
+             LIMIT 5`,
+            [normalizedUserId]
+        );
+
+        if (!Array.isArray(recentOrders) || recentOrders.length === 0) {
+            return [];
+        }
+
+        const recentOrderIds = recentOrders.map((order) => Number.parseInt(order.id, 10)).filter((id) => Number.isInteger(id));
+        const orderRecencyScore = new Map(recentOrderIds.map((orderId, index) => [orderId, recentOrderIds.length - index]));
+        const placeholders = recentOrderIds.map(() => '?').join(', ');
+
         const [purchaseRows] = await pool.execute(
             `SELECT
+                o.id AS order_id,
                 p.category_id,
+                c.name AS category_name,
                 oi.product_id,
-                SUM(oi.quantity) AS purchased_quantity,
-                MAX(o.created_at) AS last_purchased_at
+                p.name AS product_name,
+                pv.color AS variant_color,
+                pv.size AS variant_size,
+                oi.quantity AS purchased_quantity,
+                o.created_at AS purchased_at
              FROM orders o
              JOIN order_items oi ON oi.order_id = o.id
              JOIN products p ON p.id = oi.product_id
-             WHERE o.user_id = ?
-               AND o.status <> 'cancelled'
-             GROUP BY p.category_id, oi.product_id
-             ORDER BY purchased_quantity DESC, last_purchased_at DESC`,
-            [normalizedUserId]
+             LEFT JOIN categories c ON c.id = p.category_id
+             LEFT JOIN product_variants pv ON pv.id = oi.variant_id
+             WHERE o.id IN (${placeholders})
+             ORDER BY o.created_at DESC, o.id DESC`,
+            recentOrderIds
         );
 
         if (!Array.isArray(purchaseRows) || purchaseRows.length === 0) {
@@ -1401,11 +1464,23 @@ ${this.getVariantAggregateSelect('p')}
 
         const purchasedProductIds = new Set();
         const categoryScores = new Map();
+        const tokenScores = new Map();
+        // Chuẩn hóa tokens.
+        const normalizeTokens = (value) => String(value || '')
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/đ/g, 'd')
+            .split(/[^a-z0-9]+/i)
+            .map((token) => token.trim())
+            .filter((token) => token.length >= 2 && !['nam', 'nu', 'cho', 'the', 'and', 'voi'].includes(token));
 
         purchaseRows.forEach((row) => {
             const productId = Number.parseInt(row.product_id, 10);
             const categoryId = Number.parseInt(row.category_id, 10);
             const purchasedQuantity = Math.max(1, Number.parseInt(row.purchased_quantity, 10) || 1);
+            const recencyScore = orderRecencyScore.get(Number.parseInt(row.order_id, 10)) || 1;
+            const weightedScore = purchasedQuantity * recencyScore;
 
             if (Number.isInteger(productId) && productId > 0) {
                 purchasedProductIds.add(productId);
@@ -1417,8 +1492,17 @@ ${this.getVariantAggregateSelect('p')}
 
             categoryScores.set(
                 categoryId,
-                (categoryScores.get(categoryId) || 0) + purchasedQuantity
+                (categoryScores.get(categoryId) || 0) + weightedScore
             );
+
+            [
+                row.product_name,
+                row.category_name,
+                row.variant_color,
+                row.variant_size
+            ].flatMap(normalizeTokens).forEach((token) => {
+                tokenScores.set(token, (tokenScores.get(token) || 0) + weightedScore);
+            });
         });
 
         const rankedCategoryIds = [...categoryScores.entries()]
@@ -1441,12 +1525,31 @@ ${this.getVariantAggregateSelect('p')}
             offset: 0
         });
 
-        return candidates
+        const rankedCandidates = candidates
             .filter((product) => !purchasedProductIds.has(Number(product.id)))
+            .map((product) => {
+                const productTokens = [
+                    product.name,
+                    product.category_name,
+                    product.variant_colors,
+                    product.variant_sizes
+                ].flatMap(normalizeTokens);
+                const tokenScore = productTokens.reduce((sum, token) => sum + (tokenScores.get(token) || 0), 0);
+                const categoryScore = categoryScores.get(Number(product.category_id)) || 0;
+
+                return {
+                    ...product,
+                    recommendation_score: (categoryScore * 10) + (tokenScore * 3) + ((Number(product.sold_count) || 0) / 10)
+                };
+            })
             .sort((left, right) => {
+                const scoreDifference = (Number(right.recommendation_score) || 0) - (Number(left.recommendation_score) || 0);
+                if (scoreDifference !== 0) {
+                    return scoreDifference;
+                }
+
                 const leftCategoryScore = categoryScores.get(Number(left.category_id)) || 0;
                 const rightCategoryScore = categoryScores.get(Number(right.category_id)) || 0;
-
                 if (rightCategoryScore !== leftCategoryScore) {
                     return rightCategoryScore - leftCategoryScore;
                 }
@@ -1457,8 +1560,19 @@ ${this.getVariantAggregateSelect('p')}
                 }
 
                 return new Date(right.created_at || 0).getTime() - new Date(left.created_at || 0).getTime();
-            })
-            .slice(0, safeLimit);
+            });
+
+        if (rankedCandidates.length >= safeLimit) {
+            return rankedCandidates.slice(0, safeLimit);
+        }
+
+        const fallbackProducts = await this.getBestSellers(safeLimit + purchasedProductIds.size);
+        const fallback = fallbackProducts.filter((product) => (
+            !purchasedProductIds.has(Number(product.id)) &&
+            !rankedCandidates.some((candidate) => Number(candidate.id) === Number(product.id))
+        ));
+
+        return [...rankedCandidates, ...fallback].slice(0, safeLimit);
     }
 
     // =============================================================================
@@ -1609,12 +1723,14 @@ ${this.getVariantAggregateSelect('p')}
         await pool.execute(query, [id]);
     }
 
+    // Xóa tất cả.
     static async deleteAll() {
         const query = 'UPDATE products SET is_active = FALSE WHERE is_active = TRUE';
         const [result] = await pool.execute(query);
         return Number(result?.affectedRows || 0);
     }
 
+    // Xóa tất cả permanently.
     static async deleteAllPermanently() {
         const connection = await pool.getConnection();
 
@@ -1695,6 +1811,7 @@ ${this.getVariantAggregateSelect('p')}
         return { id: result.insertId, product_id: productId, image_url: imageUrl, is_primary: isPrimary, display_order: displayOrder };
     }
 
+    // Lấy ảnh.
     static async getImages(productId) {
         const [rows] = await pool.execute(
             'SELECT * FROM product_images WHERE product_id = ? ORDER BY is_primary DESC, display_order ASC, id ASC',
@@ -1703,6 +1820,7 @@ ${this.getVariantAggregateSelect('p')}
         return rows;
     }
 
+    // Tìm ảnh theo ID.
     static async findImageById(productId, imageId) {
         const [rows] = await pool.execute(
             'SELECT * FROM product_images WHERE product_id = ? AND id = ? LIMIT 1',
@@ -1747,6 +1865,7 @@ ${this.getVariantAggregateSelect('p')}
         return this.normalizeVariantNumbers(rows);
     }
 
+    // Thêm biến thể.
     static async addVariant(productId, variantData) {
         const { size, color, additional_price, stock_quantity, sku, image_id } = variantData;
         const query = `
@@ -1765,6 +1884,7 @@ ${this.getVariantAggregateSelect('p')}
         return { id: result.insertId, product_id: productId, ...variantData };
     }
 
+    // Cập nhật biến thể.
     static async updateVariant(variantId, variantData) {
         const { size, color, additional_price, stock_quantity, sku, image_id } = variantData;
         const query = `
@@ -1784,10 +1904,12 @@ ${this.getVariantAggregateSelect('p')}
         return { id: variantId, ...variantData };
     }
 
+    // Xóa biến thể.
     static async deleteVariant(variantId) {
         await pool.execute('DELETE FROM product_variants WHERE id = ?', [variantId]);
     }
 
+    // Kiểm tra biến thể referenced.
     static async isVariantReferenced(variantId) {
         const [rows] = await pool.execute(
             `SELECT
@@ -1799,6 +1921,7 @@ ${this.getVariantAggregateSelect('p')}
         return Boolean(rows[0] && (rows[0].in_cart || rows[0].in_order));
     }
 
+    // Cập nhật biến thể stock.
     static async updateVariantStock(variantId, quantity) {
         await pool.execute(
             'UPDATE product_variants SET stock_quantity = stock_quantity - ? WHERE id = ?',
@@ -1806,6 +1929,7 @@ ${this.getVariantAggregateSelect('p')}
         );
     }
 
+    // Tìm tất cả.
     static async findAll(filters = {}) {
         const displayPriceExpr = this.getDisplayPriceExpression('p', 'sale_ref');
         const effectivePromotionFilter = filters.on_sale
@@ -1880,6 +2004,7 @@ ${this.getListingSelectFields('p', 'c', 'sale_ref')}
         return this.hydrateListingProducts(rows);
     }
 
+    // Đếm tổng số bản ghi.
     static async count(filters = {}) {
         const displayPriceExpr = this.getDisplayPriceExpression('p', 'sale_ref');
         const effectivePromotionFilter = filters.on_sale
@@ -1929,6 +2054,7 @@ ${this.getListingSelectFields('p', 'c', 'sale_ref')}
         return rows[0]?.total || 0;
     }
 
+    // Lấy theo ID.
     static async getByIds(ids = []) {
         const normalizedIds = Array.from(new Set(
             (Array.isArray(ids) ? ids : [])
@@ -1960,6 +2086,7 @@ ${this.getListingSelectFields('p', 'c', 'sale_ref')}
             .filter(Boolean);
     }
 
+    // Lấy đang bật chat catalog.
     static async getActiveChatCatalog() {
         const [rows] = await pool.query(
             `SELECT
@@ -1977,6 +2104,7 @@ ${this.getListingSelectFields('p', 'c', 'sale_ref')}
         return this.hydrateListingProducts(rows);
     }
 
+    // Tìm theo ID.
     static async findById(id, options = {}) {
         const { incrementView = true } = options;
         const query = `
@@ -2014,7 +2142,7 @@ ${this.getListingSelectFields('p', 'c', 'sale_ref')}
         product.variants = this.normalizeVariantNumbers(variants);
 
         const [reviews] = await pool.execute(
-            `SELECT r.*, u.full_name as user_name
+            `SELECT r.*, u.full_name as user_name, u.avatar_url as user_avatar
              FROM reviews r
              JOIN users u ON r.user_id = u.id
              WHERE r.product_id = ? AND r.is_approved = TRUE
@@ -2034,6 +2162,7 @@ ${this.getListingSelectFields('p', 'c', 'sale_ref')}
         return product;
     }
 
+    // Tìm kiếm search.
     static async search(searchQuery, limit = 20) {
         const limitNum = parseInt(limit, 10) || 20;
         const params = [];
@@ -2095,6 +2224,7 @@ ${this.getListingSelectFields('p', 'c', 'sale_ref')}
         return this.hydrateListingProducts(rows);
     }
 
+    // Thao tác với fuzzy search.
     static async fuzzySearch(searchQuery, limit = 20) {
         const limitNum = parseInt(limit, 10) || 20;
         const lowerQuery = String(searchQuery || '').trim().toLowerCase();
@@ -2104,7 +2234,9 @@ ${this.getListingSelectFields('p', 'c', 'sale_ref')}
             return await this.getBestSellers(limitNum);
         }
 
+        // Xử lý an toàn like.
         const safeLike = (field) => `BINARY LOWER(${field}) LIKE ?`;
+        // Tạo dữ liệu biến thể exists clause.
         const buildVariantExistsClause = () => `EXISTS (
             SELECT 1
             FROM product_variants pv
@@ -2115,21 +2247,25 @@ ${this.getListingSelectFields('p', 'c', 'sale_ref')}
                   OR ${safeLike('pv.sku')}
               )
         )`;
+        // Tạo dữ liệu field clause.
         const buildFieldClause = () => `(
             ${safeLike('p.name')}
             OR ${safeLike('p.description')}
             OR ${safeLike('p.sku')}
             OR ${buildVariantExistsClause()}
         )`;
+        // Xử lý name match clause.
         const nameMatchClause = () => `(CASE WHEN ${safeLike('p.name')} THEN 1 ELSE 0 END)`;
         const likeConditions = words.map(() => buildFieldClause()).join(' OR ');
         const matchScoreClauses = words.map(() => nameMatchClause()).join(' + ');
         const params = [];
 
+        // Xử lý append like tham số.
         const appendLikeParams = (word) => {
             const likeTerm = `%${word}%`;
             params.push(likeTerm, likeTerm, likeTerm, likeTerm, likeTerm, likeTerm);
         };
+        // Xử lý append name param.
         const appendNameParam = (word) => {
             params.push(`%${word}%`);
         };
@@ -2189,6 +2325,7 @@ ${this.getListingSelectFields('p', 'c', 'sale_ref')}
         return rows;
     }
 
+    // Tính final giá.
     static calculateFinalPrice(originalPrice, saleType, saleValue) {
         const basePrice = this.toNumber(originalPrice);
         const normalizedSaleValue = this.toNumber(saleValue);

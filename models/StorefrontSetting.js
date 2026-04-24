@@ -1,3 +1,4 @@
+// File models/StorefrontSetting.js: thao tác dữ liệu database cho model StorefrontSetting.
 const pool = require('../config/database');
 
 const SETTING_DEFINITIONS = {
@@ -13,6 +14,7 @@ const SETTING_DEFINITIONS = {
     }
 };
 
+// Xử lý clamp integer.
 function clampInteger(value, { defaultValue, min, max }) {
     const parsed = Number.parseInt(value, 10);
     if (!Number.isInteger(parsed)) {
@@ -23,10 +25,12 @@ function clampInteger(value, { defaultValue, min, max }) {
 }
 
 class StorefrontSetting {
+    // Lấy definitions.
     static getDefinitions() {
         return { ...SETTING_DEFINITIONS };
     }
 
+    // Lấy default cài đặt.
     static getDefaultSettings() {
         return Object.entries(SETTING_DEFINITIONS).reduce((settings, [key, definition]) => {
             settings[key] = definition.defaultValue;
@@ -34,6 +38,7 @@ class StorefrontSetting {
         }, {});
     }
 
+    // Chuẩn hóa giá trị.
     static normalizeValue(key, rawValue) {
         const definition = SETTING_DEFINITIONS[key];
         if (!definition) {
@@ -43,6 +48,7 @@ class StorefrontSetting {
         return clampInteger(rawValue, definition);
     }
 
+    // Thao tác với hydrate cài đặt.
     static hydrateSettings(rows = []) {
         const settings = this.getDefaultSettings();
         const knownKeys = new Set(Object.keys(SETTING_DEFINITIONS));
@@ -59,6 +65,7 @@ class StorefrontSetting {
         return settings;
     }
 
+    // Lấy tất cả.
     static async getAll() {
         const keys = Object.keys(SETTING_DEFINITIONS);
         if (keys.length === 0) {
@@ -85,6 +92,7 @@ class StorefrontSetting {
         }
     }
 
+    // Cập nhật many.
     static async updateMany(nextValues = {}) {
         const keysToUpdate = Object.keys(SETTING_DEFINITIONS)
             .filter((key) => Object.prototype.hasOwnProperty.call(nextValues, key));

@@ -1,3 +1,4 @@
+<%# File views/partials/catalog-toolbar.ejs: hien thi giao dien va du lieu cho trang tuong ung. %>
 <%
     const toolbarQuery = typeof paginationQuery !== 'undefined' ? (paginationQuery || {}) : {};
     const toolbarPath = typeof paginationPath !== 'undefined' ? (paginationPath || '/products') : '/products';
@@ -22,12 +23,14 @@
     ));
 %>
 
+<%# Section gom nhom noi dung chinh cua trang. %>
 <section class="catalog-toolbar">
     <div class="catalog-toolbar__summary">
         <span class="catalog-toolbar__count"><%= toolbarTotalItems.toLocaleString('vi-VN') %></span>
         <span class="catalog-toolbar__summary-label"><%= toolbarSummaryLabel %></span>
     </div>
 
+    <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
     <form class="catalog-toolbar__form" method="get" action="<%= toolbarPath %>">
         <% preservedEntries.forEach(([key, value]) => { %>
             <% if (Array.isArray(value)) { %>

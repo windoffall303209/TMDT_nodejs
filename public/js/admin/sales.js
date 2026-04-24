@@ -1,9 +1,11 @@
+// File public/js/admin/sales.js: xử lý tương tác giao diện admin cho module sales.
 const adminSalesBootstrap = JSON.parse(document.getElementById('adminSalesBootstrap').textContent);
 const adminSaleProducts = adminSalesBootstrap.products || [];
 const adminSubscriberCount = Number(adminSalesBootstrap.subscriberCount || 0);
 const adminSales = adminSalesBootstrap.sales || [];
 const adminSalesMap = new Map(adminSales.map((sale) => [Number(sale.id), sale]));
 
+// Xử lý escape html.
 function escapeHtml(value) {
     return String(value || '')
         .replace(/&/g, '&amp;')
@@ -13,6 +15,7 @@ function escapeHtml(value) {
         .replace(/'/g, '&#39;');
 }
 
+// Hiển thị sản phẩm checklist.
 function renderProductChecklist(containerId, selectedIds = [], options = {}) {
     const container = document.getElementById(containerId);
     if (!container) {
@@ -58,6 +61,7 @@ function renderProductChecklist(containerId, selectedIds = [], options = {}) {
     }).join('');
 }
 
+// Lọc sản phẩm checklist.
 function filterProductChecklist(input, containerId) {
     const container = document.getElementById(containerId);
     if (!container) {
@@ -71,6 +75,7 @@ function filterProductChecklist(input, containerId) {
     });
 }
 
+// Xử lý set checklist state.
 function setChecklistState(containerId, checked) {
     const container = document.getElementById(containerId);
     if (!container) {
@@ -82,6 +87,7 @@ function setChecklistState(containerId, checked) {
     });
 }
 
+// Lấy checked sản phẩm ids.
 function getCheckedProductIds(containerId) {
     const container = document.getElementById(containerId);
     if (!container) {
@@ -93,6 +99,7 @@ function getCheckedProductIds(containerId) {
         .filter((value) => Number.isInteger(value) && value > 0);
 }
 
+// Xử lý vào datetime local.
 function toDatetimeLocal(value) {
     if (!value) {
         return '';
@@ -107,6 +114,7 @@ function toDatetimeLocal(value) {
     return new Date(date.getTime() - timezoneOffset).toISOString().slice(0, 16);
 }
 
+// Đồng bộ percentage warning.
 function syncPercentageWarning(selectId, inputId, warningId) {
     const typeElement = document.getElementById(selectId);
     const valueInput = document.getElementById(inputId);
@@ -126,6 +134,7 @@ function syncPercentageWarning(selectId, inputId, warningId) {
     }
 }
 
+// Bật/tắt khuyến mãi value constraints.
 function toggleSaleValueConstraints(selectId, inputId, warningId) {
     const typeElement = document.getElementById(selectId);
     const valueInput = document.getElementById(inputId);
@@ -145,6 +154,7 @@ function toggleSaleValueConstraints(selectId, inputId, warningId) {
     syncPercentageWarning(selectId, inputId, warningId);
 }
 
+// Đóng modal.
 function closeModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
@@ -152,6 +162,7 @@ function closeModal(modalId) {
     }
 }
 
+// Mở modal.
 function openModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
@@ -159,6 +170,7 @@ function openModal(modalId) {
     }
 }
 
+// Xử lý confirm action.
 async function confirmAction(options) {
     if (typeof showGlobalConfirm === 'function') {
         return showGlobalConfirm(options);
@@ -167,6 +179,7 @@ async function confirmAction(options) {
     return window.confirm(options?.message || 'Bạn có chắc muốn tiếp tục?');
 }
 
+// Xử lý edit khuyến mãi.
 function editSale(saleId) {
     const sale = adminSalesMap.get(Number(saleId));
     const form = document.getElementById('editSaleForm');
@@ -194,6 +207,7 @@ function editSale(saleId) {
     openModal('editSaleModal');
 }
 
+// Xử lý submit edit khuyến mãi.
 async function submitEditSale(event) {
     event.preventDefault();
 
@@ -239,6 +253,7 @@ async function submitEditSale(event) {
     }
 }
 
+// Xóa khuyến mãi.
 async function deleteSale(saleId) {
     const sale = adminSalesMap.get(Number(saleId));
     const confirmed = await confirmAction({
@@ -270,12 +285,14 @@ async function deleteSale(saleId) {
     }
 }
 
+// Xử lý show toast.
 function showToast(message, type = 'success') {
     if (typeof showGlobalToast === 'function') {
         showGlobalToast(message, type);
     }
 }
 
+// Mở add khuyến mãi form.
 function openAddSaleForm() {
     const section = document.querySelector('.admin-section--collapsible');
     if (section) {
@@ -284,6 +301,7 @@ function openAddSaleForm() {
     }
 }
 
+// Mở khuyến mãi email modal.
 function openSaleEmailModal(saleId = null) {
     const select = document.getElementById('saleEmailSelect');
 
@@ -299,6 +317,7 @@ function openSaleEmailModal(saleId = null) {
     openModal('saleEmailModal');
 }
 
+// Gửi khuyến mãi announcement email.
 async function sendSaleAnnouncementEmail(saleId) {
     const response = await fetch('/admin/sales/' + saleId + '/email', {
         method: 'POST',
@@ -314,6 +333,7 @@ async function sendSaleAnnouncementEmail(saleId) {
     closeModal('saleEmailModal');
 }
 
+// Xử lý confirm and send khuyến mãi email.
 async function confirmAndSendSaleEmail(saleId) {
     if (adminSubscriberCount <= 0) {
         showToast('Hiện chưa có người dùng đăng ký nhận bản tin.', 'warning');
@@ -344,6 +364,7 @@ async function confirmAndSendSaleEmail(saleId) {
     }
 }
 
+// Xử lý submit khuyến mãi email form.
 async function submitSaleEmailForm(event) {
     event.preventDefault();
 
@@ -358,11 +379,13 @@ async function submitSaleEmailForm(event) {
     await confirmAndSendSaleEmail(saleId);
 }
 
+// Bật/tắt section.
 function toggleSection(titleElement) {
     const section = titleElement.closest('.admin-section--collapsible');
     section.classList.toggle('is-open');
 }
 
+// Gan su kien nguoi dung cho thanh phan giao dien lien quan.
 document.addEventListener('DOMContentLoaded', function() {
     renderProductChecklist('createSaleProducts', [], {
         prefix: 'create-sale',
@@ -372,40 +395,49 @@ document.addEventListener('DOMContentLoaded', function() {
     toggleSaleValueConstraints('editSaleType', 'editSaleValue', 'editSaleValueWarning');
 
     document.querySelectorAll('[data-admin-toggle="section"]').forEach((button) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => toggleSection(button));
     });
 
     document.querySelectorAll('[data-sale-action="scroll-to-form"]').forEach((button) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', openAddSaleForm);
     });
 
     document.querySelectorAll('[data-sale-action="open-email-modal"]').forEach((button) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => openSaleEmailModal());
     });
 
     document.querySelectorAll('[data-checklist-search]').forEach((input) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         input.addEventListener('input', () => filterProductChecklist(input, input.dataset.checklistSearch));
     });
 
     document.querySelectorAll('[data-checklist-toggle]').forEach((button) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => {
             setChecklistState(button.dataset.checklistTarget, button.dataset.checklistToggle === 'all');
         });
     });
 
     document.querySelectorAll('[data-sale-action="edit"]').forEach((button) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => editSale(button.dataset.saleId));
     });
 
     document.querySelectorAll('[data-sale-action="delete"]').forEach((button) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => deleteSale(button.dataset.saleId));
     });
 
     document.querySelectorAll('[data-sale-action="email"]').forEach((button) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => confirmAndSendSaleEmail(button.dataset.saleId));
     });
 
     document.querySelectorAll('[data-sale-modal-close]').forEach((button) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => closeModal(button.dataset.saleModalClose));
     });
 
@@ -422,6 +454,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         modal.addEventListener('click', function(event) {
             if (event.target === modal) {
                 modal.style.display = 'none';

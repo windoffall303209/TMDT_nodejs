@@ -1,9 +1,11 @@
+// File public/js/main.js: xử lý tương tác giao diện phía trình duyệt cho module main.
 const mainState = window.__tmdtMainState || (window.__tmdtMainState = {
     initialized: false,
     cartCountRequest: null,
     productCardActionsBound: false
 });
 
+// Thêm vào giỏ hàng.
 async function addToCart(eventOrProductId, productId = null, variantId = null, quantity = 1) {
     let actualProductId;
     let actualVariantId;
@@ -46,6 +48,21 @@ async function addToCart(eventOrProductId, productId = null, variantId = null, q
         if (data.success) {
             updateCartCount();
             showNotification(data.message || 'Đã thêm vào giỏ hàng!', 'success');
+        } else if (data.requiresLogin && data.loginUrl) {
+            showNotification(data.message || 'Vui lòng đăng nhập để sử dụng chức năng này.', 'warning');
+            window.setTimeout(() => {
+                window.location.href = data.loginUrl;
+            }, 900);
+        } else if (data.requiresEmailVerification && data.loginUrl) {
+            showNotification(data.message || 'Vui lòng xác thực email trước khi tiếp tục.', 'warning');
+            window.setTimeout(() => {
+                window.location.href = data.loginUrl;
+            }, 900);
+        } else if (data.requiresVariant && data.productUrl) {
+            showNotification(data.message || 'Vui lòng chọn phân loại sản phẩm.', 'warning');
+            window.setTimeout(() => {
+                window.location.href = data.productUrl;
+            }, 900);
         } else {
             showNotification(data.message || 'Có lỗi xảy ra', 'error');
         }
@@ -55,6 +72,7 @@ async function addToCart(eventOrProductId, productId = null, variantId = null, q
     }
 }
 
+// Cập nhật giỏ hàng count.
 async function updateCartCount() {
     const cartCountElement = document.getElementById('cart-count');
     if (!cartCountElement) {
@@ -83,12 +101,14 @@ async function updateCartCount() {
     return mainState.cartCountRequest;
 }
 
+// Xử lý show notification.
 function showNotification(message, type = 'info') {
     if (typeof showGlobalToast === 'function') {
         showGlobalToast(message, type);
     }
 }
 
+// Xử lý run when browser idle.
 function runWhenBrowserIdle(callback, fallbackDelay = 250) {
     if (typeof callback !== 'function') {
         return;
@@ -102,6 +122,7 @@ function runWhenBrowserIdle(callback, fallbackDelay = 250) {
     window.setTimeout(callback, fallbackDelay);
 }
 
+// Khởi tạo header scroll state.
 function initHeaderScrollState() {
     const header = document.querySelector('.header');
     if (!header) {
@@ -110,12 +131,14 @@ function initHeaderScrollState() {
 
     const root = document.documentElement;
 
+    // Xử lý apply state.
     const applyState = () => {
         header.classList.toggle('header--scrolled', window.scrollY > 32);
         root.style.setProperty('--live-header-height', `${Math.round(header.getBoundingClientRect().height)}px`);
     };
 
     let ticking = false;
+    // Xử lý on scroll.
     const onScroll = () => {
         if (ticking) {
             return;
@@ -129,10 +152,13 @@ function initHeaderScrollState() {
     };
 
     applyState();
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     window.addEventListener('scroll', onScroll, { passive: true });
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     window.addEventListener('resize', applyState);
 }
 
+// Khởi tạo desktop danh mục dropdowns.
 function initDesktopCategoryDropdowns() {
     const navItems = Array.from(document.querySelectorAll('.main-nav__item--has-dropdown'));
     if (!navItems.length) {
@@ -143,6 +169,7 @@ function initDesktopCategoryDropdowns() {
     const openDelay = 70;
     const closeDelay = 220;
 
+    // Xử lý clear timers.
     const clearTimers = (item) => {
         if (item._dropdownOpenTimer) {
             window.clearTimeout(item._dropdownOpenTimer);
@@ -155,6 +182,7 @@ function initDesktopCategoryDropdowns() {
         }
     };
 
+    // Đóng item.
     const closeItem = (item) => {
         if (!item) {
             return;
@@ -167,6 +195,7 @@ function initDesktopCategoryDropdowns() {
         }
     };
 
+    // Mở item.
     const openItem = (item) => {
         navItems.forEach((navItem) => {
             if (navItem !== item) {
@@ -182,6 +211,7 @@ function initDesktopCategoryDropdowns() {
         }
     };
 
+    // Lên lịch open.
     const scheduleOpen = (item) => {
         if (!hoverMedia.matches) {
             return;
@@ -193,6 +223,7 @@ function initDesktopCategoryDropdowns() {
         }, openDelay);
     };
 
+    // Lên lịch close.
     const scheduleClose = (item) => {
         clearTimers(item);
         item._dropdownCloseTimer = window.setTimeout(() => {
@@ -207,10 +238,12 @@ function initDesktopCategoryDropdowns() {
             return;
         }
 
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         item.addEventListener('pointerenter', () => {
             scheduleOpen(item);
         });
 
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         item.addEventListener('pointerleave', () => {
             if (!hoverMedia.matches) {
                 closeItem(item);
@@ -220,11 +253,13 @@ function initDesktopCategoryDropdowns() {
             scheduleClose(item);
         });
 
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         item.addEventListener('focusin', () => {
             clearTimers(item);
             openItem(item);
         });
 
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         item.addEventListener('focusout', (event) => {
             if (item.contains(event.relatedTarget)) {
                 return;
@@ -233,6 +268,7 @@ function initDesktopCategoryDropdowns() {
             scheduleClose(item);
         });
 
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         item.addEventListener('keydown', (event) => {
             if (event.key !== 'Escape') {
                 return;
@@ -244,6 +280,7 @@ function initDesktopCategoryDropdowns() {
         });
     });
 
+    // Đồng bộ hover mode.
     const syncHoverMode = () => {
         if (hoverMedia.matches) {
             return;
@@ -256,14 +293,17 @@ function initDesktopCategoryDropdowns() {
     };
 
     if (typeof hoverMedia.addEventListener === 'function') {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         hoverMedia.addEventListener('change', syncHoverMode);
     } else if (typeof hoverMedia.addListener === 'function') {
         hoverMedia.addListener(syncHoverMode);
     }
 
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     window.addEventListener('resize', syncHoverMode);
 }
 
+// Khởi tạo sản phẩm card actions.
 function initProductCardActions() {
     if (mainState.productCardActionsBound) {
         return;
@@ -271,6 +311,7 @@ function initProductCardActions() {
 
     mainState.productCardActionsBound = true;
 
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     document.addEventListener('click', (event) => {
         const quickAddButton = event.target.closest('.product-card__quick-add');
         if (!quickAddButton) {
@@ -286,6 +327,7 @@ function initProductCardActions() {
     });
 }
 
+// Gan su kien nguoi dung cho thanh phan giao dien lien quan.
 document.addEventListener('DOMContentLoaded', () => {
     if (mainState.initialized) {
         return;
@@ -305,6 +347,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initProductCardActions();
 });
 
+// Khởi tạo mobile menu.
 function initMobileMenu() {
     const mobileMenuBtn = document.getElementById('mobileMenuBtn');
     const mobileNav = document.getElementById('mobileNav');
@@ -315,6 +358,7 @@ function initMobileMenu() {
     if (mobileMenuBtn.dataset.initialized) return;
     mobileMenuBtn.dataset.initialized = 'true';
 
+    // Mở mobile menu.
     function openMobileMenu() {
         mobileMenuBtn.classList.add('active');
         mobileNav.classList.add('active');
@@ -322,6 +366,7 @@ function initMobileMenu() {
         document.body.classList.add('mobile-menu-open');
     }
 
+    // Đóng mobile menu.
     function closeMobileMenu() {
         mobileMenuBtn.classList.remove('active');
         mobileNav.classList.remove('active');
@@ -329,6 +374,7 @@ function initMobileMenu() {
         document.body.classList.remove('mobile-menu-open');
     }
 
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     mobileMenuBtn.addEventListener('click', (e) => {
         e.preventDefault();
         if (mobileNav.classList.contains('active')) {
@@ -339,11 +385,14 @@ function initMobileMenu() {
     });
 
     if (mobileNavClose) {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         mobileNavClose.addEventListener('click', closeMobileMenu);
     }
 
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     mobileNavOverlay.addEventListener('click', closeMobileMenu);
 
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && mobileNav.classList.contains('active')) {
             closeMobileMenu();
@@ -352,15 +401,18 @@ function initMobileMenu() {
 
     const mobileNavLinks = mobileNav.querySelectorAll('a');
     mobileNavLinks.forEach((link) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         link.addEventListener('click', closeMobileMenu);
     });
 
     const mobileNavForms = mobileNav.querySelectorAll('form');
     mobileNavForms.forEach((form) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         form.addEventListener('submit', closeMobileMenu);
     });
 
     let resizeTimer;
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(() => {
@@ -371,6 +423,7 @@ function initMobileMenu() {
     });
 }
 
+// Khởi tạo newsletter form.
 function initNewsletterForm() {
     const form = document.getElementById('newsletter-form');
     const successMsg = document.getElementById('newsletter-success');
@@ -383,6 +436,7 @@ function initNewsletterForm() {
 
     dismissButton?.addEventListener('click', dismissNewsletterBanner);
 
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
@@ -429,6 +483,7 @@ function initNewsletterForm() {
     });
 }
 
+// Xử lý check newsletter trạng thái.
 async function checkNewsletterStatus() {
     const form = document.getElementById('newsletter-form');
     const successMsg = document.getElementById('newsletter-success');
@@ -484,6 +539,7 @@ async function checkNewsletterStatus() {
     }
 }
 
+// Xử lý dismiss newsletter banner.
 function dismissNewsletterBanner() {
     const newsletterSection = document.getElementById('newsletter-section');
     if (newsletterSection) {

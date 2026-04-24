@@ -1,3 +1,4 @@
+// File __tests__/orderController.test.js: kiểm thử tự động cho module orderController.test.
 process.env.NODE_ENV = 'test';
 
 jest.mock('../models/Order', () => ({
@@ -6,6 +7,7 @@ jest.mock('../models/Order', () => ({
     findById: jest.fn(),
     findByOrderCode: jest.fn(),
     updatePaymentStatus: jest.fn(),
+    updateStatus: jest.fn(),
     calculateShippingFee: jest.fn((subtotal) => (Number(subtotal) >= 500000 ? 0 : 30000))
 }));
 
@@ -54,6 +56,7 @@ const Payment = require('../models/Payment');
 const paymentService = require('../services/paymentService');
 const orderController = require('../controllers/orderController');
 
+// Tạo response giả lập cho test.
 function createRes() {
     const res = {};
     res.status = jest.fn().mockReturnValue(res);
@@ -300,6 +303,56 @@ describe('orderController', () => {
             9,
             [11]
         );
+    });
+
+    it('auto-confirms zero-payable cart orders and skips online payment gateways', async () => {
+        Address.findById.mockResolvedValue({ id: 4, user_id: 1 });
+        Cart.getOrCreate.mockResolvedValue({ id: 2 });
+        Cart.calculateTotal.mockResolvedValue({
+            subtotal: 10000,
+            items: [{ id: 11, product_id: 1, quantity: 1, subtotal: 10000 }]
+        });
+        Voucher.validate.mockResolvedValue({
+            valid: true,
+            discountAmount: 40000,
+            voucher: { id: 9 }
+        });
+        Order.create.mockResolvedValue({ id: 21 });
+        Order.findById.mockResolvedValue({
+            id: 21,
+            order_code: 'ORDZERO',
+            final_amount: 0,
+            status: 'pending',
+            payment_status: 'unpaid'
+        });
+        Order.updateStatus.mockResolvedValue({
+            id: 21,
+            order_code: 'ORDZERO',
+            final_amount: 0,
+            status: 'confirmed',
+            payment_status: 'paid'
+        });
+
+        const req = {
+            user: { id: 1 },
+            body: {
+                address_id: 4,
+                payment_method: 'vnpay',
+                voucher_code: 'BIGSALE',
+                selected_cart_item_ids: '11'
+            },
+            ip: '127.0.0.1'
+        };
+        const res = createRes();
+
+        await orderController.createOrder(req, res);
+
+        expect(Order.updatePaymentStatus).toHaveBeenCalledWith(21, 'paid');
+        expect(Order.updateStatus).toHaveBeenCalledWith(21, 'confirmed', expect.objectContaining({
+            source: 'system'
+        }));
+        expect(paymentService.createVNPayPayment).not.toHaveBeenCalled();
+        expect(res.redirect).toHaveBeenCalledWith('/orders/ORDZERO/confirmation');
     });
 
     it('rejects buy-now orders when the variant does not belong to the product', async () => {

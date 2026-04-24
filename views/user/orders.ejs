@@ -1,10 +1,16 @@
+<%# File views/user/orders.ejs: hien thi giao dien va du lieu cho trang tuong ung. %>
 <%- include('../partials/header') %>
 
 <link rel="stylesheet" href="/css/orders.css">
 
+<%
+    const currentCancelFeedback = typeof cancelFeedback !== 'undefined' ? cancelFeedback : null;
+%>
+
 <!-- ===== Trang danh sách đơn hàng của người dùng ===== -->
 <div class="orders-page page-shell">
     <div class="container">
+        <%# Section gom nhom noi dung chinh cua trang. %>
         <section class="page-intro page-intro--compact">
             <h1 class="page-intro__title page-intro__title-inline">
                 <span>Đơn hàng</span>
@@ -13,16 +19,28 @@
             </h1>
         </section>
 
+        <% if (currentCancelFeedback === 'success') { %>
+            <div class="tracking-action-card tracking-action-card--success order-feedback">
+                <p>Đã hủy đơn hàng và hoàn lại tồn kho.</p>
+            </div>
+        <% } else if (currentCancelFeedback === 'invalid-status') { %>
+            <div class="tracking-action-card tracking-action-card--warning order-feedback">
+                <p>Chỉ có thể hủy đơn ở trạng thái Chờ xác nhận hoặc Đã xác nhận.</p>
+            </div>
+        <% } %>
+
         <% if (orders && orders.length > 0) { %>
             <div class="orders-list">
                 <% orders.forEach((order) => { %>
                     <%
                         const statusMap = {
+                            pending_payment: { label: 'Chờ thanh toán', className: 'is-pending-payment' },
                             pending: { label: 'Chờ xác nhận', className: 'is-pending' },
                             confirmed: { label: 'Đã xác nhận', className: 'is-confirmed' },
                             processing: { label: 'Đang xử lý', className: 'is-processing' },
                             shipping: { label: 'Đang giao', className: 'is-shipping' },
                             delivered: { label: 'Đã giao', className: 'is-delivered' },
+                            completed: { label: 'Đã hoàn thành', className: 'is-completed' },
                             cancelled: { label: 'Đã hủy', className: 'is-cancelled' }
                         };
                         const paymentLabels = {
@@ -31,6 +49,10 @@
                             momo: 'MoMo'
                         };
                         const orderStatus = statusMap[order.status] || { label: order.status, className: '' };
+                        const hasActiveReturnRequest = ['pending', 'approved'].includes(order.return_request_status || '');
+                        const isPaymentSettled = order.payment_status === 'paid' || ['delivered', 'completed'].includes(order.status);
+                        const paymentStatusLabel = isPaymentSettled ? 'Đã thanh toán' : (order.payment_method === 'cod' ? 'COD' : 'Chưa thanh toán');
+                        const canCancelOrder = ['pending', 'confirmed'].includes(order.status);
                     %>
                     <article class="order-card">
                         <header class="order-card__header">
@@ -61,7 +83,11 @@
                                             <% } %>
                                         </div>
                                         <div class="order-item__info">
-                                            <div class="order-item__name"><%= item.product_name %></div>
+                                            <% if (item.product_slug) { %>
+                                                <a class="order-item__name order-item__name-link" href="/products/<%= item.product_slug %>"><%= item.product_name %></a>
+                                            <% } else { %>
+                                                <div class="order-item__name"><%= item.product_name %></div>
+                                            <% } %>
                                             <% if (item.variant_color || item.variant_size) { %>
                                                 <div class="order-item__meta">
                                                     <% if (item.variant_color) { %>Màu: <%= item.variant_color %><% } %>
@@ -108,6 +134,7 @@
                             <div class="order-card__payment">
                                 <span>Thanh toán</span>
                                 <strong><%= paymentLabels[order.payment_method] || order.payment_method %></strong>
+                                <small class="order-card__payment-status"><%= paymentStatusLabel %></small>
                             </div>
                             <div class="order-card__total">
                                 <span>Tổng cộng</span>
@@ -116,6 +143,24 @@
                         </footer>
 
                         <div class="order-card__actions">
+                            <% if (order.status === 'pending_payment' && order.payment_status !== 'paid' && (order.payment_method === 'vnpay' || order.payment_method === 'momo')) { %>
+                                <a href="/orders/<%= order.order_code %>/pay" class="btn btn-primary">Thanh toán ngay</a>
+                            <% } %>
+                            <% if (canCancelOrder) { %>
+                                <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
+                                <form action="/orders/<%= order.order_code %>/cancel" method="POST" class="order-card__action-form" onsubmit="return confirm('Bạn chắc chắn muốn hủy đơn hàng này?');">
+                                    <button type="submit" class="btn btn-danger">Hủy đơn hàng</button>
+                                </form>
+                            <% } %>
+                            <% if (order.status === 'delivered' && !hasActiveReturnRequest) { %>
+                                <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
+                                <form action="/orders/<%= order.order_code %>/confirm-received" method="POST" class="order-card__action-form">
+                                    <button type="submit" class="btn btn-primary">Xác nhận nhận hàng</button>
+                                </form>
+                                <a href="/orders/<%= order.order_code %>/return-request" class="btn btn-secondary">Yêu cầu hoàn hàng</a>
+                            <% } else if (order.status === 'delivered' && hasActiveReturnRequest) { %>
+                                <a href="/orders/<%= order.order_code %>/return-request" class="btn btn-secondary">Xem yêu cầu hoàn hàng</a>
+                            <% } %>
                             <a href="/orders/<%= order.order_code %>/tracking" class="btn btn-primary">Theo dõi đơn</a>
                             <a href="/orders/<%= order.order_code %>/confirmation" class="btn btn-secondary">Xem chi tiết</a>
                         </div>

@@ -1,3 +1,4 @@
+// File __tests__/chatController.test.js: kiểm thử tự động cho module chatController.test.
 process.env.NODE_ENV = 'test';
 
 jest.mock('../models/Chat', () => ({
@@ -39,6 +40,7 @@ const Product = require('../models/Product');
 const { describeProductFromImage } = require('../services/chatVisionService');
 const chatController = require('../controllers/chatController');
 
+// Tạo response giả lập cho test.
 function createRes() {
     const res = {};
     res.status = jest.fn().mockReturnValue(res);
@@ -46,6 +48,7 @@ function createRes() {
     return res;
 }
 
+// Tạo dữ liệu cuộc trò chuyện state.
 function buildConversationState(overrides = {}) {
     return {
         intent: 'unknown',
@@ -61,6 +64,7 @@ function buildConversationState(overrides = {}) {
     };
 }
 
+// Tạo dữ liệu sản phẩm.
 function buildProduct(overrides = {}) {
     return {
         id: 1,

@@ -17,6 +17,7 @@ const pool = require('../config/database');
 const bcrypt = require('bcryptjs');
 
 class User {
+    // Thao tác với generate random mật khẩu hash.
     static async generateRandomPasswordHash() {
         const crypto = require('crypto');
         const randomPassword = crypto.randomBytes(24).toString('hex');
@@ -64,7 +65,13 @@ class User {
                 marketing_consent || false
             ]);
 
-            return { id: result.insertId, email, full_name };
+            return {
+                id: result.insertId,
+                email,
+                full_name,
+                role: 'customer',
+                email_verified: false
+            };
         } catch (error) {
             // Xử lý lỗi email trùng lặp
             if (error.code === 'ER_DUP_ENTRY') {
@@ -94,6 +101,7 @@ class User {
         return rows[0] || null;
     }
 
+    // Tạo google người dùng.
     static async createGoogleUser({ email, full_name, avatar_url = null }) {
         const password_hash = await this.generateRandomPasswordHash();
         const [result] = await pool.execute(
@@ -113,6 +121,7 @@ class User {
         return this.findById(result.insertId);
     }
 
+    // Đồng bộ google profile.
     static async syncGoogleProfile(userId, { full_name, avatar_url = null }) {
         await pool.execute(
             `UPDATE users
@@ -127,6 +136,7 @@ class User {
         return this.findById(userId);
     }
 
+    // Tìm or create google người dùng.
     static async findOrCreateGoogleUser(profile = {}) {
         const email = String(profile.email || '').trim().toLowerCase();
         const fullName = String(profile.name || profile.full_name || '').trim() || email.split('@')[0] || 'Google User';
@@ -334,7 +344,7 @@ class User {
      * @returns {Promise<void>}
      */
     static async verifyEmail(userId) {
-        const query = 'UPDATE users SET email_verified = TRUE WHERE id = ?';
+        const query = 'UPDATE users SET email_verified = TRUE, email_verified_at = COALESCE(email_verified_at, NOW()) WHERE id = ?';
         await pool.execute(query, [userId]);
     }
 
@@ -356,6 +366,20 @@ class User {
         const query = 'SELECT id, email, full_name FROM users WHERE marketing_consent = TRUE AND email_verified = TRUE AND is_active = TRUE';
         const [rows] = await pool.execute(query);
         return rows;
+    }
+
+    // Lấy admin emails.
+    static async getAdminEmails() {
+        const [rows] = await pool.execute(
+            `SELECT email
+             FROM users
+             WHERE role = 'admin'
+               AND is_active = TRUE
+               AND email IS NOT NULL
+               AND email <> ''`
+        );
+
+        return rows.map((row) => row.email).filter(Boolean);
     }
 
     // =============================================================================
@@ -397,7 +421,7 @@ class User {
         // Sắp xếp theo ngày đăng ký mới nhất
         query += ' ORDER BY created_at DESC';
 
-        // Phân trang
+        // Phuong thuc trang
         if (filters.limit) {
             const limit = parseInt(filters.limit) || 50;
             const offset = parseInt(filters.offset) || 0;

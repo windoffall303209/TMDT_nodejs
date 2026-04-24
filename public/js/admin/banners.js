@@ -1,9 +1,11 @@
+// File public/js/admin/banners.js: xử lý tương tác giao diện admin cho module banners.
 function showBannerToast(message, type = 'success') {
     if (typeof showGlobalToast === 'function') {
         showGlobalToast(message, type);
     }
 }
 
+// Xử lý show banner confirm.
 function showBannerConfirm(message, title = 'Xác nhận') {
     return new Promise((resolve) => {
         const modal = document.getElementById('confirmModal');
@@ -23,6 +25,7 @@ function showBannerConfirm(message, title = 'Xác nhận') {
     });
 }
 
+// Bật/tắt banner section.
 function toggleBannerSection(titleElement) {
     const section = titleElement.closest('.admin-section--collapsible');
     section?.classList.toggle('is-open');
@@ -84,6 +87,7 @@ function initDragAndDrop() {
 
     let draggedCard = null;
 
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     grid.addEventListener('dragstart', (e) => {
         draggedCard = e.target.closest('.banner-card');
         if (!draggedCard) return;
@@ -91,6 +95,7 @@ function initDragAndDrop() {
         e.dataTransfer.effectAllowed = 'move';
     });
 
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     grid.addEventListener('dragend', () => {
         if (draggedCard) {
             draggedCard.classList.remove('banner-card--dragging');
@@ -103,6 +108,7 @@ function initDragAndDrop() {
         saveOrder();
     });
 
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     grid.addEventListener('dragover', (e) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
@@ -125,12 +131,14 @@ function initDragAndDrop() {
         }
     });
 
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     grid.addEventListener('dragleave', (e) => {
         const overCard = e.target.closest('.banner-card');
         if (overCard) overCard.classList.remove('banner-card--drag-over');
     });
 }
 
+// Lưu đơn hàng.
 async function saveOrder() {
     const grid = document.getElementById('bannersGrid');
     if (!grid) return;
@@ -170,6 +178,7 @@ try {
     if (el) bannersData = JSON.parse(el.textContent);
 } catch (_) { /* ignore */ }
 
+// Mở edit modal.
 function openEditModal(bannerId) {
     const banner = bannersData.find(b => b.id === parseInt(bannerId, 10));
     if (!banner) return;
@@ -183,10 +192,12 @@ function openEditModal(bannerId) {
     document.getElementById('editBannerModal').style.display = 'flex';
 }
 
+// Đóng edit modal.
 function closeEditModal() {
     document.getElementById('editBannerModal').style.display = 'none';
 }
 
+// Xử lý submit edit banner.
 async function submitEditBanner(e) {
     e.preventDefault();
 
@@ -225,18 +236,22 @@ async function submitEditBanner(e) {
 // =========================================================================
 function initAdminBannersPage() {
     document.querySelectorAll('[data-admin-toggle="section"]').forEach((button) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => toggleBannerSection(button));
     });
 
     document.querySelectorAll('[data-banner-action="delete"]').forEach((button) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => deleteBanner(button.dataset.bannerId));
     });
 
     document.querySelectorAll('[data-banner-action="toggle"]').forEach((button) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => toggleBannerActive(button.dataset.bannerId));
     });
 
     document.querySelectorAll('[data-banner-action="edit"]').forEach((button) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => openEditModal(button.dataset.bannerId));
     });
 
@@ -248,4 +263,5 @@ function initAdminBannersPage() {
     initDragAndDrop();
 }
 
+// Gan su kien nguoi dung cho thanh phan giao dien lien quan.
 document.addEventListener('DOMContentLoaded', initAdminBannersPage);

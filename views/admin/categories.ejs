@@ -1,3 +1,4 @@
+<%# File views/admin/categories.ejs: hien thi giao dien va du lieu cho trang tuong ung. %>
 <%- include('../partials/admin-header', { currentPage: 'categories', pageStyles: ['/css/admin/categories.css'] }) %>
 
 <div class="admin-page">
@@ -55,6 +56,7 @@
                     <% } %>
                 </p>
             </div>
+            <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
             <form action="/admin/categories" method="GET" class="admin-search-form">
                 <input
                     type="search"
@@ -74,6 +76,7 @@
 
         <div class="admin-section">
             <h3 class="admin-section__title">Import danh mục nhanh</h3>
+            <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
             <form action="/admin/categories/import" method="POST" enctype="multipart/form-data" class="admin-form">
                 <div class="admin-form__row admin-form__row--categories">
                     <div class="admin-form__group">
@@ -99,7 +102,8 @@
                     <polyline points="6 9 12 15 18 9"/>
                 </svg>
             </h3>
-            <form id="createCategoryForm" action="/admin/categories" method="POST" class="admin-form admin-section__content">
+            <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
+            <form id="createCategoryForm" action="/admin/categories" method="POST" enctype="multipart/form-data" class="admin-form admin-section__content">
                 <div class="admin-form__row admin-form__row--categories">
                     <div class="admin-form__group">
                         <label class="admin-form__label">Tên danh mục <span>*</span></label>
@@ -127,6 +131,11 @@
                     <div class="admin-form__group">
                         <label class="admin-form__label">Ảnh đại diện (URL)</label>
                         <input type="url" name="image_url" class="admin-form__input" placeholder="https://...">
+                    </div>
+                    <div class="admin-form__group">
+                        <label class="admin-form__label">Tải ảnh từ máy</label>
+                        <input type="file" name="image" accept="image/*" class="admin-form__input">
+                        <p class="admin-form__hint">Nếu chọn file, ảnh upload sẽ ưu tiên hơn URL.</p>
                     </div>
                 </div>
                 <div class="admin-form__group">
@@ -247,7 +256,8 @@
                 </svg>
             </button>
         </div>
-        <form id="editCategoryForm" class="admin-form">
+        <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
+        <form id="editCategoryForm" class="admin-form" enctype="multipart/form-data">
             <input type="hidden" id="editCategoryId">
             <div class="admin-form__row admin-form__row--categories">
                 <div class="admin-form__group">
@@ -271,6 +281,11 @@
                 <div class="admin-form__group">
                     <label class="admin-form__label">Ảnh đại diện (URL)</label>
                     <input type="url" id="editCategoryImageUrl" class="admin-form__input" placeholder="https://...">
+                </div>
+                <div class="admin-form__group">
+                    <label class="admin-form__label">Tải ảnh mới</label>
+                    <input type="file" id="editCategoryImage" accept="image/*" class="admin-form__input">
+                    <p class="admin-form__hint">Bỏ trống nếu muốn giữ ảnh hiện tại.</p>
                 </div>
             </div>
             <div class="admin-form__group">
@@ -305,6 +320,7 @@
     </div>
 </div>
 
+<%# Bootstrap du lieu JSON cho script phia client. %>
 <script type="application/json" id="adminCategoriesBootstrap"><%- JSON.stringify({
     categories: (categories || []).map((category) => ({
         id: category.id,

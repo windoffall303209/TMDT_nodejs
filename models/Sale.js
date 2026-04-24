@@ -1,6 +1,8 @@
+// File models/Sale.js: thao tác dữ liệu database cho model Sale.
 const pool = require('../config/database');
 
 class Sale {
+    // Chuẩn hóa sản phẩm ID.
     static normalizeProductIds(productIds = []) {
         if (!Array.isArray(productIds)) {
             return [];
@@ -13,6 +15,7 @@ class Sale {
         )];
     }
 
+    // Chuẩn hóa discount giá trị.
     static normalizeDiscountValue(type, value) {
         const normalizedValue = Number(value);
 
@@ -27,6 +30,7 @@ class Sale {
         return normalizedValue;
     }
 
+    // Tìm tất cả.
     static async findAll(filters = {}) {
         const normalizedFilters = typeof filters === 'boolean'
             ? { activeOnly: filters }
@@ -50,15 +54,18 @@ class Sale {
         return rows;
     }
 
+    // Tìm theo ID.
     static async findById(id) {
         const [rows] = await pool.execute('SELECT * FROM sales WHERE id = ?', [id]);
         return rows[0] || null;
     }
 
+    // Lấy đang bật sales.
     static async getActiveSales() {
         return this.findAll({ activeOnly: true });
     }
 
+    // Tạo bản ghi mới.
     static async create(saleData) {
         const { name, description, type, value, start_date, end_date } = saleData;
         const normalizedValue = this.normalizeDiscountValue(type, value);
@@ -79,6 +86,7 @@ class Sale {
         return { id: result.insertId, ...saleData };
     }
 
+    // Thao tác với assign sản phẩm.
     static async assignProducts(saleId, productIds = [], connection = pool) {
         const normalizedProductIds = this.normalizeProductIds(productIds);
 
@@ -102,6 +110,7 @@ class Sale {
         );
     }
 
+    // Thao tác với clear assigned sản phẩm.
     static async clearAssignedProducts(saleId, connection = pool) {
         await connection.execute(
             'UPDATE products SET sale_id = NULL WHERE sale_id = ?',
@@ -109,6 +118,7 @@ class Sale {
         );
     }
 
+    // Lấy assigned sản phẩm map.
     static async getAssignedProductsMap(saleIds = []) {
         if (!Array.isArray(saleIds) || saleIds.length === 0) {
             return new Map();
@@ -145,6 +155,7 @@ class Sale {
         return assignments;
     }
 
+    // Cập nhật bản ghi hiện có.
     static async update(id, saleData) {
         const { name, description, type, value, start_date, end_date, is_active } = saleData;
         const normalizedValue = this.normalizeDiscountValue(type, value);
@@ -168,10 +179,12 @@ class Sale {
         return this.findById(id);
     }
 
+    // Xóa bản ghi theo điều kiện truyền vào.
     static async delete(id) {
         await pool.execute('UPDATE sales SET is_active = FALSE WHERE id = ?', [id]);
     }
 
+    // Thao tác với activate scheduled sales.
     static async activateScheduledSales() {
         const [result] = await pool.execute(
             `UPDATE sales
@@ -181,6 +194,7 @@ class Sale {
         return result.affectedRows;
     }
 
+    // Thao tác với deactivate expired sales.
     static async deactivateExpiredSales() {
         const [result] = await pool.execute(
             `UPDATE sales

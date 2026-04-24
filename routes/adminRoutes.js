@@ -1,6 +1,7 @@
+// File routes/adminRoutes.js: khai báo endpoint và middleware cho module adminRoutes.
 const express = require('express');
 const router = express.Router();
-const adminController = require('../controllers/adminController');
+const adminController = require('../controllers/admin');
 const { verifyToken, isAdmin } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 const productImportUpload = require('../middleware/productImportUpload');
@@ -23,8 +24,8 @@ router.get('/categories/export', adminController.exportCategories);
 router.get('/categories/import-template', adminController.downloadCategoryImportTemplate);
 router.post('/categories/import', productImportUpload.single('import_file'), adminController.importCategories);
 router.post('/categories/delete-all', adminController.deleteAllCategories);
-router.post('/categories', adminController.createCategory);
-router.put('/categories/:id', adminController.updateCategory);
+router.post('/categories', upload.single('image'), uploadToCloud, adminController.createCategory);
+router.put('/categories/:id', upload.single('image'), uploadToCloud, adminController.updateCategory);
 router.delete('/categories/:id', adminController.deleteCategory);
 
 // Products
@@ -56,6 +57,11 @@ router.delete('/products/variants/:variantId', adminController.deleteProductVari
 router.get('/orders', adminController.getOrders);
 router.get('/orders/:id', adminController.getOrderDetail);
 router.put('/orders/:id/status', adminController.updateOrderStatus);
+
+// Return requests
+router.get('/returns', adminController.getReturnRequests);
+router.put('/returns/:id/status', adminController.updateReturnRequestStatus);
+router.get('/returns/:id', adminController.getReturnRequestDetail);
 
 // Users
 router.get('/users', adminController.getUsers);

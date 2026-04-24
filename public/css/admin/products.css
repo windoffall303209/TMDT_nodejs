@@ -271,6 +271,7 @@
 
 .variant-row .variant-size,
 .variant-row .variant-color,
+.variant-row .variant-color-select,
 .variant-row .variant-price,
 .variant-row .variant-stock,
 .variant-row .variant-sku,
@@ -289,11 +290,25 @@
 
 .variant-row .variant-size,
 .variant-row .variant-color,
+.variant-row .variant-color-select,
 .variant-row .variant-price,
 .variant-row .variant-stock,
 .variant-row .variant-sku,
 .variant-row .variant-image-select {
     min-height: 42px;
+}
+
+.variant-color-control {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 44px;
+    gap: 6px;
+    align-items: stretch;
+}
+
+.variant-color-control .variant-color-select {
+    padding: 0;
+    text-indent: -999px;
+    cursor: pointer;
 }
 
 .variant-row .variant-image-file {

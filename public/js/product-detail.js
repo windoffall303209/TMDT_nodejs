@@ -1,3 +1,4 @@
+// File public/js/product-detail.js: xử lý tương tác giao diện phía trình duyệt cho module product detail.
 const productDetailState = {
     currentImageIndex: 0,
     productImages: [],
@@ -7,15 +8,18 @@ const productDetailState = {
     bootstrap: null
 };
 
+// Xử lý vào numeric giá.
 function toNumericPrice(value) {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : 0;
 }
 
+// Định dạng currency.
 function formatCurrency(value) {
     return `${toNumericPrice(value).toLocaleString('vi-VN')}đ`;
 }
 
+// Xử lý read sản phẩm chi tiết bootstrap.
 function readProductDetailBootstrap() {
     if (productDetailState.bootstrap) {
         return productDetailState.bootstrap;
@@ -47,6 +51,7 @@ function readProductDetailBootstrap() {
     return productDetailState.bootstrap;
 }
 
+// Chuẩn hóa ảnh url.
 function normalizeImageUrl(imageUrl) {
     if (!imageUrl) return '';
 
@@ -57,14 +62,17 @@ function normalizeImageUrl(imageUrl) {
     }
 }
 
+// Lấy main ảnh element.
 function getMainImageElement() {
     return document.getElementById('mainImage');
 }
 
+// Lấy fallback element.
 function getFallbackElement() {
     return document.getElementById('fallbackIcon');
 }
 
+// Xử lý show main ảnh.
 function showMainImage() {
     const mainImage = getMainImageElement();
     const fallback = getFallbackElement();
@@ -73,6 +81,7 @@ function showMainImage() {
     if (fallback) fallback.hidden = true;
 }
 
+// Xử lý show gallery fallback.
 function showGalleryFallback() {
     const mainImage = getMainImageElement();
     const fallback = getFallbackElement();
@@ -81,6 +90,7 @@ function showGalleryFallback() {
     if (fallback) fallback.hidden = false;
 }
 
+// Xử lý scroll đang bật thumb into view.
 function scrollActiveThumbIntoView(index) {
     const activeThumb = document.querySelectorAll('.product-gallery__thumb')[index];
     activeThumb?.scrollIntoView({
@@ -90,6 +100,7 @@ function scrollActiveThumbIntoView(index) {
     });
 }
 
+// Cập nhật gallery thumb state.
 function updateGalleryThumbState(index) {
     document.querySelectorAll('.product-gallery__thumb').forEach((thumb, thumbIndex) => {
         thumb.classList.toggle('product-gallery__thumb--active', thumbIndex === index);
@@ -101,6 +112,7 @@ function updateGalleryThumbState(index) {
     scrollActiveThumbIntoView(index);
 }
 
+// Xử lý select ảnh.
 function selectImage(index, imageUrl) {
     if (productDetailState.productImages.length === 0) return;
 
@@ -124,6 +136,7 @@ function selectImage(index, imageUrl) {
     updateGalleryThumbState(nextIndex);
 }
 
+// Xử lý switch gallery vào ảnh.
 function switchGalleryToImage(imageUrl) {
     if (!imageUrl || !productDetailState.productImages.length) return;
 
@@ -134,6 +147,7 @@ function switchGalleryToImage(imageUrl) {
     }
 }
 
+// Xử lý prev ảnh.
 function prevImage() {
     if (productDetailState.productImages.length === 0) return;
     productDetailState.currentImageIndex =
@@ -142,6 +156,7 @@ function prevImage() {
     selectImage(productDetailState.currentImageIndex, productDetailState.productImages[productDetailState.currentImageIndex]);
 }
 
+// Xử lý next ảnh.
 function nextImage() {
     if (productDetailState.productImages.length === 0) return;
     productDetailState.currentImageIndex =
@@ -149,12 +164,14 @@ function nextImage() {
     selectImage(productDetailState.currentImageIndex, productDetailState.productImages[productDetailState.currentImageIndex]);
 }
 
+// Xử lý set selected class.
 function setSelectedClass(selector, activeButton) {
     document.querySelectorAll(selector).forEach((button) => {
         button.classList.toggle('is-selected', button === activeButton);
     });
 }
 
+// Cập nhật giá display.
 function updatePriceDisplay(currentPrice, originalPrice = null, hasDiscount = false) {
     const currentPriceElement = document.getElementById('productPrice');
     const originalPriceElement = document.querySelector('.product-info__price-original');
@@ -184,6 +201,7 @@ function updatePriceDisplay(currentPrice, originalPrice = null, hasDiscount = fa
     }
 }
 
+// Cập nhật biến thể stock tin nhắn.
 function updateVariantStockMessage(stockQuantity = null) {
     const stockElement = document.getElementById('variantStock');
     if (!stockElement) {
@@ -206,6 +224,7 @@ function updateVariantStockMessage(stockQuantity = null) {
     stockElement.dataset.state = 'out-of-stock';
 }
 
+// Lấy current stock limit.
 function getCurrentStockLimit() {
     const bootstrap = readProductDetailBootstrap();
     const variants = bootstrap.variants || [];
@@ -222,6 +241,7 @@ function getCurrentStockLimit() {
     return selectedVariant ? Math.max(0, selectedVariant.stock_quantity) : null;
 }
 
+// Đồng bộ quantity input với stock.
 function syncQuantityInputWithStock(showWarning = false) {
     const qtyInput = document.getElementById('productQty');
     const stockLimit = getCurrentStockLimit();
@@ -250,6 +270,7 @@ function syncQuantityInputWithStock(showWarning = false) {
     qtyInput.value = String(nextValue);
 }
 
+// Xác định biến thể.
 function resolveVariant() {
     const bootstrap = readProductDetailBootstrap();
     const variants = bootstrap.variants || [];
@@ -299,6 +320,7 @@ function resolveVariant() {
     }
 }
 
+// Cập nhật biến thể availability.
 function updateVariantAvailability() {
     const bootstrap = readProductDetailBootstrap();
     const variants = bootstrap.variants || [];
@@ -354,6 +376,7 @@ function updateVariantAvailability() {
     });
 }
 
+// Xử lý biến thể button click.
 function handleVariantButtonClick(button) {
     if (button.classList.contains('color-btn')) {
         const clickedColor = button.dataset.color || null;
@@ -419,6 +442,51 @@ function handleVariantButtonClick(button) {
     if (qtyInput) qtyInput.value = 1;
 }
 
+// Lấy current sản phẩm điều hướng.
+function getCurrentProductRedirect() {
+    return `${window.location.pathname}${window.location.search}` || '/products';
+}
+
+// Xử lý show đăng nhập required dialog.
+function showLoginRequiredDialog(payload = {}) {
+    const loginUrl = payload.loginUrl || `/auth/login?redirect=${encodeURIComponent(getCurrentProductRedirect())}`;
+    const message = payload.message || 'Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng.';
+    let dialog = document.querySelector('.login-required-dialog');
+
+    if (!dialog) {
+        dialog = document.createElement('div');
+        dialog.className = 'login-required-dialog';
+        dialog.innerHTML = `
+            <div class="login-required-dialog__backdrop" data-login-dialog-close></div>
+            <div class="login-required-dialog__panel" role="dialog" aria-modal="true" aria-labelledby="loginRequiredTitle">
+                <button type="button" class="login-required-dialog__close" data-login-dialog-close aria-label="Dong thong bao">&times;</button>
+                <h3 id="loginRequiredTitle">Cần đăng nhập</h3>
+                <p class="login-required-dialog__message"></p>
+                <div class="login-required-dialog__actions">
+                    <button type="button" class="login-required-dialog__secondary" data-login-dialog-close>Để sau</button>
+                    <a class="login-required-dialog__primary" href="#">Đăng nhập</a>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(dialog);
+        dialog.querySelectorAll('[data-login-dialog-close]').forEach((button) => {
+            // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
+            button.addEventListener('click', () => {
+                dialog.classList.remove('is-open');
+                document.body.classList.remove('login-required-dialog-open');
+            });
+        });
+    }
+
+    dialog.querySelector('.login-required-dialog__message').textContent = message;
+    const primaryAction = dialog.querySelector('.login-required-dialog__primary');
+    primaryAction.href = loginUrl;
+    primaryAction.textContent = payload.requiresEmailVerification ? 'Xác thực email' : 'Đăng nhập';
+    dialog.classList.add('is-open');
+    document.body.classList.add('login-required-dialog-open');
+}
+
+// Lấy selected biến thể stock legacy.
 function getSelectedVariantStockLegacy() {
     const bootstrap = readProductDetailBootstrap();
     const variants = bootstrap.variants || [];
@@ -428,6 +496,7 @@ function getSelectedVariantStockLegacy() {
     return match ? match.stock_quantity : 0;
 }
 
+// Thêm vào giỏ hàng với biến thể.
 async function addToCartWithVariant() {
     const bootstrap = readProductDetailBootstrap();
     const variants = bootstrap.variants || [];
@@ -452,11 +521,17 @@ async function addToCartWithVariant() {
             body: JSON.stringify({
                 product_id: bootstrap.productId,
                 variant_id: productDetailState.selectedVariantId,
-                quantity: quantity
+                quantity: quantity,
+                redirect: getCurrentProductRedirect()
             })
         });
 
         const data = await response.json();
+        if (response.status === 401 || response.status === 403 || data.requiresLogin || data.requiresEmailVerification) {
+            showLoginRequiredDialog(data);
+            return;
+        }
+
         if (data.success) {
             updateCartCount();
             showNotification(data.message || 'Đã thêm vào giỏ hàng!', 'success');
@@ -469,6 +544,7 @@ async function addToCartWithVariant() {
     }
 }
 
+// Xử lý buy now với biến thể.
 function buyNowWithVariant() {
     const bootstrap = readProductDetailBootstrap();
     const variants = bootstrap.variants || [];
@@ -492,11 +568,14 @@ function buyNowWithVariant() {
     window.location.href = `/orders/buy-now/${bootstrap.productId}${queryString}`;
 }
 
+// Xử lý bind gallery events.
 function bindGalleryEvents() {
     const mainImage = getMainImageElement();
     if (mainImage && mainImage.dataset.galleryBound !== 'true') {
         mainImage.dataset.galleryBound = 'true';
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         mainImage.addEventListener('load', showMainImage);
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         mainImage.addEventListener('error', showGalleryFallback);
     }
 
@@ -504,6 +583,7 @@ function bindGalleryEvents() {
         if (thumb.dataset.galleryBound === 'true') return;
 
         thumb.dataset.galleryBound = 'true';
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         thumb.addEventListener('click', () => {
             const thumbIndexValue = parseInt(thumb.dataset.index, 10);
             const imageUrl =
@@ -518,6 +598,7 @@ function bindGalleryEvents() {
         if (button.dataset.galleryBound === 'true') return;
 
         button.dataset.galleryBound = 'true';
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => {
             if (button.dataset.galleryNav === 'prev') {
                 prevImage();
@@ -528,6 +609,7 @@ function bindGalleryEvents() {
     });
 }
 
+// Khởi tạo sản phẩm gallery.
 function initProductGallery() {
     const bootstrap = readProductDetailBootstrap();
     productDetailState.productImages = Array.isArray(bootstrap.images)
@@ -563,11 +645,13 @@ function initProductGallery() {
     }
 }
 
+// Lấy selected quantity.
 function getSelectedQuantity() {
     const qtyInput = document.getElementById('productQty');
     return qtyInput ? parseInt(qtyInput.value, 10) || 1 : 1;
 }
 
+// Khởi tạo quantity selector legacy.
 function initQuantitySelectorLegacy() {
     const qtyInput = document.getElementById('productQty');
     const qtyMinus = document.getElementById('qtyMinus');
@@ -591,10 +675,12 @@ function initQuantitySelectorLegacy() {
         }
     });
 
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     qtyInput.addEventListener('input', () => {
         qtyInput.value = qtyInput.value.replace(/[^0-9]/g, '');
     });
 
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     qtyInput.addEventListener('blur', () => {
         let val = parseInt(qtyInput.value, 10);
         if (!val || val < 1) val = 1;
@@ -608,6 +694,7 @@ function initQuantitySelectorLegacy() {
     });
 }
 
+// Xử lý refresh collapsible section.
 function refreshCollapsibleSection(body) {
     if (!body || !body.classList.contains('is-open')) return;
     if (body.dataset.toggleMode === 'display') {
@@ -617,6 +704,7 @@ function refreshCollapsibleSection(body) {
     body.style.maxHeight = `${body.scrollHeight}px`;
 }
 
+// Xử lý set collapsible section state.
 function setCollapsibleSectionState(toggle, body, isOpen) {
     if (!toggle || !body) return;
 
@@ -634,6 +722,7 @@ function setCollapsibleSectionState(toggle, body, isOpen) {
     body.style.maxHeight = isOpen ? `${body.scrollHeight}px` : '0px';
 }
 
+// Khởi tạo collapsible section.
 function initCollapsibleSection(toggleId, bodyId) {
     const toggle = document.getElementById(toggleId);
     const body = document.getElementById(bodyId);
@@ -641,19 +730,23 @@ function initCollapsibleSection(toggleId, bodyId) {
     if (!toggle || !body) return;
 
     setCollapsibleSectionState(toggle, body, body.classList.contains('is-open'));
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     toggle.addEventListener('click', () => {
         const isOpen = !body.classList.contains('is-open');
         setCollapsibleSectionState(toggle, body, isOpen);
     });
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     window.addEventListener('resize', () => refreshCollapsibleSection(body));
 }
 
+// Xử lý refresh đánh giá panels.
 function refreshReviewPanels() {
     ['createReviewPanel', 'reviewEditPanel', 'myReviewPanel', 'reviewBody'].forEach((id) => {
         refreshCollapsibleSection(document.getElementById(id));
     });
 }
 
+// Xử lý clear transient đánh giá truy vấn state.
 function clearTransientReviewQueryState() {
     const url = new URL(window.location.href);
     if (!url.searchParams.has('review')) return;
@@ -663,6 +756,7 @@ function clearTransientReviewQueryState() {
     window.history.replaceState({}, document.title, nextUrl);
 }
 
+// Cập nhật toggle label.
 function updateToggleLabel(toggle, isOpen) {
     if (!toggle) return;
     toggle.textContent = isOpen
@@ -670,6 +764,7 @@ function updateToggleLabel(toggle, isOpen) {
         : (toggle.dataset.openLabel || toggle.textContent);
 }
 
+// Xử lý bind toggle label.
 function bindToggleLabel(toggleId, panelId, afterToggle) {
     const toggle = document.getElementById(toggleId);
     const panel = document.getElementById(panelId);
@@ -677,6 +772,7 @@ function bindToggleLabel(toggleId, panelId, afterToggle) {
     if (!toggle || !panel) return;
 
     updateToggleLabel(toggle, panel.classList.contains('is-open'));
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     toggle.addEventListener('click', () => {
         window.requestAnimationFrame(() => {
             const isOpen = panel.classList.contains('is-open');
@@ -689,6 +785,7 @@ function bindToggleLabel(toggleId, panelId, afterToggle) {
     });
 }
 
+// Đóng toggle section.
 function closeToggleSection(toggleId, panelId) {
     const toggle = document.getElementById(toggleId);
     const panel = document.getElementById(panelId);
@@ -699,11 +796,13 @@ function closeToggleSection(toggleId, panelId) {
     updateToggleLabel(toggle, false);
 }
 
+// Khởi tạo các điều khiển tạo đánh giá.
 function initCreateReviewControls() {
     initCollapsibleSection('createReviewToggle', 'createReviewPanel');
     bindToggleLabel('createReviewToggle', 'createReviewPanel');
 }
 
+// Khởi tạo own đánh giá controls.
 function initOwnReviewControls() {
     initCollapsibleSection('myReviewToggle', 'myReviewPanel');
     initCollapsibleSection('reviewEditToggle', 'reviewEditPanel');
@@ -716,6 +815,7 @@ function initOwnReviewControls() {
     bindToggleLabel('reviewEditToggle', 'reviewEditPanel');
 }
 
+// Khởi tạo đánh giá media input.
 function initReviewMediaInput() {
     const input = document.getElementById('reviewMediaInput');
     const preview = document.getElementById('reviewMediaPreview');
@@ -726,6 +826,7 @@ function initReviewMediaInput() {
 
     let objectUrls = [];
 
+    // Hiển thị preview.
     const renderPreview = () => {
         objectUrls.forEach((url) => URL.revokeObjectURL(url));
         objectUrls = [];
@@ -801,14 +902,17 @@ function initReviewMediaInput() {
         refreshReviewPanels();
     };
 
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     input.addEventListener('change', renderPreview);
     renderPreview();
 }
 
+// Khởi tạo description toggle.
 function initDescriptionToggle() {
     initCollapsibleSection('descToggle', 'descBody');
 }
 
+// Xử lý scroll vào đánh giá section.
 function scrollToReviewsSection() {
     const reviewSection = document.getElementById('productReviewsSection');
     const reviewToggle = document.getElementById('reviewToggle');
@@ -828,6 +932,7 @@ function scrollToReviewsSection() {
     });
 }
 
+// Xác định biến thể.
 function resolveVariant() {
     const bootstrap = readProductDetailBootstrap();
     const variants = bootstrap.variants || [];
@@ -871,11 +976,13 @@ function resolveVariant() {
     syncQuantityInputWithStock(true);
 }
 
+// Lấy selected biến thể stock.
 function getSelectedVariantStock() {
     const stockLimit = getCurrentStockLimit();
     return stockLimit === null ? Infinity : stockLimit;
 }
 
+// Khởi tạo quantity selector.
 function initQuantitySelector() {
     const qtyInput = document.getElementById('productQty');
     const qtyMinus = document.getElementById('qtyMinus');
@@ -909,10 +1016,12 @@ function initQuantitySelector() {
         showNotification(`Số lượng tồn kho chỉ còn ${Math.max(0, maxStock).toLocaleString('vi-VN')} sản phẩm`, 'warning');
     });
 
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     qtyInput.addEventListener('input', () => {
         qtyInput.value = qtyInput.value.replace(/[^0-9]/g, '');
     });
 
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     qtyInput.addEventListener('blur', () => {
         let value = parseInt(qtyInput.value, 10);
         if (!value || value < 1) {
@@ -923,6 +1032,7 @@ function initQuantitySelector() {
         syncQuantityInputWithStock(true);
     });
 
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     qtyInput.addEventListener('keydown', (event) => {
         if (event.key !== 'Enter') {
             return;
@@ -940,6 +1050,7 @@ function initQuantitySelector() {
     });
 }
 
+// Khởi tạo sản phẩm chi tiết trang.
 function initProductDetailPage() {
     const bootstrap = readProductDetailBootstrap();
 
@@ -960,22 +1071,27 @@ function initProductDetailPage() {
     syncQuantityInputWithStock();
 
     document.querySelectorAll('.variant-btn').forEach((button) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => handleVariantButtonClick(button));
     });
 
     document.querySelectorAll('[data-product-action="add-to-cart"]').forEach((button) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', addToCartWithVariant);
     });
 
     document.querySelectorAll('[data-product-action="buy-now"]').forEach((button) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', buyNowWithVariant);
     });
 
     document.querySelectorAll('[data-scroll-to-reviews]').forEach((button) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', scrollToReviewsSection);
     });
 }
 
+// Khởi tạo sản phẩm chi tiết trang legacy.
 function initProductDetailPageLegacy() {
     readProductDetailBootstrap();
     initProductGallery();
@@ -988,20 +1104,25 @@ function initProductDetailPageLegacy() {
     clearTransientReviewQueryState();
 
     document.querySelectorAll('.variant-btn').forEach((button) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => handleVariantButtonClick(button));
     });
 
     document.querySelectorAll('[data-product-action="add-to-cart"]').forEach((button) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', addToCartWithVariant);
     });
 
     document.querySelectorAll('[data-product-action="buy-now"]').forEach((button) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', buyNowWithVariant);
     });
 
     document.querySelectorAll('[data-scroll-to-reviews]').forEach((button) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', scrollToReviewsSection);
     });
 }
 
+// Gan su kien nguoi dung cho thanh phan giao dien lien quan.
 document.addEventListener('DOMContentLoaded', initProductDetailPage);

@@ -6,6 +6,7 @@ function showToast(message, type = 'success') {
 
 const DELETE_ALL_CONFIRMATION_TEXT = 'Xóa tất cả';
 
+// Xử lý show confirm.
 function showConfirm(message, title = 'Xác nhận', yesText = 'Xác nhận', yesColor = '#f44336', options = {}) {
     return new Promise((resolve) => {
         const modal = document.getElementById('confirmModal');
@@ -19,6 +20,7 @@ function showConfirm(message, title = 'Xác nhận', yesText = 'Xác nhận', ye
         const typingHint = document.getElementById('confirmTypingHint');
         const requiredText = options.requireText?.trim() || '';
 
+        // Đóng modal.
         const closeModal = (confirmed) => {
             modal.style.display = 'none';
             confirmButton.onclick = null;
@@ -42,12 +44,14 @@ function showConfirm(message, title = 'Xác nhận', yesText = 'Xác nhận', ye
             resolve(confirmed);
         };
 
+        // Xử lý escape.
         const handleEscape = (event) => {
             if (event.key === 'Escape') {
                 closeModal(false);
             }
         };
 
+        // Cập nhật typing state.
         const updateTypingState = () => {
             if (!requiredText || !typingInput || !typingHint) {
                 confirmButton.disabled = false;
@@ -102,6 +106,7 @@ function showConfirm(message, title = 'Xác nhận', yesText = 'Xác nhận', ye
             }
         };
 
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         document.addEventListener('keydown', handleEscape);
         window.setTimeout(() => {
             if (requiredText && typingInput) {
@@ -113,6 +118,7 @@ function showConfirm(message, title = 'Xác nhận', yesText = 'Xác nhận', ye
     });
 }
 
+// Xử lý change per trang.
 function changePerPage(limit) {
     const url = new URL(window.location.href);
     url.searchParams.set('page', '1');
@@ -120,6 +126,7 @@ function changePerPage(limit) {
     window.location.href = url.toString();
 }
 
+// Bật/tắt sản phẩm section.
 function toggleProductSection(titleElement) {
     const section = titleElement.closest('.admin-section--collapsible');
     section?.classList.toggle('is-open');
@@ -130,10 +137,12 @@ const variantMediaState = {
     edit: { images: [], uploadCounter: 0, productId: null }
 };
 
+// Lấy mode state.
 function getModeState(mode) {
     return variantMediaState[mode];
 }
 
+// Xử lý escape html.
 function escapeHtml(value) {
     return String(value ?? '')
         .replace(/&/g, '&amp;')
@@ -143,20 +152,82 @@ function escapeHtml(value) {
         .replace(/'/g, '&#39;');
 }
 
+const VARIANT_COLOR_SUGGESTIONS = [
+    'Đen',
+    'Trắng',
+    'Đỏ',
+    'Xanh dương',
+    'Xanh lá',
+    'Vàng',
+    'Hồng',
+    'Tím',
+    'Cam',
+    'Nâu',
+    'Xám',
+    'Be',
+    'Kem'
+];
+
+// Đảm bảo biến thể color datalist.
+function ensureVariantColorDatalist() {
+    if (document.getElementById('variantColorOptions')) {
+        return;
+    }
+
+    const datalist = document.createElement('datalist');
+    datalist.id = 'variantColorOptions';
+    datalist.innerHTML = VARIANT_COLOR_SUGGESTIONS
+        .map((color) => `<option value="${escapeHtml(color)}"></option>`)
+        .join('');
+    document.body.appendChild(datalist);
+}
+
+// Lấy biến thể color tùy chọn html.
+function getVariantColorOptionsHtml(selectedValue = '') {
+    const normalizedSelected = String(selectedValue || '').trim().toLowerCase();
+    const baseOption = '<option value="">Chọn màu có sẵn</option>';
+    const options = VARIANT_COLOR_SUGGESTIONS.map((color) => {
+        const selected = color.toLowerCase() === normalizedSelected ? 'selected' : '';
+        return `<option value="${escapeHtml(color)}" ${selected}>${escapeHtml(color)}</option>`;
+    });
+
+    return [baseOption, ...options].join('');
+}
+
+// Đồng bộ biến thể color select.
+function syncVariantColorSelect(row) {
+    const input = row.querySelector('.variant-color');
+    const select = row.querySelector('.variant-color-select');
+    if (!input || !select) {
+        return;
+    }
+
+    const normalizedValue = input.value.trim().toLowerCase();
+    const matchedOption = Array.from(select.options).find((option) => (
+        option.value && option.value.toLowerCase() === normalizedValue
+    ));
+
+    select.value = matchedOption ? matchedOption.value : '';
+}
+
+// Xử lý revoke preview url.
 function revokePreviewUrl(previewUrl) {
     if (typeof previewUrl === 'string' && previewUrl.startsWith('blob:')) {
         URL.revokeObjectURL(previewUrl);
     }
 }
 
+// Lấy tệp signature.
 function getFileSignature(file) {
     return `${file.name}::${file.size}::${file.lastModified}`;
 }
 
+// Lấy create ảnh preview.
 function getCreateImagesPreview() {
     return document.getElementById('createImagesPreview');
 }
 
+// Tạo object preview url.
 function createObjectPreviewUrl(file) {
     if (typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
         return URL.createObjectURL(file);
@@ -165,6 +236,7 @@ function createObjectPreviewUrl(file) {
     return null;
 }
 
+// Xử lý read tệp as dữ liệu url.
 function readFileAsDataUrl(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -174,10 +246,12 @@ function readFileAsDataUrl(file) {
     });
 }
 
+// Lấy preview url.
 async function getPreviewUrl(file) {
     return readFileAsDataUrl(file);
 }
 
+// Tạo dữ liệu existing ảnh tùy chọn.
 function buildExistingImageOption(image) {
     return {
         value: `existing:${image.id}`,
@@ -189,6 +263,7 @@ function buildExistingImageOption(image) {
     };
 }
 
+// Tạo dữ liệu main ảnh tùy chọn.
 function buildMainImageOption(upload, index) {
     const file = upload.file;
     return {
@@ -200,6 +275,7 @@ function buildMainImageOption(upload, index) {
     };
 }
 
+// Tạo dữ liệu uploaded ảnh tùy chọn.
 function buildUploadedImageOption(token, file, previewUrl) {
     return {
         value: `upload:${token}`,
@@ -211,6 +287,7 @@ function buildUploadedImageOption(token, file, previewUrl) {
     };
 }
 
+// Xử lý upsert mode ảnh.
 function upsertModeImage(mode, imageOption) {
     const state = getModeState(mode);
     const existingIndex = state.images.findIndex(image => image.value === imageOption.value);
@@ -224,6 +301,7 @@ function upsertModeImage(mode, imageOption) {
     }
 }
 
+// Xóa mode ảnh.
 function removeModeImage(mode, value) {
     const state = getModeState(mode);
     const imageToRemove = state.images.find(image => image.value === value);
@@ -233,6 +311,7 @@ function removeModeImage(mode, value) {
     state.images = state.images.filter(image => image.value !== value);
 }
 
+// Xử lý reset mode ảnh.
 function resetModeImages(mode, images) {
     const state = getModeState(mode);
     state.images
@@ -241,14 +320,17 @@ function resetModeImages(mode, images) {
     state.images = images.slice();
 }
 
+// Lấy create form.
 function getCreateForm() {
     return document.getElementById('createProductForm');
 }
 
+// Lấy create ảnh input.
 function getCreateImagesInput() {
     return document.getElementById('createImagesInput');
 }
 
+// Đồng bộ create ảnh input từ state.
 function syncCreateImagesInputFromState() {
     const input = getCreateImagesInput();
     if (!input) return;
@@ -262,6 +344,7 @@ function syncCreateImagesInputFromState() {
     }
 }
 
+// Hiển thị create ảnh preview.
 function renderCreateImagesPreview() {
     const preview = getCreateImagesPreview();
     if (!preview) return;
@@ -302,12 +385,14 @@ function renderCreateImagesPreview() {
     `).join('');
 
     preview.querySelectorAll('.product-upload-preview__remove').forEach(button => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => {
             removeCreateMainUpload(decodeURIComponent(button.dataset.fileKey));
         });
     });
 }
 
+// Thêm create main uploads.
 async function addCreateMainUploads(files) {
     const state = getModeState('create');
     const existingKeys = new Set(state.mainUploads.map(upload => upload.key));
@@ -326,6 +411,7 @@ async function addCreateMainUploads(files) {
     state.mainUploads.push(...uploads);
 }
 
+// Xóa create main upload.
 function removeCreateMainUpload(fileKey) {
     const state = getModeState('create');
     const uploadIndex = state.mainUploads.findIndex(upload => upload.key === fileKey);
@@ -338,6 +424,7 @@ function removeCreateMainUpload(fileKey) {
     collectVariants('create');
 }
 
+// Xử lý create ảnh selection.
 async function handleCreateImagesSelection() {
     const input = getCreateImagesInput();
     const selectedFiles = Array.from(input?.files || []);
@@ -354,6 +441,7 @@ async function handleCreateImagesSelection() {
     syncCreateImagesInputFromState();
 }
 
+// Đồng bộ create main ảnh tùy chọn.
 function syncCreateMainImageOptions() {
     const state = getModeState('create');
     state.images = state.images.filter(image => image.kind !== 'main');
@@ -366,6 +454,7 @@ function syncCreateMainImageOptions() {
     refreshVariantImageSelects('create');
 }
 
+// Lấy ảnh tùy chọn html.
 function getImageOptionsHtml(mode, selectedValue = '') {
     const state = getModeState(mode);
     const baseOption = '<option value="">-- Ảnh biến thể --</option>';
@@ -377,6 +466,7 @@ function getImageOptionsHtml(mode, selectedValue = '') {
     return [baseOption, ...options].join('');
 }
 
+// Cập nhật biến thể ảnh preview.
 function updateVariantImagePreview(row, mode) {
     const preview = row.querySelector('.variant-image-preview');
     if (!preview) return;
@@ -403,6 +493,7 @@ function updateVariantImagePreview(row, mode) {
     preview.classList.add('is-visible');
 }
 
+// Xử lý refresh biến thể ảnh selects.
 function refreshVariantImageSelects(mode) {
     const state = getModeState(mode);
     const container = document.getElementById(`${mode}VariantsList`);
@@ -421,12 +512,14 @@ function refreshVariantImageSelects(mode) {
     });
 }
 
+// Lấy next upload token.
 function getNextUploadToken(mode) {
     const state = getModeState(mode);
     state.uploadCounter += 1;
     return `${mode}-${Date.now()}-${state.uploadCounter}`;
 }
 
+// Đồng bộ biến thể upload input names.
 function syncVariantUploadInputNames(mode) {
     const container = document.getElementById(`${mode}VariantsList`);
     if (!container) return;
@@ -450,6 +543,7 @@ function syncVariantUploadInputNames(mode) {
     });
 }
 
+// Xử lý biến thể tệp selection.
 async function handleVariantFileSelection(fileInput, mode) {
     const file = fileInput.files && fileInput.files[0];
     const row = fileInput.closest('.variant-row');
@@ -486,6 +580,7 @@ async function handleVariantFileSelection(fileInput, mode) {
     collectVariants(mode);
 }
 
+// Xóa biến thể row.
 function removeVariantRow(button, mode) {
     const row = button.closest('.variant-row');
     if (!row) return;
@@ -500,6 +595,7 @@ function removeVariantRow(button, mode) {
     collectVariants(mode);
 }
 
+// Mở edit modal.
 async function openEditModal(id, name, categoryId, price, stock, description) {
     const state = getModeState('edit');
     state.productId = id;
@@ -536,10 +632,12 @@ async function openEditModal(id, name, categoryId, price, stock, description) {
     }
 }
 
+// Đóng edit modal.
 function closeEditModal() {
     document.getElementById('editModal').style.display = 'none';
 }
 
+// Xóa sản phẩm.
 async function deleteProduct(productId) {
     const confirmed = await showConfirm(
         'Bạn có chắc muốn xóa sản phẩm này?',
@@ -566,6 +664,7 @@ async function deleteProduct(productId) {
     }
 }
 
+// Xóa tất cả sản phẩm.
 async function deleteAllProducts(totalProductCount = 0) {
     if (Number(totalProductCount) <= 0) {
         showToast('Không có sản phẩm nào trong database để xóa.', 'warning');
@@ -605,6 +704,7 @@ async function deleteAllProducts(totalProductCount = 0) {
     }
 }
 
+// Mở ảnh modal.
 async function openImageModal(productId, productName) {
     document.getElementById('imageModalProductId').value = productId;
     document.getElementById('imageModalProductName').textContent = productName;
@@ -612,10 +712,12 @@ async function openImageModal(productId, productName) {
     await loadProductImages(productId);
 }
 
+// Đóng ảnh modal.
 function closeImageModal() {
     document.getElementById('imageModal').style.display = 'none';
 }
 
+// Nạp sản phẩm ảnh.
 async function loadProductImages(productId) {
     const grid = document.getElementById('imagesGrid');
     grid.innerHTML = '<p style="color: #999;">Đang tải...</p>';
@@ -643,6 +745,7 @@ async function loadProductImages(productId) {
     }
 }
 
+// Xóa ảnh.
 async function deleteImage(imageId) {
     const confirmed = await window.showGlobalConfirm({
         title: 'Xóa ảnh sản phẩm',
@@ -673,6 +776,7 @@ async function deleteImage(imageId) {
     }
 }
 
+// Xử lý set chính ảnh.
 async function setPrimaryImage(imageId) {
     const productId = document.getElementById('imageModalProductId').value;
 
@@ -693,6 +797,7 @@ async function setPrimaryImage(imageId) {
     }
 }
 
+// Thêm ảnh theo url.
 async function addImageByUrl() {
     const url = document.getElementById('newImageUrl').value;
     if (!url) {
@@ -723,8 +828,10 @@ async function addImageByUrl() {
     }
 }
 
+// Thêm biến thể row.
 function addVariantRow(mode, data = {}) {
     const container = document.getElementById(`${mode}VariantsList`);
+    ensureVariantColorDatalist();
     const row = document.createElement('div');
     row.className = 'variant-row';
     row.innerHTML = `
@@ -743,22 +850,12 @@ function addVariantRow(mode, data = {}) {
         </div>
         <div class="variant-row__field variant-row__field--color">
             <span class="variant-row__label">Màu sắc</span>
-            <select class="variant-color">
-                <option value="" ${!data.color ? 'selected' : ''}>Chọn màu</option>
-                <option value="Đen" ${data.color === 'Đen' ? 'selected' : ''}>Đen</option>
-                <option value="Trắng" ${data.color === 'Trắng' ? 'selected' : ''}>Trắng</option>
-                <option value="Đỏ" ${data.color === 'Đỏ' ? 'selected' : ''}>Đỏ</option>
-                <option value="Xanh dương" ${data.color === 'Xanh dương' ? 'selected' : ''}>Xanh dương</option>
-                <option value="Xanh lá" ${data.color === 'Xanh lá' ? 'selected' : ''}>Xanh lá</option>
-                <option value="Vàng" ${data.color === 'Vàng' ? 'selected' : ''}>Vàng</option>
-                <option value="Hồng" ${data.color === 'Hồng' ? 'selected' : ''}>Hồng</option>
-                <option value="Tím" ${data.color === 'Tím' ? 'selected' : ''}>Tím</option>
-                <option value="Cam" ${data.color === 'Cam' ? 'selected' : ''}>Cam</option>
-                <option value="Nâu" ${data.color === 'Nâu' ? 'selected' : ''}>Nâu</option>
-                <option value="Xám" ${data.color === 'Xám' ? 'selected' : ''}>Xám</option>
-                <option value="Be" ${data.color === 'Be' ? 'selected' : ''}>Be</option>
-                <option value="Kem" ${data.color === 'Kem' ? 'selected' : ''}>Kem</option>
-            </select>
+            <div class="variant-color-control">
+                <input type="text" class="variant-color" list="variantColorOptions" value="${escapeHtml(data.color || '')}" placeholder="VD: Xanh navy, Ghi khói">
+                <select class="variant-color-select" aria-label="Chọn màu có sẵn">
+                    ${getVariantColorOptionsHtml(data.color || '')}
+                </select>
+            </div>
         </div>
         <div class="variant-row__field variant-row__field--price">
             <span class="variant-row__label">Giá cộng thêm</span>
@@ -800,6 +897,19 @@ function addVariantRow(mode, data = {}) {
         removeVariantRow(this, mode);
     });
 
+    row.querySelector('.variant-color-select')?.addEventListener('change', function () {
+        const input = row.querySelector('.variant-color');
+        if (input && this.value) {
+            input.value = this.value;
+            collectVariants(mode);
+        }
+    });
+
+    row.querySelector('.variant-color')?.addEventListener('input', function () {
+        syncVariantColorSelect(row);
+        collectVariants(mode);
+    });
+
     // Auto-gen variant SKU
     row.querySelector('.variant-auto-sku-btn')?.addEventListener('click', function() {
         const skuInput = row.querySelector('.variant-sku');
@@ -838,6 +948,7 @@ function addVariantRow(mode, data = {}) {
 
     row.querySelectorAll('input, select').forEach(input => {
         const eventName = input.type === 'file' ? 'change' : (input.tagName === 'SELECT' ? 'change' : 'input');
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         input.addEventListener(eventName, () => {
             if (input.classList.contains('variant-image-file')) {
                 handleVariantFileSelection(input, mode).catch(error => {
@@ -860,6 +971,7 @@ function addVariantRow(mode, data = {}) {
     collectVariants(mode);
 }
 
+// Xử lý collect biến thể.
 function collectVariants(mode) {
     const container = document.getElementById(`${mode}VariantsList`);
     const rows = container.querySelectorAll('.variant-row');
@@ -899,6 +1011,7 @@ function collectVariants(mode) {
     syncVariantUploadInputNames(mode);
 }
 
+// Khởi tạo quản trị sản phẩm.
 function initAdminProducts() {
     const createForm = getCreateForm();
     const createImagesInput = getCreateImagesInput();
@@ -1001,9 +1114,11 @@ function initAdminProducts() {
     });
 
     document.querySelectorAll('[data-admin-toggle="section"]').forEach((button) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => toggleProductSection(button));
     });
 
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     document.addEventListener('click', (event) => {
         const actionButton = event.target.closest('[data-product-action]');
         if (actionButton) {
@@ -1084,6 +1199,7 @@ function initAdminProducts() {
     const createSkuInput = document.getElementById('createSkuInput');
     const categorySelect = createForm?.querySelector('select[name="category_id"]');
 
+    // Xử lý generate sku.
     function generateSku() {
         if (!autoSkuCheckbox?.checked) return;
 
@@ -1110,6 +1226,7 @@ function initAdminProducts() {
     }
 
     if (autoSkuCheckbox && createSkuInput) {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         autoSkuCheckbox.addEventListener('change', function() {
             if (this.checked) {
                 createSkuInput.readOnly = true;
@@ -1130,5 +1247,6 @@ function initAdminProducts() {
     syncCreateMainImageOptions();
 }
 
+// Gan su kien nguoi dung cho thanh phan giao dien lien quan.
 document.addEventListener('DOMContentLoaded', initAdminProducts);
 

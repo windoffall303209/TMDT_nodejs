@@ -16,6 +16,7 @@ const Product = require('../models/Product');
 const Category = require('../models/Category');
 const Banner = require('../models/Banner');
 const { deleteFromCloudinary } = require('../config/cloudinary');
+const { getProductSuggestions } = require('../services/productSuggestService');
 
 const DESCRIPTION_ALLOWED_TAGS = [
     'p', 'br', 'strong', 'b', 'em', 'i', 'u', 's',
@@ -86,6 +87,17 @@ const REVIEW_FEEDBACK_MESSAGES = {
     }
 };
 
+// Trả JSON gợi ý sản phẩm cho ô autocomplete tìm kiếm.
+exports.suggestProducts = async (req, res) => {
+    try {
+        const suggestions = await getProductSuggestions(req.query.q, 6);
+        res.json(suggestions);
+    } catch (error) {
+        console.error('Product suggest error:', error);
+        res.status(500).json([]);
+    }
+};
+
 const PER_PAGE_OPTIONS = [10, 20, 30, 40, 50];
 const DEFAULT_PER_PAGE = 20;
 const DEFAULT_PRODUCT_GRID_COLUMNS = 5;
@@ -104,16 +116,19 @@ const CATEGORY_FALLBACK_MAP = {
     'tre-em': { id: 3, name: 'Thời Trang Trẻ Em', slug: 'tre-em', description: 'Quần áo trẻ em' }
 };
 
+// Chuẩn hóa positive integer.
 function normalizePositiveInteger(value, fallback = 1) {
     const parsedValue = Number.parseInt(value, 10);
     return Number.isInteger(parsedValue) && parsedValue > 0 ? parsedValue : fallback;
 }
 
+// Chuẩn hóa per trang.
 function normalizePerPage(value) {
     const parsedValue = normalizePositiveInteger(value, DEFAULT_PER_PAGE);
     return PER_PAGE_OPTIONS.includes(parsedValue) ? parsedValue : DEFAULT_PER_PAGE;
 }
 
+// Chuẩn hóa storefront settings.
 function normalizeStorefrontSettings(settings = {}) {
     const productGridColumns = Math.min(
         6,
@@ -136,6 +151,7 @@ function normalizeStorefrontSettings(settings = {}) {
     };
 }
 
+// Tạo dữ liệu phân trang.
 function buildPagination(totalItems, requestedPage, perPage) {
     const safeTotalItems = Math.max(0, Number.parseInt(totalItems, 10) || 0);
     const safePerPage = normalizePerPage(perPage);
@@ -151,6 +167,7 @@ function buildPagination(totalItems, requestedPage, perPage) {
     };
 }
 
+// Phân tích catalog sort.
 function parseCatalogSort(sort) {
     switch (String(sort || '').trim()) {
         case 'best-selling':
@@ -169,6 +186,7 @@ function parseCatalogSort(sort) {
     }
 }
 
+// Chuẩn hóa non negative number.
 function normalizeNonNegativeNumber(value) {
     if (value === undefined || value === null || value === '') {
         return null;
@@ -178,6 +196,7 @@ function normalizeNonNegativeNumber(value) {
     return Number.isFinite(parsedValue) && parsedValue >= 0 ? parsedValue : null;
 }
 
+// Chuẩn hóa giá range.
 function normalizePriceRange(minPrice, maxPrice) {
     let normalizedMin = normalizeNonNegativeNumber(minPrice);
     let normalizedMax = normalizeNonNegativeNumber(maxPrice);
@@ -192,6 +211,7 @@ function normalizePriceRange(minPrice, maxPrice) {
     };
 }
 
+// Chuẩn hóa array truy vấn.
 function normalizeArrayQuery(value) {
     const rawValues = Array.isArray(value) ? value : [value];
 
@@ -202,6 +222,7 @@ function normalizeArrayQuery(value) {
     )];
 }
 
+// Chuẩn hóa rating filters.
 function normalizeRatingFilters(value) {
     return [...new Set(
         normalizeArrayQuery(value)
@@ -210,6 +231,7 @@ function normalizeRatingFilters(value) {
     )].sort((left, right) => right - left);
 }
 
+// Chuẩn hóa promotion filters.
 function normalizePromotionFilters(promotion, sale) {
     const normalizedPromotions = normalizeArrayQuery(promotion)
         .filter((item) => PROMOTION_FILTER_OPTIONS.has(item));
@@ -221,6 +243,7 @@ function normalizePromotionFilters(promotion, sale) {
     return String(sale || '').trim() === 'true' ? ['active_or_upcoming'] : [];
 }
 
+// Chuẩn hóa giá range filters.
 function normalizePriceRangeFilters(value) {
     const ranges = [];
     const seenRanges = new Set();
@@ -245,6 +268,7 @@ function normalizePriceRangeFilters(value) {
     return ranges;
 }
 
+// Tạo dữ liệu effective giá ranges.
 function buildEffectivePriceRanges(presetRanges = [], minPrice = null, maxPrice = null) {
     const ranges = [...presetRanges];
     const hasManualRange = minPrice !== null || maxPrice !== null;
@@ -267,6 +291,7 @@ function buildEffectivePriceRanges(presetRanges = [], minPrice = null, maxPrice 
     return ranges;
 }
 
+// Tạo catalog danh mục maps.
 function createCatalogCategoryMaps(categories = []) {
     const categoryById = new Map();
     const categoryBySlug = new Map();
@@ -288,6 +313,7 @@ function createCatalogCategoryMaps(categories = []) {
 
     const descendantCache = new Map();
 
+    // Lấy root danh mục.
     function getRootCategory(item) {
         let current = item || null;
         let guard = 0;
@@ -305,11 +331,13 @@ function createCatalogCategoryMaps(categories = []) {
         return current;
     }
 
+    // Lấy danh sách danh mục con.
     function getChildren(parentId) {
         const key = parentId ? String(parentId) : 'root';
         return childrenMap.get(key) || [];
     }
 
+    // Lấy descendant ids.
     function getDescendantIds(categoryId) {
         const cacheKey = String(categoryId);
         if (descendantCache.has(cacheKey)) {
@@ -347,6 +375,7 @@ function createCatalogCategoryMaps(categories = []) {
     };
 }
 
+// Chuẩn hóa danh mục filters.
 function normalizeCategoryFilters(value, categories = []) {
     const allowedSlugs = new Set(
         (Array.isArray(categories) ? categories : [])
@@ -359,6 +388,7 @@ function normalizeCategoryFilters(value, categories = []) {
     ));
 }
 
+// Xác định danh mục filter ids.
 function resolveCategoryFilterIds(selectedCategorySlugs = [], categoryMaps, defaultCategoryIds = []) {
     const categoryIds = new Set(
         (Array.isArray(defaultCategoryIds) ? defaultCategoryIds : [])
@@ -386,6 +416,7 @@ function resolveCategoryFilterIds(selectedCategorySlugs = [], categoryMaps, defa
     return [...resolvedIds];
 }
 
+// Kiểm tra khuyến mãi filter đang bật.
 function isSaleFilterActive(promotions = []) {
     const promotionSet = new Set(Array.isArray(promotions) ? promotions : []);
     return (
@@ -394,10 +425,12 @@ function isSaleFilterActive(promotions = []) {
     );
 }
 
+// Lấy fallback danh mục.
 function getFallbackCategories() {
     return Object.values(CATEGORY_FALLBACK_MAP);
 }
 
+// Tìm danh mục theo slug với fallback.
 async function findCategoryBySlugWithFallback(slug) {
     if (!slug) {
         return null;
@@ -415,6 +448,7 @@ async function findCategoryBySlugWithFallback(slug) {
     return CATEGORY_FALLBACK_MAP[slug] || null;
 }
 
+// Nạp catalog danh mục.
 async function loadCatalogCategories() {
     try {
         const categories = await Category.findAll();
@@ -428,6 +462,7 @@ async function loadCatalogCategories() {
     return getFallbackCategories();
 }
 
+// Tạo dữ liệu catalog truy vấn state.
 function buildCatalogQueryState({
     categorySlug = '',
     categorySlugs = [],
@@ -469,6 +504,7 @@ function buildCatalogQueryState({
     return query;
 }
 
+// Lấy sản phẩm display giá.
 function getProductDisplayPrice(product) {
     const priceCandidates = [
         product?.display_price,
@@ -486,15 +522,18 @@ function getProductDisplayPrice(product) {
     return 0;
 }
 
+// Lấy sản phẩm average rating.
 function getProductAverageRating(product) {
     const parsedValue = Number(product?.average_rating);
     return Number.isFinite(parsedValue) ? parsedValue : 0;
 }
 
+// Lấy sản phẩm promotion trạng thái.
 function getProductPromotionStatus(product) {
     return String(product?.promotion_status || 'none').trim();
 }
 
+// Xử lý matches promotion filter.
 function matchesPromotionFilter(product, promotions = []) {
     const selectedPromotions = Array.isArray(promotions)
         ? promotions
@@ -512,6 +551,7 @@ function matchesPromotionFilter(product, promotions = []) {
     ));
 }
 
+// Xử lý matches catalog filters.
 function matchesCatalogFilters(product, filters = {}) {
     if (!product) {
         return false;
@@ -569,6 +609,7 @@ function matchesCatalogFilters(product, filters = {}) {
     return matchesPromotionFilter(product, filters.promotions || filters.promotion);
 }
 
+// So sánh catalog sản phẩm.
 function compareCatalogProducts(left, right, currentSort) {
     if (currentSort === 'best-selling') {
         return (Number(right?.sold_count) || 0) - (Number(left?.sold_count) || 0);
@@ -595,6 +636,7 @@ function compareCatalogProducts(left, right, currentSort) {
     return rightCreatedAt - leftCreatedAt;
 }
 
+// Sắp xếp catalog sản phẩm.
 function sortCatalogProducts(products = [], currentSort = 'newest') {
     return [...products].sort((left, right) => {
         const primaryComparison = compareCatalogProducts(left, right, currentSort);
@@ -606,6 +648,7 @@ function sortCatalogProducts(products = [], currentSort = 'newest') {
     });
 }
 
+// Tạo dữ liệu catalog view dữ liệu.
 function buildCatalogViewData({
     category = null,
     categories = [],
@@ -643,6 +686,7 @@ function buildCatalogViewData({
     };
 }
 
+// Chuẩn hóa đánh giá comment.
 function normalizeReviewComment(comment) {
     if (typeof comment !== 'string') {
         return '';
@@ -657,6 +701,7 @@ function normalizeReviewComment(comment) {
         .slice(0, 2000);
 }
 
+// Chuẩn hóa remove media ids.
 function normalizeRemoveMediaIds(value) {
     return [...new Set(
         (Array.isArray(value) ? value : [value])
@@ -665,6 +710,7 @@ function normalizeRemoveMediaIds(value) {
     )];
 }
 
+// Đếm đánh giá media theo type.
 function countReviewMediaByType(mediaItems = []) {
     return mediaItems.reduce((counts, media) => {
         const mediaType = media?.mediaType || media?.media_type;
@@ -678,6 +724,7 @@ function countReviewMediaByType(mediaItems = []) {
     }, { images: 0, videos: 0 });
 }
 
+// Kiểm tra đánh giá media selection valid.
 function isReviewMediaSelectionValid(existingMedia = [], removeMediaIds = [], uploadedMedia = []) {
     const removableIds = new Set(removeMediaIds);
     const remainingMedia = (Array.isArray(existingMedia) ? existingMedia : [])
@@ -691,6 +738,7 @@ function isReviewMediaSelectionValid(existingMedia = [], removeMediaIds = [], up
     );
 }
 
+// Dọn dẹp uploaded đánh giá media.
 async function cleanupUploadedReviewMedia(mediaItems = []) {
     for (const media of mediaItems) {
         const publicId = media?.publicId || media?.public_id;
@@ -705,10 +753,12 @@ async function cleanupUploadedReviewMedia(mediaItems = []) {
     }
 }
 
+// Xử lý contains html markup.
 function containsHtmlMarkup(value) {
     return /<\/?[a-z][\s\S]*>/i.test(value);
 }
 
+// Định dạng sản phẩm description.
 function formatProductDescription(description) {
     if (typeof description !== 'string') {
         return '';
@@ -749,14 +799,12 @@ function formatProductDescription(description) {
         .join('');
 }
 
+// Lấy đánh giá feedback.
 function getReviewFeedback(code) {
-    if (code === 'updated') {
-        return null;
-    }
-
     return REVIEW_FEEDBACK_MESSAGES[code] || null;
 }
 
+// Tạo dữ liệu sản phẩm đánh giá điều hướng.
 function buildProductReviewRedirect(slug, code) {
     const safeSlug = encodeURIComponent(slug);
     return `/products/${safeSlug}?review=${encodeURIComponent(code)}`;
@@ -839,6 +887,7 @@ exports.getHomePage = async (req, res) => {
     }
 };
 
+// Tạo sản phẩm đánh giá.
 exports.createProductReview = async (req, res) => {
     const fallbackSlug = req.params.slug;
     const uploadedMedia = Array.isArray(req.uploadedReviewMedia) ? req.uploadedReviewMedia : [];
@@ -890,6 +939,7 @@ exports.createProductReview = async (req, res) => {
     }
 };
 
+// Cập nhật sản phẩm đánh giá.
 exports.updateProductReview = async (req, res) => {
     const fallbackSlug = req.params.slug;
     const requestedReviewId = Number.parseInt(req.params.reviewId, 10);
@@ -945,7 +995,7 @@ exports.updateProductReview = async (req, res) => {
         }
 
         await cleanupUploadedReviewMedia(updatedReview.removedMedia || []);
-        return res.redirect(`/products/${encodeURIComponent(product.slug || fallbackSlug)}`);
+        return res.redirect(buildProductReviewRedirect(product.slug || fallbackSlug, 'updated'));
     } catch (error) {
         console.error('Update product review error:', error);
         await cleanupUploadedReviewMedia(uploadedMedia);
@@ -1129,6 +1179,7 @@ exports.getProducts = async (req, res) => {
     }
 };
 
+// Lấy cho you.
 exports.getForYou = async (req, res) => {
     try {
         const recommendations = req.user

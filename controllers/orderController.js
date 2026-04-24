@@ -18,21 +18,31 @@ const Cart = require('../models/Cart');
 const Voucher = require('../models/Voucher');
 const Product = require('../models/Product');
 const Payment = require('../models/Payment');
+const ReturnRequest = require('../models/ReturnRequest');
 const paymentService = require('../services/paymentService');
 const emailService = require('../services/emailService');
+const {
+    cleanupUploadedReturnMedia,
+    MAX_RETURN_IMAGES,
+    MAX_RETURN_VIDEOS
+} = require('../middleware/returnUpload');
 
 const ALLOWED_PAYMENT_METHODS = new Set(['cod', 'vnpay', 'momo']);
+const ONLINE_PAYMENT_METHODS = new Set(['vnpay', 'momo']);
 
+// Chuyển giá trị đầu vào về số nguyên.
 function parseInteger(value) {
     const parsed = Number(value);
     return Number.isInteger(parsed) ? parsed : null;
 }
 
+// Phân tích positive integer.
 function parsePositiveInteger(value) {
     const parsed = parseInteger(value);
     return parsed !== null && parsed > 0 ? parsed : null;
 }
 
+// Phân tích optional positive integer.
 function parseOptionalPositiveInteger(value) {
     if (value === undefined || value === null || value === '') {
         return null;
@@ -41,11 +51,13 @@ function parseOptionalPositiveInteger(value) {
     return parsePositiveInteger(value);
 }
 
+// Phân tích tiền value.
 function parseMoneyValue(value) {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : 0;
 }
 
+// Xác định shipping fee.
 function resolveShippingFee(subtotal) {
     if (typeof Order.calculateShippingFee === 'function') {
         return parseMoneyValue(Order.calculateShippingFee(subtotal));
@@ -54,14 +66,17 @@ function resolveShippingFee(subtotal) {
     return parseMoneyValue(subtotal) >= 500000 ? 0 : 30000;
 }
 
+// Lấy payable amount.
 function getPayableAmount(subtotal, shippingFee = 0) {
     return Math.max(0, parseMoneyValue(subtotal) + parseMoneyValue(shippingFee));
 }
 
+// Xử lý clamp discount amount.
 function clampDiscountAmount(discountAmount, subtotal, shippingFee = 0) {
     return Math.max(0, Math.min(parseMoneyValue(discountAmount), getPayableAmount(subtotal, shippingFee)));
 }
 
+// Phân tích giỏ hàng item ids.
 function parseCartItemIds(rawValue) {
     if (rawValue === undefined || rawValue === null || rawValue === '') {
         return null;
@@ -81,6 +96,7 @@ function parseCartItemIds(rawValue) {
     return Array.from(uniqueIds);
 }
 
+// Tạo dữ liệu scoped giỏ hàng dữ liệu.
 function buildScopedCartData(cartData, selectedCartItemIds = null) {
     const items = Array.isArray(cartData?.items) ? cartData.items : [];
 
@@ -104,6 +120,7 @@ function buildScopedCartData(cartData, selectedCartItemIds = null) {
     };
 }
 
+// Lấy validated biến thể.
 function getValidatedVariant(product, variantId) {
     if (variantId === null || variantId === undefined) {
         return null;
@@ -120,6 +137,7 @@ function getValidatedVariant(product, variantId) {
     return variant;
 }
 
+// Đảm bảo available stock.
 function ensureAvailableStock(product, quantity, variant = null) {
     const availableStock = variant
         ? (parseInteger(variant.stock_quantity) || 0)
@@ -130,6 +148,7 @@ function ensureAvailableStock(product, quantity, variant = null) {
     }
 }
 
+// Tính unit giá.
 function calculateUnitPrice(product, variant = null) {
     const basePrice = product.final_price !== undefined && product.final_price !== null
         ? product.final_price
@@ -143,6 +162,7 @@ function calculateUnitPrice(product, variant = null) {
     return unitPrice;
 }
 
+// Xử lý assert người dùng owns địa chỉ.
 async function assertUserOwnsAddress(userId, addressId) {
     const address = await Address.findById(addressId);
 
@@ -153,6 +173,7 @@ async function assertUserOwnsAddress(userId, addressId) {
     return address;
 }
 
+// Chuẩn hóa mã giảm giá assignments.
 function normalizeVoucherAssignments(vouchers, assignments) {
     return vouchers.map((voucher) => {
         const applicableProducts = assignments.get(voucher.id) || [];
@@ -164,6 +185,7 @@ function normalizeVoucherAssignments(vouchers, assignments) {
     });
 }
 
+// Lọc eligible mã giảm giá.
 function filterEligibleVouchers(vouchers, items) {
     const now = new Date();
     const productIds = new Set((items || []).map((item) => parseInt(item.product_id, 10)));
@@ -183,6 +205,7 @@ function filterEligibleVouchers(vouchers, items) {
     });
 }
 
+// Lấy available mã giảm giá cho items.
 async function getAvailableVouchersForItems(items) {
     const vouchers = await Voucher.findAll({ is_active: true });
     const assignments = await Voucher.getApplicableProductsMap(vouchers.map((voucher) => voucher.id));
@@ -190,6 +213,7 @@ async function getAvailableVouchersForItems(items) {
     return filterEligibleVouchers(normalizedVouchers, items);
 }
 
+// Tạo dữ liệu buy now mã giảm giá items.
 async function buildBuyNowVoucherItems(productId, quantity = 1, variantId = null) {
     const product = await Product.findById(parseInt(productId, 10), { incrementView: false });
 
@@ -215,6 +239,7 @@ async function buildBuyNowVoucherItems(productId, quantity = 1, variantId = null
     };
 }
 
+// Hiển thị thanh toán failure.
 function renderPaymentFailure(res, req, message, status = 400) {
     return res.status(status).render('error', {
         message,
@@ -222,8 +247,10 @@ function renderPaymentFailure(res, req, message, status = 400) {
     });
 }
 
+// Đồng bộ vn pay thanh toán kết quả.
 async function syncVNPayPaymentResult(order, result, { allowOrderPaymentUpdate = true } = {}) {
     const paymentStatus = result.success ? 'success' : 'failed';
+    let paymentMarkedPaid = false;
 
     await Payment.recordGatewayResult({
         orderId: order.id,
@@ -241,9 +268,171 @@ async function syncVNPayPaymentResult(order, result, { allowOrderPaymentUpdate =
         }
     });
 
-    if (allowOrderPaymentUpdate && result.success && order.payment_status !== 'paid') {
-        await Order.updatePaymentStatus(order.id, 'paid');
+    if (allowOrderPaymentUpdate && result.success) {
+        if (order.payment_status !== 'paid') {
+            paymentMarkedPaid = await markOrderPaid(order);
+        }
+        await confirmPaidOnlineOrder(order);
+    } else if (allowOrderPaymentUpdate && !result.success) {
+        await markOnlineOrderPendingPayment(order);
     }
+
+    return { paymentStatus, paymentMarkedPaid };
+}
+
+// Đồng bộ mo mo thanh toán kết quả.
+async function syncMoMoPaymentResult(order, result, { allowOrderPaymentUpdate = true } = {}) {
+    const paymentStatus = result.success ? 'success' : 'failed';
+    let paymentMarkedPaid = false;
+
+    await Payment.recordGatewayResult({
+        orderId: order.id,
+        paymentMethod: 'momo',
+        transactionId: result.transactionId || null,
+        amount: result.amount,
+        status: paymentStatus,
+        paymentData: {
+            resultCode: result.resultCode,
+            message: result.message,
+            payType: result.payType,
+            responseTime: result.responseTime,
+            raw: result.raw
+        }
+    });
+
+    if (allowOrderPaymentUpdate && result.success) {
+        if (order.payment_status !== 'paid') {
+            paymentMarkedPaid = await markOrderPaid(order);
+        }
+        await confirmPaidOnlineOrder(order);
+    } else if (allowOrderPaymentUpdate && !result.success) {
+        await markOnlineOrderPendingPayment(order);
+    }
+
+    return { paymentStatus, paymentMarkedPaid };
+}
+
+// Xử lý mark đơn hàng paid.
+async function markOrderPaid(order) {
+    const updateResult = await Order.updatePaymentStatus(order.id, 'paid');
+
+    if (updateResult === undefined || updateResult === null) {
+        return true;
+    }
+
+    return Number(updateResult.affectedRows || updateResult.changedRows || 0) > 0;
+}
+
+// Gửi đơn hàng confirmation async.
+function sendOrderConfirmationAsync(order) {
+    return emailService.sendOrderConfirmation(order).catch(err => console.error('Email error:', err));
+}
+
+// Gửi quản trị new đơn hàng async.
+function sendAdminNewOrderAsync(order) {
+    if (typeof emailService.sendAdminNewOrderEmail !== 'function') {
+        return Promise.resolve(false);
+    }
+
+    return emailService
+        .sendAdminNewOrderEmail(order)
+        .catch(err => console.error('Admin new order email error:', err));
+}
+
+// Gửi đơn hàng confirmation after thanh toán.
+async function sendOrderConfirmationAfterPayment(order) {
+    const latestOrder = await Order.findById(order.id);
+    return sendOrderConfirmationAsync(latestOrder || order);
+}
+
+// Lấy đơn hàng final amount.
+function getOrderFinalAmount(order) {
+    const amount = Number(order?.final_amount);
+    return Number.isFinite(amount) ? amount : null;
+}
+
+// Kiểm tra zero payable đơn hàng.
+function isZeroPayableOrder(order) {
+    const finalAmount = getOrderFinalAmount(order);
+    return finalAmount !== null && finalAmount <= 0;
+}
+
+// Kiểm tra online thanh toán đơn hàng.
+function isOnlinePaymentOrder(order) {
+    return ONLINE_PAYMENT_METHODS.has(String(order?.payment_method || '').toLowerCase());
+}
+
+// Xử lý confirm paid online đơn hàng.
+async function confirmPaidOnlineOrder(order) {
+    if (!order?.id || !isOnlinePaymentOrder(order)) {
+        return order;
+    }
+
+    const currentStatus = Order.normalizeStatus ? Order.normalizeStatus(order.status) : String(order.status || '').toLowerCase();
+    if (!['pending_payment', 'pending'].includes(currentStatus)) {
+        return order;
+    }
+
+    if (typeof Order.updateStatus !== 'function') {
+        return { ...order, status: 'confirmed' };
+    }
+
+    return Order.updateStatus(order.id, 'confirmed', {
+        source: 'system',
+        title: 'Thanh toán thành công',
+        description: 'Cổng thanh toán đã xác nhận giao dịch, đơn hàng được chuyển sang chờ người bán chuẩn bị hàng.'
+    }) || { ...order, status: 'confirmed' };
+}
+
+// Xử lý mark online đơn hàng pending thanh toán.
+async function markOnlineOrderPendingPayment(order) {
+    if (!order?.id || !isOnlinePaymentOrder(order) || order.payment_status === 'paid') {
+        return order;
+    }
+
+    const currentStatus = Order.normalizeStatus ? Order.normalizeStatus(order.status) : String(order.status || '').toLowerCase();
+    if (currentStatus === 'pending_payment') {
+        return order;
+    }
+
+    if (typeof Order.updateStatus !== 'function') {
+        return { ...order, status: 'pending_payment' };
+    }
+
+    return Order.updateStatus(order.id, 'pending_payment', {
+        source: 'system',
+        title: 'Thanh toán chưa hoàn tất',
+        description: 'Khách hàng chưa hoàn tất hoặc đã hủy phiên thanh toán online.'
+    }) || { ...order, status: 'pending_payment' };
+}
+
+// Xử lý confirm zero payable đơn hàng.
+async function confirmZeroPayableOrder(order) {
+    if (!isZeroPayableOrder(order)) {
+        return order;
+    }
+
+    await Order.updatePaymentStatus(order.id, 'paid');
+
+    if (typeof Order.updateStatus !== 'function') {
+        return {
+            ...order,
+            status: 'confirmed',
+            payment_status: 'paid'
+        };
+    }
+
+    const confirmedOrder = await Order.updateStatus(order.id, 'confirmed', {
+        source: 'system',
+        title: 'Đơn hàng 0đ đã được xác nhận',
+        description: 'Đơn hàng không cần thanh toán thêm nên hệ thống tự động xác nhận để người bán chuẩn bị hàng.'
+    });
+
+    return confirmedOrder || {
+        ...order,
+        status: 'confirmed',
+        payment_status: 'paid'
+    };
 }
 
 // =============================================================================
@@ -386,13 +575,16 @@ exports.createOrder = async (req, res) => {
         );
 
         // Lấy thông tin đầy đủ của đơn hàng
-        const order = await Order.findById(orderResult.id);
+        let order = await Order.findById(orderResult.id);
+        order = await confirmZeroPayableOrder(order);
+        sendAdminNewOrderAsync(order);
 
         // Gửi email xác nhận đơn hàng (async)
-        emailService.sendOrderConfirmation(order).catch(err => console.error('Email error:', err));
 
         // Xử lý thanh toán theo phương thức
-        if (payment_method === 'cod') {
+        if (isZeroPayableOrder(order) || payment_method === 'cod') {
+            sendOrderConfirmationAsync(order);
+
             // COD (Thanh toán khi nhận hàng) - Redirect đến trang xác nhận
             return res.redirect(`/orders/${order.order_code}/confirmation`);
         } else if (payment_method === 'vnpay') {
@@ -449,8 +641,11 @@ exports.orderConfirmation = async (req, res) => {
         }
 
         // Render trang xác nhận
+        const returnRequest = await ReturnRequest.findByOrderId(order.id);
+
         res.render('checkout/confirmation', {
             order,
+            returnRequest,
             user: req.user
         });
     } catch (error) {
@@ -490,8 +685,14 @@ exports.showOrderTracking = async (req, res) => {
             return res.status(403).render('error', { message: 'Access denied' });
         }
 
+        const returnRequest = await ReturnRequest.findByOrderId(order.id);
+
         res.render('user/order-tracking', {
             order,
+            returnRequest,
+            returnFeedback: req.query.return || null,
+            receivedFeedback: req.query.received || null,
+            cancelFeedback: req.query.cancel || null,
             user: req.user
         });
     } catch (error) {
@@ -500,6 +701,7 @@ exports.showOrderTracking = async (req, res) => {
     }
 };
 
+// Lấy đơn hàng history.
 exports.getOrderHistory = async (req, res) => {
     try {
         // Kiểm tra đăng nhập
@@ -509,10 +711,19 @@ exports.getOrderHistory = async (req, res) => {
 
         // Lấy 20 đơn hàng gần nhất của user
         const orders = await Order.findByUser(req.user.id, 20, 0);
+        await Promise.all(orders.map(async (order) => {
+            if (order.status !== 'delivered') {
+                return;
+            }
+
+            const returnRequest = await ReturnRequest.findByOrderId(order.id);
+            order.return_request_status = returnRequest?.status || null;
+        }));
 
         // Render trang lịch sử
         res.render('user/orders', {
             orders,
+            cancelFeedback: req.query.cancel || null,
             user: req.user
         });
     } catch (error) {
@@ -537,6 +748,258 @@ exports.getOrderHistory = async (req, res) => {
  *
  * @returns {Redirect|Render} Redirect đến trang xác nhận hoặc trang lỗi
  */
+exports.retryPayment = async (req, res) => {
+    try {
+        if (!req.user) {
+            return res.redirect('/auth/login');
+        }
+
+        const order = await Order.findByOrderCode(req.params.orderCode);
+        if (!order) {
+            return res.status(404).render('error', { message: 'Order not found' });
+        }
+
+        if (order.user_id !== req.user.id) {
+            return res.status(403).render('error', { message: 'Access denied' });
+        }
+
+        if (!isOnlinePaymentOrder(order)) {
+            return res.redirect(`/orders/${order.order_code}/confirmation`);
+        }
+
+        if (order.payment_status === 'paid' || !['pending_payment', 'pending'].includes(String(order.status || '').toLowerCase())) {
+            return res.redirect(`/orders/${order.order_code}/confirmation`);
+        }
+
+        if (isZeroPayableOrder(order)) {
+            await confirmZeroPayableOrder(order);
+            return res.redirect(`/orders/${order.order_code}/confirmation`);
+        }
+
+        if (order.payment_method === 'vnpay') {
+            const payment = await paymentService.createVNPayPayment(order, { ipAddr: req.ip });
+            return res.redirect(payment.paymentUrl);
+        }
+
+        if (order.payment_method === 'momo') {
+            const payment = await paymentService.createMoMoPayment(order);
+            return res.render('checkout/momo-payment', {
+                payment,
+                order,
+                user: req.user
+            });
+        }
+
+        return res.redirect(`/orders/${order.order_code}/confirmation`);
+    } catch (error) {
+        console.error('Retry payment error:', error);
+        return res.status(400).render('error', { message: error.message || 'Unable to retry payment' });
+    }
+};
+
+// Xử lý cancel đơn hàng.
+exports.cancelOrder = async (req, res) => {
+    try {
+        if (!req.user) {
+            return res.redirect('/auth/login');
+        }
+
+        const order = await Order.findByOrderCode(req.params.orderCode);
+        if (!order) {
+            return res.status(404).render('error', { message: 'Order not found' });
+        }
+
+        if (order.user_id !== req.user.id) {
+            return res.status(403).render('error', { message: 'Access denied' });
+        }
+
+        if (!['pending', 'confirmed'].includes(String(order.status || '').toLowerCase())) {
+            return res.redirect(`/orders/${order.order_code}/tracking?cancel=invalid-status`);
+        }
+
+        await Order.cancelByUser(order.id, req.user.id);
+        return res.redirect(`/orders/${order.order_code}/tracking?cancel=success`);
+    } catch (error) {
+        console.error('Cancel order error:', error);
+        return res.status(400).render('error', { message: error.message || 'Unable to cancel order' });
+    }
+};
+
+// Xử lý show hoàn hàng yêu cầu.
+exports.showReturnRequest = async (req, res) => {
+    try {
+        if (!req.user) {
+            return res.redirect(`/auth/login?redirect=/orders/${encodeURIComponent(req.params.orderCode)}/return-request`);
+        }
+
+        const order = await Order.findByOrderCode(req.params.orderCode);
+        if (!order) {
+            return res.status(404).render('error', { message: 'Order not found' });
+        }
+
+        if (order.user_id !== req.user.id) {
+            return res.status(403).render('error', { message: 'Access denied' });
+        }
+
+        if (String(order.status || '').toLowerCase() !== 'delivered') {
+            return res.redirect(`/orders/${order.order_code}/tracking?return=invalid-status`);
+        }
+
+        const returnRequest = await ReturnRequest.findByOrderId(order.id);
+
+        return res.render('user/return-request', {
+            order,
+            returnRequest,
+            returnFeedback: req.query.return || null,
+            returnMediaLimits: {
+                images: MAX_RETURN_IMAGES,
+                videos: MAX_RETURN_VIDEOS
+            },
+            user: req.user
+        });
+    } catch (error) {
+        console.error('Return request page error:', error);
+        return res.status(500).render('error', { message: 'Unable to load return request page' });
+    }
+};
+
+// Xử lý confirm received.
+exports.confirmReceived = async (req, res) => {
+    try {
+        if (!req.user) {
+            return res.redirect('/auth/login');
+        }
+
+        const order = await Order.findByOrderCode(req.params.orderCode);
+        if (!order) {
+            return res.status(404).render('error', { message: 'Order not found' });
+        }
+
+        if (order.user_id !== req.user.id) {
+            return res.status(403).render('error', { message: 'Access denied' });
+        }
+
+        if (String(order.status || '').toLowerCase() !== 'delivered') {
+            return res.redirect(`/orders/${order.order_code}/tracking?received=invalid-status`);
+        }
+
+        const returnRequest = await ReturnRequest.findByOrderId(order.id);
+        if (returnRequest && ['pending', 'approved'].includes(ReturnRequest.normalizeStatus(returnRequest.status))) {
+            return res.redirect(`/orders/${order.order_code}/tracking?received=return-pending`);
+        }
+
+        await Order.updateStatus(order.id, 'completed', {
+            source: 'user',
+            title: 'Người mua xác nhận đã nhận hàng',
+            description: 'Người mua đã xác nhận nhận hàng và hoàn tất đơn hàng.'
+        }, { actorUserId: req.user.id });
+
+        return res.redirect(`/orders/${order.order_code}/tracking?received=confirmed`);
+    } catch (error) {
+        console.error('Confirm received error:', error);
+        return res.status(400).render('error', { message: error.message || 'Unable to confirm received order' });
+    }
+};
+
+// Xử lý pre validate hoàn hàng yêu cầu.
+exports.preValidateReturnRequest = async (req, res, next) => {
+    try {
+        if (!req.user) {
+            return res.redirect(`/auth/login?redirect=/orders/${encodeURIComponent(req.params.orderCode)}/return-request`);
+        }
+
+        const order = await Order.findByOrderCode(req.params.orderCode);
+        if (!order) {
+            return res.status(404).render('error', { message: 'Order not found' });
+        }
+
+        if (order.user_id !== req.user.id) {
+            return res.status(403).render('error', { message: 'Access denied' });
+        }
+
+        if (String(order.status || '').toLowerCase() !== 'delivered') {
+            return res.redirect(`/orders/${order.order_code}/tracking?return=invalid-status`);
+        }
+
+        const existingRequest = await ReturnRequest.findByOrderId(order.id);
+        if (existingRequest) {
+            return res.redirect(`/orders/${order.order_code}/return-request?return=already-requested`);
+        }
+
+        req.returnRequestOrder = order;
+        return next();
+    } catch (error) {
+        console.error('Return request pre-validation error:', error);
+        return res.status(400).render('error', { message: error.message || 'Unable to validate return request' });
+    }
+};
+
+// Tạo hoàn hàng yêu cầu.
+exports.createReturnRequest = async (req, res) => {
+    const uploadedMedia = Array.isArray(req.uploadedReturnMedia) ? req.uploadedReturnMedia : [];
+
+    try {
+        if (!req.user) {
+            await cleanupUploadedReturnMedia(uploadedMedia);
+            return res.redirect(`/auth/login?redirect=/orders/${encodeURIComponent(req.params.orderCode)}/return-request`);
+        }
+
+        const order = req.returnRequestOrder || await Order.findByOrderCode(req.params.orderCode);
+        if (!order) {
+            await cleanupUploadedReturnMedia(uploadedMedia);
+            return res.status(404).render('error', { message: 'Order not found' });
+        }
+
+        if (order.user_id !== req.user.id) {
+            await cleanupUploadedReturnMedia(uploadedMedia);
+            return res.status(403).render('error', { message: 'Access denied' });
+        }
+
+        if (String(order.status || '').toLowerCase() !== 'delivered') {
+            await cleanupUploadedReturnMedia(uploadedMedia);
+            return res.redirect(`/orders/${order.order_code}/tracking?return=invalid-status`);
+        }
+
+        const reason = String(req.body.reason || '').trim();
+        if (reason.length < 10) {
+            await cleanupUploadedReturnMedia(uploadedMedia);
+            return res.redirect(`/orders/${order.order_code}/return-request?return=missing-reason`);
+        }
+
+        if (uploadedMedia.length === 0) {
+            return res.redirect(`/orders/${order.order_code}/return-request?return=missing-media`);
+        }
+
+        if (!req.returnRequestOrder) {
+            const existingRequest = await ReturnRequest.findByOrderId(order.id);
+            if (existingRequest) {
+                await cleanupUploadedReturnMedia(uploadedMedia);
+                return res.redirect(`/orders/${order.order_code}/return-request?return=already-requested`);
+            }
+        }
+
+        const returnRequest = await ReturnRequest.create({
+            orderId: order.id,
+            userId: req.user.id,
+            reason,
+            media: uploadedMedia
+        });
+
+        if (typeof emailService.sendAdminReturnRequestEmail === 'function') {
+            emailService
+                .sendAdminReturnRequestEmail(returnRequest, order)
+                .catch((emailError) => console.error('Admin return request email error:', emailError));
+        }
+
+        return res.redirect(`/orders/${order.order_code}/return-request?return=requested`);
+    } catch (error) {
+        console.error('Create return request error:', error);
+        await cleanupUploadedReturnMedia(uploadedMedia);
+        return res.status(400).render('error', { message: error.message || 'Unable to create return request' });
+    }
+};
+
+// Xử lý vnpay hoàn hàng.
 exports.vnpayReturn = async (req, res) => {
     try {
         // Xac minh chu ky va ket qua thanh toan
@@ -553,20 +1016,20 @@ exports.vnpayReturn = async (req, res) => {
         }
         // Return URL la duong hien thi cho khach, nhung van sync fallback o day
         // de ho tro test sandbox khi IPN chua di xuyen mang.
-        await syncVNPayPaymentResult(order, result);
+        const syncResult = await syncVNPayPaymentResult(order, result);
         if (result.success) {
+            if (syncResult.paymentMarkedPaid) {
+                await sendOrderConfirmationAfterPayment(order);
+            }
             return res.redirect(`/orders/${result.orderId}/confirmation`);
         }
-        return renderPaymentFailure(
-            res,
-            req,
-            `Thanh toan VNPay khong thanh cong. Ma phan hoi: ${result.responseCode || 'N/A'}`
-        );
+        return res.redirect(`/orders/${result.orderId}/confirmation?payment=failed`);
     } catch (error) {
         console.error('VNPay callback error:', error);
         res.status(500).render('error', { message: 'Payment verification failed' });
     }
 };
+// Xử lý vnpay ipn.
 exports.vnpayIpn = async (req, res) => {
     try {
         const result = await paymentService.verifyVNPayPayment(req.query);
@@ -581,9 +1044,13 @@ exports.vnpayIpn = async (req, res) => {
             return res.status(200).json({ RspCode: '04', Message: 'Invalid Amount' });
         }
         if (order.payment_status === 'paid') {
+            await confirmPaidOnlineOrder(order);
             return res.status(200).json({ RspCode: '02', Message: 'Order already confirmed' });
         }
-        await syncVNPayPaymentResult(order, result);
+        const syncResult = await syncVNPayPaymentResult(order, result);
+        if (result.success && syncResult.paymentMarkedPaid) {
+            await sendOrderConfirmationAfterPayment(order);
+        }
         return res.status(200).json({ RspCode: '00', Message: 'Confirm Success' });
     } catch (error) {
         console.error('VNPay IPN error:', error);
@@ -605,7 +1072,22 @@ exports.vnpayIpn = async (req, res) => {
 exports.momoReturn = async (req, res) => {
     try {
         // Xác minh kết quả thanh toán
-        const result = await paymentService.verifyMoMoPayment(req.body);
+        const momoPayload = Object.keys(req.body || {}).length > 0 ? req.body : req.query;
+        const result = await paymentService.verifyMoMoPayment(momoPayload);
+
+        if (!result.isValidSignature) {
+            return renderPaymentFailure(res, req, 'Chu ky tra ve tu MoMo khong hop le');
+        }
+
+        if (!result.success) {
+            const order = await Order.findByOrderCode(result.orderId);
+            if (order && Number(result.amount) === Number(order.final_amount)) {
+                await syncMoMoPaymentResult(order, result);
+                return res.redirect(`/orders/${result.orderId}/confirmation?payment=failed`);
+            }
+
+            return renderPaymentFailure(res, req, 'Thanh toan MoMo khong thanh cong. Vui long thu lai.');
+        }
 
         if (result.success) {
             // Thanh toán thành công
@@ -618,9 +1100,12 @@ exports.momoReturn = async (req, res) => {
                 return res.status(400).render('error', { message: 'Payment amount mismatch' });
             }
 
-            await Order.updatePaymentStatus(order.id, 'paid');
+            const syncResult = await syncMoMoPaymentResult(order, result);
+            if (syncResult.paymentMarkedPaid) {
+                await sendOrderConfirmationAfterPayment(order);
+            }
 
-            res.redirect(`/orders/${result.orderId}/confirmation`);
+            return res.redirect(`/orders/${result.orderId}/confirmation`);
         } else {
             // Thanh toán thất bại
             return renderPaymentFailure(res, req, 'Thanh toan MoMo khong thanh cong. Vui long thu lai.');
@@ -830,13 +1315,16 @@ exports.createBuyNowOrder = async (req, res) => {
         );
 
         // Lấy thông tin đầy đủ đơn hàng
-        const order = await Order.findById(orderResult.id);
+        let order = await Order.findById(orderResult.id);
+        order = await confirmZeroPayableOrder(order);
+        sendAdminNewOrderAsync(order);
 
         // Gửi email xác nhận
-        emailService.sendOrderConfirmation(order).catch(err => console.error('Email error:', err));
 
         // Xử lý thanh toán theo phương thức
-        if (payment_method === 'cod') {
+        if (isZeroPayableOrder(order) || payment_method === 'cod') {
+            sendOrderConfirmationAsync(order);
+
             return res.redirect(`/orders/${order.order_code}/confirmation`);
         } else if (payment_method === 'vnpay') {
             const payment = await paymentService.createVNPayPayment(order, { ipAddr: req.ip });

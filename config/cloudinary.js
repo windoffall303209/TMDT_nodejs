@@ -1,3 +1,4 @@
+// File config/cloudinary.js: cấu hình hệ thống cho module cloudinary.
 const cloudinary = require('cloudinary').v2;
 
 // Configure Cloudinary

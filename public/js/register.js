@@ -1,3 +1,4 @@
+// File public/js/register.js: xử lý tương tác giao diện phía trình duyệt cho module register.
 function togglePassword(inputId, button) {
     const input = document.getElementById(inputId);
     if (!input || !button) {
@@ -17,6 +18,7 @@ function togglePassword(inputId, button) {
     }
 }
 
+// Gan su kien nguoi dung cho thanh phan giao dien lien quan.
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('registerForm');
     const fullName = document.getElementById('full_name');
@@ -53,6 +55,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // Xử lý clear error.
     function clearError(fieldId) {
         showError(fieldId, '');
     }
@@ -83,6 +86,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return true;
     }
 
+    // Kiểm tra hợp lệ email.
     function validateEmail() {
         const val = email.value.trim();
         if (!val) {
@@ -101,6 +105,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return true;
     }
 
+    // Kiểm tra hợp lệ số điện thoại.
     function validatePhone() {
         const val = phone.value.trim();
         if (!val) {
@@ -115,6 +120,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return true;
     }
 
+    // Kiểm tra hợp lệ mật khẩu.
     function validatePassword() {
         const val = password.value;
         if (!val) {
@@ -141,6 +147,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return true;
     }
 
+    // Kiểm tra hợp lệ confirm mật khẩu.
     function validateConfirmPassword() {
         if (!confirmPassword.value) {
             showError('confirm_password', 'Xác nhận mật khẩu là bắt buộc');
@@ -165,15 +172,20 @@ document.addEventListener('DOMContentLoaded', function() {
     // =========================================================================
 
     fullName.addEventListener('blur', validateFullName);
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     email.addEventListener('blur', validateEmail);
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     phone.addEventListener('blur', validatePhone);
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     password.addEventListener('blur', validatePassword);
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     confirmPassword.addEventListener('blur', validateConfirmPassword);
 
     // Live feedback cho password match khi đang gõ
     password.addEventListener('input', function() {
         if (confirmPassword.value) validateConfirmPassword();
     });
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     confirmPassword.addEventListener('input', validateConfirmPassword);
 
     // =========================================================================
@@ -181,6 +193,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // =========================================================================
 
     document.querySelectorAll('[data-password-target]').forEach(function(button) {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', function() {
             togglePassword(button.dataset.passwordTarget, button);
         });

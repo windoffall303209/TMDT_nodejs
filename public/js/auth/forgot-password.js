@@ -1,3 +1,4 @@
+// File public/js/auth/forgot-password.js: xử lý tương tác giao diện phía trình duyệt cho module forgot password.
 document.addEventListener('DOMContentLoaded', function() {
     const alertContainer = document.getElementById('alert-container');
     const stepEmail = document.getElementById('step-email');
@@ -27,6 +28,7 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
     }
 
+    // Xử lý clear alert.
     function clearAlert() {
         alertContainer.innerHTML = '';
     }
@@ -92,6 +94,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Handle code input
     codeInputs.forEach((input, index) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         input.addEventListener('input', (e) => {
             const value = e.target.value;
             e.target.value = value.replace(/[^0-9]/g, '');
@@ -108,12 +111,14 @@ document.addEventListener('DOMContentLoaded', function() {
             updateFullCode();
         });
 
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Backspace' && !e.target.value && index > 0) {
                 codeInputs[index - 1].focus();
             }
         });
 
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         input.addEventListener('paste', (e) => {
             e.preventDefault();
             const pastedData = e.clipboardData.getData('text').replace(/[^0-9]/g, '').slice(0, 6);
@@ -130,6 +135,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // Cập nhật full code.
     function updateFullCode() {
         const code = Array.from(codeInputs).map(input => input.value).join('');
         fullCodeInput.value = code;

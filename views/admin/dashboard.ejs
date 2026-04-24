@@ -1,3 +1,4 @@
+<%# File views/admin/dashboard.ejs: hien thi giao dien va du lieu cho trang tuong ung. %>
 <%- include('../partials/admin-header', { currentPage: 'dashboard', pageStyles: ['/css/admin/dashboard.css'] }) %>
 
 <div class="admin-page">
@@ -71,7 +72,7 @@
                     </div>
                     <div class="stat-card__content">
                         <h3 class="stat-card__label">Đơn Chờ Xử Lý</h3>
-                        <p class="stat-card__value"><%= stats.pending_orders || 0 %></p>
+                        <p class="stat-card__value"><%= (stats.pending_orders || 0) + (stats.pending_payment_orders || 0) %></p>
                     </div>
                 </div>
             </div>
@@ -149,7 +150,7 @@
                         <div class="dashboard-chart-legend__item">
                             <span class="dashboard-chart-legend__dot dashboard-chart-legend__dot--pending"></span>
                             <span>Chờ xử lý</span>
-                            <strong><%= dashboardCharts.orderStatus.pending || 0 %></strong>
+                            <strong><%= (dashboardCharts.orderStatus.pending || 0) + (dashboardCharts.orderStatus.pending_payment || 0) %></strong>
                         </div>
                         <div class="dashboard-chart-legend__item">
                             <span class="dashboard-chart-legend__dot dashboard-chart-legend__dot--processing"></span>
@@ -158,8 +159,8 @@
                         </div>
                         <div class="dashboard-chart-legend__item">
                             <span class="dashboard-chart-legend__dot dashboard-chart-legend__dot--delivered"></span>
-                            <span>Đã giao</span>
-                            <strong><%= dashboardCharts.orderStatus.delivered || 0 %></strong>
+                            <span>Đã hoàn thành</span>
+                            <strong><%= dashboardCharts.orderStatus.completed || 0 %></strong>
                         </div>
                         <div class="dashboard-chart-legend__item">
                             <span class="dashboard-chart-legend__dot dashboard-chart-legend__dot--cancelled"></span>
@@ -216,6 +217,7 @@
                         <p class="dashboard-section__subtext">Đang hiển thị <strong data-dashboard-limit-label><%= Math.min(recentLimit, recentOrders.length) %></strong> đơn hàng mới nhất.</p>
                     </div>
                     <div class="dashboard-section__actions">
+                        <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
                         <form class="dashboard-limit-form">
                             <label for="dashboardRecentLimit">Hiển thị</label>
                             <select id="dashboardRecentLimit" name="recent_limit" class="admin-form__select dashboard-limit-form__select" data-dashboard-recent-limit>
@@ -265,6 +267,10 @@
                                             let statusClass = '';
                                             let statusText = '';
                                             switch(order.status) {
+                                                case 'pending_payment':
+                                                    statusClass = 'admin-table__badge--pending';
+                                                    statusText = 'Chờ thanh toán';
+                                                    break;
                                                 case 'pending':
                                                     statusClass = 'admin-table__badge--pending';
                                                     statusText = 'Chờ xử lý';
@@ -280,6 +286,10 @@
                                                 case 'delivered':
                                                     statusClass = 'admin-table__badge--delivered';
                                                     statusText = 'Đã giao';
+                                                    break;
+                                                case 'completed':
+                                                    statusClass = 'admin-table__badge--delivered';
+                                                    statusText = 'Đã hoàn thành';
                                                     break;
                                                 case 'cancelled':
                                                     statusClass = 'admin-table__badge--cancelled';
@@ -373,6 +383,7 @@
     </div>
 </div>
 
+<%# Bootstrap du lieu JSON cho script phia client. %>
 <script type="application/json" id="adminDashboardBootstrap"><%- JSON.stringify({
     recentLimit: Number(recentLimit || 10),
     orderStatus: dashboardCharts?.orderStatus || {},

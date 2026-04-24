@@ -1,3 +1,4 @@
+// File services/chatRagService.js: gom logic service cho module chatRagService.
 const crypto = require('crypto');
 const pool = require('../config/database');
 const Product = require('../models/Product');
@@ -21,14 +22,17 @@ const DEFAULT_READY_WAIT_TIMEOUT_MS = Number.parseInt(process.env.CHAT_RAG_READY
 
 const syncTasks = new Map();
 
+// Xử lý now iso timestamp.
 function nowIsoTimestamp() {
     return new Date().toISOString().slice(0, 19).replace('T', ' ');
 }
 
+// Xử lý hash content.
 function hashContent(value) {
     return crypto.createHash('sha256').update(String(value || '')).digest('hex');
 }
 
+// Chuẩn hóa text.
 function normalizeText(value) {
     return String(value || '')
         .normalize('NFD')
@@ -39,14 +43,17 @@ function normalizeText(value) {
         .trim();
 }
 
+// Xử lý unique terms.
 function uniqueTerms(values = []) {
     return Array.from(new Set(values.filter(Boolean)));
 }
 
+// Xử lý compact whitespace.
 function compactWhitespace(value) {
     return String(value || '').replace(/\s+/g, ' ').trim();
 }
 
+// Xử lý split oversized text.
 function splitOversizedText(text, maxTokens = DEFAULT_EMBEDDING_CHUNK_TOKENS) {
     let remaining = compactWhitespace(text);
     if (!remaining) {
@@ -80,6 +87,7 @@ function splitOversizedText(text, maxTokens = DEFAULT_EMBEDDING_CHUNK_TOKENS) {
     return chunks.filter(Boolean);
 }
 
+// Xử lý split text cho embedding.
 function splitTextForEmbedding(text, options = {}) {
     const normalized = compactWhitespace(text);
     if (!normalized) {
@@ -96,6 +104,7 @@ function splitTextForEmbedding(text, options = {}) {
     const chunks = [];
     let current = '';
 
+    // Xử lý push current.
     const pushCurrent = () => {
         const normalizedChunk = compactWhitespace(current);
         if (normalizedChunk) {
@@ -147,6 +156,7 @@ function splitTextForEmbedding(text, options = {}) {
     return allowed.filter(Boolean);
 }
 
+// Xử lý cosine similarity.
 function cosineSimilarity(left = [], right = []) {
     if (!Array.isArray(left) || !Array.isArray(right) || left.length === 0 || right.length === 0 || left.length !== right.length) {
         return 0;
@@ -171,6 +181,7 @@ function cosineSimilarity(left = [], right = []) {
     return dot / (Math.sqrt(leftMagnitude) * Math.sqrt(rightMagnitude));
 }
 
+// Tính lexical bonus.
 function computeLexicalBonus(query, candidateText) {
     const queryTerms = uniqueTerms(normalizeText(query).split(/\s+/).filter((term) => term.length >= 3));
     if (!queryTerms.length) {
@@ -182,10 +193,12 @@ function computeLexicalBonus(query, candidateText) {
     return Math.min(0.12, overlapCount * 0.02);
 }
 
+// Xử lý combine scores.
 function combineScores(vectorScore, lexicalBonus) {
     return vectorScore + lexicalBonus;
 }
 
+// Kiểm tra state fresh.
 function isStateFresh(state) {
     if (!state?.last_synced_at) {
         return false;
@@ -199,6 +212,7 @@ function isStateFresh(state) {
     return Date.now() - lastSyncedAt < DEFAULT_SYNC_TTL_MINUTES * 60 * 1000;
 }
 
+// Tải rag sản phẩm.
 async function fetchRagProducts() {
     const [rows] = await pool.query(`
         SELECT p.*,
@@ -224,6 +238,7 @@ async function fetchRagProducts() {
     return Product.hydrateListingProducts(rows);
 }
 
+// Tạo dữ liệu base chunk.
 function buildBaseChunk(payload = {}) {
     return {
         sourceType: payload.sourceType,
@@ -236,6 +251,7 @@ function buildBaseChunk(payload = {}) {
     };
 }
 
+// Đảm bảo chunk within limit.
 function ensureChunkWithinLimit(chunk, maxTokens = DEFAULT_EMBEDDING_CHUNK_TOKENS) {
     if (estimateTokenCount(chunk.content) <= maxTokens) {
         return [chunk];
@@ -269,6 +285,7 @@ function ensureChunkWithinLimit(chunk, maxTokens = DEFAULT_EMBEDDING_CHUNK_TOKEN
     }));
 }
 
+// Tạo dữ liệu sản phẩm chunks.
 function buildProductChunks(product) {
     const colors = uniqueTerms(String(product.variant_colors || '').split(',').map((value) => value.trim()));
     const sizes = uniqueTerms(String(product.variant_sizes || '').split(',').map((value) => value.trim()));
@@ -370,6 +387,7 @@ function buildProductChunks(product) {
     return [summaryChunk, ...detailChunks].flatMap((chunk) => ensureChunkWithinLimit(chunk));
 }
 
+// Tạo dữ liệu knowledge chunks.
 function buildKnowledgeChunks(document) {
     const chunks = splitTextForEmbedding(document.content, {
         maxTokens: DEFAULT_EMBEDDING_CHUNK_TOKENS
@@ -390,6 +408,7 @@ function buildKnowledgeChunks(document) {
     })).flatMap((chunk) => ensureChunkWithinLimit(chunk));
 }
 
+// Xử lý embed chunks.
 async function embedChunks(chunks = []) {
     if (!chunks.length) {
         return [];
@@ -424,6 +443,7 @@ async function embedChunks(chunks = []) {
     return results;
 }
 
+// Đồng bộ sản phẩm chunks.
 async function syncProductChunks() {
     const sourceType = 'product';
     await ChatRag.updateSyncState(sourceType, {
@@ -448,6 +468,7 @@ async function syncProductChunks() {
     return embeddedChunks.length;
 }
 
+// Đồng bộ knowledge chunks.
 async function syncKnowledgeChunks() {
     const sourceType = 'knowledge';
     await ChatRag.updateSyncState(sourceType, {
@@ -471,11 +492,13 @@ async function syncKnowledgeChunks() {
     return embeddedChunks.length;
 }
 
+// Xử lý run sync task.
 async function runSyncTask(sourceType, syncFn) {
     if (syncTasks.has(sourceType)) {
         return syncTasks.get(sourceType);
     }
 
+    // Xử lý task.
     const task = (async () => {
         try {
             return await syncFn();
@@ -496,6 +519,7 @@ async function runSyncTask(sourceType, syncFn) {
     return task;
 }
 
+// Xử lý wait cho task với timeout.
 function waitForTaskWithTimeout(task, timeoutMs = DEFAULT_READY_WAIT_TIMEOUT_MS) {
     if (!task || !Number.isFinite(timeoutMs) || timeoutMs <= 0) {
         return task;
@@ -510,12 +534,14 @@ function waitForTaskWithTimeout(task, timeoutMs = DEFAULT_READY_WAIT_TIMEOUT_MS)
     ]);
 }
 
+// Lên lịch source refresh.
 function scheduleSourceRefresh(sourceType, syncFn) {
     runSyncTask(sourceType, syncFn).catch((error) => {
         console.error(`Chat RAG background sync error (${sourceType}):`, error.message || error);
     });
 }
 
+// Đảm bảo source ready.
 async function ensureSourceReady(sourceType, syncFn, options = {}) {
     const waitForReady = Boolean(options.waitForReady);
     const waitTimeoutMs = Math.max(0, Number.parseInt(options.waitTimeoutMs, 10) || DEFAULT_READY_WAIT_TIMEOUT_MS);
@@ -548,6 +574,7 @@ async function ensureSourceReady(sourceType, syncFn, options = {}) {
     return { ready: true, chunkCount: Number(result || 0), stale: false };
 }
 
+// Đảm bảo chat rag ready.
 async function ensureChatRagReady(options = {}) {
     const product = await ensureSourceReady('product', syncProductChunks, options);
     const knowledge = await ensureSourceReady('knowledge', syncKnowledgeChunks, options);
@@ -557,12 +584,14 @@ async function ensureChatRagReady(options = {}) {
     };
 }
 
+// Xử lý score chunk.
 function scoreChunk(chunk, query, queryEmbedding) {
     const vectorScore = cosineSimilarity(queryEmbedding, chunk.embedding_vector);
     const lexicalBonus = computeLexicalBonus(query, `${chunk.title}\n${chunk.content}`);
     return combineScores(vectorScore, lexicalBonus);
 }
 
+// Lấy sản phẩm theo rag matches.
 async function getProductsByRagMatches(matches = []) {
     const bestMatchesByProductId = new Map();
 
@@ -606,6 +635,7 @@ async function getProductsByRagMatches(matches = []) {
         .filter(Boolean);
 }
 
+// Xử lý retrieve chat rag context.
 async function retrieveChatRagContext(query, options = {}) {
     const normalizedQuery = String(query || '').trim();
     if (!normalizedQuery) {
@@ -689,6 +719,7 @@ async function retrieveChatRagContext(query, options = {}) {
     };
 }
 
+// Đồng bộ chat rag index.
 async function syncChatRagIndex() {
     await ensureChatRagReady({
         waitForReady: true,

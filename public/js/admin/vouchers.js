@@ -1,9 +1,11 @@
+// File public/js/admin/vouchers.js: xử lý tương tác giao diện admin cho module vouchers.
 const adminVouchersBootstrap = JSON.parse(document.getElementById('adminVouchersBootstrap').textContent);
 const adminVoucherProducts = adminVouchersBootstrap.products || [];
 const adminSubscriberCount = Number(adminVouchersBootstrap.subscriberCount || 0);
 const adminVouchers = adminVouchersBootstrap.vouchers || [];
 const adminVouchersMap = new Map(adminVouchers.map((voucher) => [Number(voucher.id), voucher]));
 
+// Xử lý escape html.
 function escapeHtml(value) {
     return String(value || '')
         .replace(/&/g, '&amp;')
@@ -13,6 +15,7 @@ function escapeHtml(value) {
         .replace(/'/g, '&#39;');
 }
 
+// Hiển thị sản phẩm checklist.
 function renderProductChecklist(containerId, selectedIds = [], options = {}) {
     const container = document.getElementById(containerId);
     if (!container) {
@@ -47,6 +50,7 @@ function renderProductChecklist(containerId, selectedIds = [], options = {}) {
     }).join('');
 }
 
+// Lọc sản phẩm checklist.
 function filterProductChecklist(input, containerId) {
     const container = document.getElementById(containerId);
     if (!container) {
@@ -60,6 +64,7 @@ function filterProductChecklist(input, containerId) {
     });
 }
 
+// Xử lý set checklist state.
 function setChecklistState(containerId, checked) {
     const container = document.getElementById(containerId);
     if (!container) {
@@ -71,6 +76,7 @@ function setChecklistState(containerId, checked) {
     });
 }
 
+// Lấy checked sản phẩm ids.
 function getCheckedProductIds(containerId) {
     const container = document.getElementById(containerId);
     if (!container) {
@@ -82,6 +88,7 @@ function getCheckedProductIds(containerId) {
         .filter((value) => Number.isInteger(value) && value > 0);
 }
 
+// Xử lý vào datetime local.
 function toDatetimeLocal(value) {
     if (!value) {
         return '';
@@ -96,6 +103,7 @@ function toDatetimeLocal(value) {
     return new Date(date.getTime() - timezoneOffset).toISOString().slice(0, 16);
 }
 
+// Đóng modal.
 function closeModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
@@ -103,6 +111,7 @@ function closeModal(modalId) {
     }
 }
 
+// Mở modal.
 function openModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
@@ -110,6 +119,7 @@ function openModal(modalId) {
     }
 }
 
+// Xử lý confirm action.
 async function confirmAction(options) {
     if (typeof showGlobalConfirm === 'function') {
         return showGlobalConfirm(options);
@@ -118,6 +128,7 @@ async function confirmAction(options) {
     return window.confirm(options?.message || 'Bạn có chắc muốn tiếp tục?');
 }
 
+// Bật/tắt max discount.
 function toggleMaxDiscount(selectId = 'voucherType', groupId = 'maxDiscountGroup') {
     const typeElement = document.getElementById(selectId);
     const maxDiscountGroup = document.getElementById(groupId);
@@ -139,6 +150,7 @@ function toggleMaxDiscount(selectId = 'voucherType', groupId = 'maxDiscountGroup
     }
 }
 
+// Đồng bộ mã giảm giá percentage warning.
 function syncVoucherPercentageWarning(selectId = 'voucherType', inputId = 'voucherValue', warningId = 'voucherValueWarning') {
     const typeElement = document.getElementById(selectId);
     const valueInput = document.getElementById(inputId);
@@ -158,6 +170,7 @@ function syncVoucherPercentageWarning(selectId = 'voucherType', inputId = 'vouch
     }
 }
 
+// Bật/tắt mã giảm giá value constraints.
 function toggleVoucherValueConstraints(selectId = 'voucherType', inputId = 'voucherValue', warningId = 'voucherValueWarning') {
     const typeElement = document.getElementById(selectId);
     const valueInput = document.getElementById(inputId);
@@ -177,6 +190,7 @@ function toggleVoucherValueConstraints(selectId = 'voucherType', inputId = 'vouc
     syncVoucherPercentageWarning(selectId, inputId, warningId);
 }
 
+// Xử lý edit mã giảm giá.
 function editVoucher(voucherId) {
     const voucher = adminVouchersMap.get(Number(voucherId));
     const form = document.getElementById('editVoucherForm');
@@ -209,6 +223,7 @@ function editVoucher(voucherId) {
     openModal('editVoucherModal');
 }
 
+// Xử lý submit edit mã giảm giá.
 async function submitEditVoucher(event) {
     event.preventDefault();
 
@@ -259,6 +274,7 @@ async function submitEditVoucher(event) {
     }
 }
 
+// Xóa mã giảm giá.
 async function deleteVoucher(voucherId) {
     const voucher = adminVouchersMap.get(Number(voucherId));
     const confirmed = await confirmAction({
@@ -290,6 +306,7 @@ async function deleteVoucher(voucherId) {
     }
 }
 
+// Bật/tắt mã giảm giá trạng thái.
 async function toggleVoucherStatus(voucherId, newStatus) {
     try {
         const response = await fetch('/admin/vouchers/' + voucherId + '/status', {
@@ -310,12 +327,14 @@ async function toggleVoucherStatus(voucherId, newStatus) {
     }
 }
 
+// Xử lý show toast.
 function showToast(message, type = 'success') {
     if (typeof showGlobalToast === 'function') {
         showGlobalToast(message, type);
     }
 }
 
+// Mở add mã giảm giá modal.
 function openAddVoucherModal() {
     const section = document.querySelector('.admin-section--collapsible');
     if (section) {
@@ -324,6 +343,7 @@ function openAddVoucherModal() {
     }
 }
 
+// Mở mã giảm giá email modal.
 function openVoucherEmailModal(voucherId = null) {
     const select = document.getElementById('voucherEmailSelect');
 
@@ -339,6 +359,7 @@ function openVoucherEmailModal(voucherId = null) {
     openModal('voucherEmailModal');
 }
 
+// Gửi mã giảm giá announcement email.
 async function sendVoucherAnnouncementEmail(voucherId) {
     const response = await fetch('/admin/vouchers/' + voucherId + '/email', {
         method: 'POST',
@@ -354,6 +375,7 @@ async function sendVoucherAnnouncementEmail(voucherId) {
     closeModal('voucherEmailModal');
 }
 
+// Xử lý confirm and send mã giảm giá email.
 async function confirmAndSendVoucherEmail(voucherId) {
     if (adminSubscriberCount <= 0) {
         showToast('Hiện chưa có người dùng đăng ký nhận bản tin.', 'warning');
@@ -384,6 +406,7 @@ async function confirmAndSendVoucherEmail(voucherId) {
     }
 }
 
+// Xử lý submit mã giảm giá email form.
 async function submitVoucherEmailForm(event) {
     event.preventDefault();
 
@@ -398,11 +421,13 @@ async function submitVoucherEmailForm(event) {
     await confirmAndSendVoucherEmail(voucherId);
 }
 
+// Bật/tắt section.
 function toggleSection(titleElement) {
     const section = titleElement.closest('.admin-section--collapsible');
     section.classList.toggle('is-open');
 }
 
+// Gan su kien nguoi dung cho thanh phan giao dien lien quan.
 document.addEventListener('DOMContentLoaded', function() {
     renderProductChecklist('createVoucherProducts', [], {
         prefix: 'create-voucher'
@@ -412,46 +437,56 @@ document.addEventListener('DOMContentLoaded', function() {
     toggleVoucherValueConstraints('editVoucherType', 'editVoucherValue', 'editVoucherValueWarning');
 
     document.querySelectorAll('[data-admin-toggle="section"]').forEach((button) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => toggleSection(button));
     });
 
     document.querySelectorAll('[data-voucher-action="scroll-to-form"]').forEach((button) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', openAddVoucherModal);
     });
 
     document.querySelectorAll('[data-voucher-action="open-email-modal"]').forEach((button) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => openVoucherEmailModal());
     });
 
     document.querySelectorAll('[data-checklist-search]').forEach((input) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         input.addEventListener('input', () => filterProductChecklist(input, input.dataset.checklistSearch));
     });
 
     document.querySelectorAll('[data-checklist-toggle]').forEach((button) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => {
             setChecklistState(button.dataset.checklistTarget, button.dataset.checklistToggle === 'all');
         });
     });
 
     document.querySelectorAll('[data-voucher-action="edit"]').forEach((button) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => editVoucher(button.dataset.voucherId));
     });
 
     document.querySelectorAll('[data-voucher-action="toggle-status"]').forEach((button) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => {
             toggleVoucherStatus(button.dataset.voucherId, button.dataset.voucherNextState === 'true');
         });
     });
 
     document.querySelectorAll('[data-voucher-action="delete"]').forEach((button) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => deleteVoucher(button.dataset.voucherId));
     });
 
     document.querySelectorAll('[data-voucher-action="email"]').forEach((button) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => confirmAndSendVoucherEmail(button.dataset.voucherId));
     });
 
     document.querySelectorAll('[data-voucher-modal-close]').forEach((button) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => closeModal(button.dataset.voucherModalClose));
     });
 
@@ -474,6 +509,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         modal.addEventListener('click', function(event) {
             if (event.target === modal) {
                 modal.style.display = 'none';

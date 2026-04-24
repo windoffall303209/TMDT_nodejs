@@ -1,3 +1,4 @@
+<%# File views/admin/storefront.ejs: hien thi giao dien va du lieu cho trang tuong ung. %>
 <%- include('../partials/admin-header', { currentPage: 'storefront', pageStyles: ['/css/admin/storefront.css'] }) %>
 
 <!-- ===== Trang cấu hình storefront từ admin ===== -->
@@ -35,6 +36,7 @@
                 Sau khi lưu, storefront sẽ cập nhật ngay ở các trang sản phẩm và trang chủ.
             </p>
 
+            <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
             <form action="/admin/storefront" method="POST" class="admin-form storefront-settings-form">
                 <div class="storefront-settings-grid">
                     <div class="storefront-settings-card">

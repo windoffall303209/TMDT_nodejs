@@ -1,3 +1,4 @@
+// File __tests__/productController.test.js: kiểm thử tự động cho module productController.test.
 process.env.NODE_ENV = 'test';
 
 jest.mock('../models/Product', () => ({
@@ -21,6 +22,7 @@ const Product = require('../models/Product');
 const Category = require('../models/Category');
 const productController = require('../controllers/productController');
 
+// Tạo response giả lập cho test.
 function createRes() {
     const res = {};
     res.status = jest.fn().mockReturnValue(res);
@@ -289,7 +291,7 @@ describe('productController.updateProductReview', () => {
                 }
             ]
         });
-        expect(res.redirect).toHaveBeenCalledWith('/products/ao-gio');
+        expect(res.redirect).toHaveBeenCalledWith('/products/ao-gio?review=updated');
     });
 
     it('rejects updates that exceed review media limits', async () => {

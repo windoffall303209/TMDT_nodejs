@@ -1,3 +1,4 @@
+// File app.js: mã nguồn cho module app.
 require("dotenv").config();
 const express = require("express");
 const path = require("path");
@@ -9,10 +10,12 @@ const bodyParser = require("body-parser");
 const { optionalAuth } = require("./middleware/auth");
 const headerCategories = require("./middleware/headerCategories");
 const { storefrontSettings } = require("./middleware/storefrontSettings");
+const privacy = require("./utils/privacy");
 
 const FORM_PARAMETER_LIMIT = 20000;
 const FORM_BODY_LIMIT = "5mb";
 
+// Tạo ứng dụng Express và gắn middleware/route.
 function createApp() {
   const app = express();
   app.set("trust proxy", true);
@@ -37,6 +40,7 @@ function createApp() {
           scriptSrcAttr: ["'none'"],
           fontSrc: ["'self'", "https://fonts.gstatic.com"],
           imgSrc: ["'self'", "data:", "blob:", "https:"],
+          mediaSrc: ["'self'", "blob:", "https:"],
           connectSrc: ["'self'"],
           formAction: paymentFormActionSources,
         },
@@ -99,6 +103,7 @@ function createApp() {
   app.use((req, res, next) => {
     res.locals.user = req.user || null;
     res.locals.path = req.originalUrl || req.path;
+    res.locals.privacy = privacy;
     next();
   });
 

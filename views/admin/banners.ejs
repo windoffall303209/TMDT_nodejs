@@ -1,3 +1,4 @@
+<%# File views/admin/banners.ejs: hien thi giao dien va du lieu cho trang tuong ung. %>
 <%- include('../partials/admin-header', { currentPage: 'banners', pageStyles: ['/css/admin/banners.css'] }) %>
 
 <div class="admin-page">
@@ -22,6 +23,7 @@
                     <polyline points="6 9 12 15 18 9"/>
                 </svg>
             </h3>
+            <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
             <form action="/admin/banners" method="POST" enctype="multipart/form-data" class="admin-form admin-section__content">
                 <div class="admin-form__row">
                     <div class="admin-form__group">
@@ -177,6 +179,7 @@
                 </svg>
             </button>
         </div>
+        <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
         <form id="editBannerForm" class="admin-form">
             <input type="hidden" id="editBannerId">
             <div class="admin-form__group" style="margin-bottom:16px;">
@@ -204,6 +207,7 @@
     </div>
 </div>
 
+<%# Bootstrap du lieu JSON cho script phia client. %>
 <script type="application/json" id="bannersBootstrap"><%- JSON.stringify(
     (banners || []).map(b => ({ id: b.id, title: b.title || '', subtitle: b.subtitle || '', link_url: b.link_url || '', image_url: b.image_url || '' }))
 ).replace(/</g, '\u003c') %></script>

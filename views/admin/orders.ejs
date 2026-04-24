@@ -1,3 +1,4 @@
+<%# File views/admin/orders.ejs: hien thi giao dien va du lieu cho trang tuong ung. %>
 <%- include('../partials/admin-header', { currentPage: 'orders', pageStyles: ['/css/admin/orders.css'] }) %>
 
 <div class="admin-page">
@@ -28,11 +29,11 @@
             </div>
             <div class="stat-card stat-card--purple">
                 <h3 class="stat-card__label">Chờ xử lý</h3>
-                <p class="stat-card__value"><%= orders ? orders.filter(o => o.status === 'pending').length : 0 %></p>
+                <p class="stat-card__value"><%= orders ? orders.filter(o => o.status === 'pending' || o.status === 'pending_payment').length : 0 %></p>
             </div>
             <div class="stat-card stat-card--green">
-                <h3 class="stat-card__label">Đã giao</h3>
-                <p class="stat-card__value"><%= orders ? orders.filter(o => o.status === 'delivered').length : 0 %></p>
+                <h3 class="stat-card__label">Đã hoàn thành</h3>
+                <p class="stat-card__value"><%= orders ? orders.filter(o => o.status === 'completed').length : 0 %></p>
             </div>
             <div class="stat-card stat-card--pink">
                 <h3 class="stat-card__label">Đã hủy</h3>
@@ -44,10 +45,12 @@
         <div class="admin-section admin-section--tabs">
             <div class="order-tabs">
                 <button class="order-tab active" data-status="all">Tất cả</button>
+                <button class="order-tab" data-status="pending_payment">Chờ thanh toán</button>
                 <button class="order-tab" data-status="pending">Chờ xử lý</button>
                 <button class="order-tab" data-status="confirmed">Đã xác nhận</button>
                 <button class="order-tab" data-status="shipping">Đang giao</button>
                 <button class="order-tab" data-status="delivered">Đã giao</button>
+                <button class="order-tab" data-status="completed">Đã hoàn thành</button>
                 <button class="order-tab" data-status="cancelled">Đã hủy</button>
             </div>
         </div>
@@ -62,6 +65,7 @@
                     <% } %>
                 </p>
             </div>
+            <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
             <form action="/admin/orders" method="GET" class="admin-search-form">
                 <input
                     type="search"
@@ -95,7 +99,11 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <% orders.forEach(order => { %>
+                        <% orders.forEach(order => {
+                            const isPaymentSettled = order.payment_status === 'paid' || ['delivered', 'completed'].includes(order.status);
+                            const paymentStatusText = isPaymentSettled ? 'Đã thanh toán' : (order.payment_method === 'cod' ? 'COD' : 'Chưa thanh toán');
+                            const paymentStatusClass = isPaymentSettled ? 'admin-table__badge--delivered' : (order.payment_method === 'cod' ? 'admin-table__badge--processing' : 'admin-table__badge--pending');
+                        %>
                             <tr data-status="<%= order.status %>">
                                 <td>
                                     <a href="/admin/orders/<%= order.id %>" class="admin-table__link">
@@ -106,7 +114,7 @@
                                     <div class="order-customer">
                                         <span class="order-customer__name"><%= order.user_name || order.recipient_name || 'N/A' %></span>
                                         <% if (order.recipient_phone) { %>
-                                            <span class="order-customer__phone"><%= order.recipient_phone %></span>
+                                            <span class="order-customer__phone"><%= privacy.maskPhone(order.recipient_phone) %></span>
                                         <% } %>
                                     </div>
                                 </td>
@@ -114,18 +122,20 @@
                                     <span class="admin-table__price"><%= (order.final_amount || order.total_amount || 0).toLocaleString('vi-VN') %>đ</span>
                                 </td>
                                 <td class="text-center">
-                                    <% if (order.payment_status === 'paid') { %>
-                                        <span class="admin-table__badge admin-table__badge--delivered">Đã thanh toán</span>
-                                    <% } else { %>
-                                        <span class="admin-table__badge admin-table__badge--pending">Chưa thanh toán</span>
-                                    <% } %>
+                                    <span class="admin-table__badge <%= paymentStatusClass %>"><%= paymentStatusText %></span>
                                 </td>
                                 <td class="text-center">
                                     <select data-order-id="<%= order.id %>" class="order-status-select order-status-select--<%= order.status %>">
+                                        <% if (order.status === 'pending_payment') { %>
+                                            <option value="pending_payment" selected>Chờ thanh toán</option>
+                                        <% } %>
                                         <option value="pending" <%= order.status === 'pending' ? 'selected' : '' %>>Chờ xử lý</option>
                                         <option value="confirmed" <%= order.status === 'confirmed' ? 'selected' : '' %>>Đã xác nhận</option>
                                         <option value="shipping" <%= order.status === 'shipping' ? 'selected' : '' %>>Đang giao</option>
                                         <option value="delivered" <%= order.status === 'delivered' ? 'selected' : '' %>>Đã giao</option>
+                                        <% if (order.status === 'completed') { %>
+                                            <option value="completed" selected disabled>Đã hoàn thành</option>
+                                        <% } %>
                                         <option value="cancelled" <%= order.status === 'cancelled' ? 'selected' : '' %>>Đã hủy</option>
                                     </select>
                                 </td>

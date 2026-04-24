@@ -1,3 +1,4 @@
+<%# File views/products/detail.ejs: hien thi giao dien va du lieu cho trang tuong ung. %>
 <%- include('../partials/header') %>
 
 <link rel="stylesheet" href="/css/product-detail.css">
@@ -178,6 +179,7 @@
         </div>
 
         <% if (product.description) { %>
+            <%# Section gom nhom noi dung chinh cua trang. %>
             <section class="product-description-section">
                 <button type="button" class="product-description__toggle" id="descToggle" aria-expanded="false">
                     <h3>Mô tả sản phẩm</h3>
@@ -192,6 +194,7 @@
         <% } %>
 
         <!-- Khu vực đánh giá: thông báo, form tạo/sửa, danh sách review -->
+        <%# Section gom nhom noi dung chinh cua trang. %>
         <section class="product-reviews" id="productReviewsSection">
             <button
                 type="button"
@@ -235,6 +238,7 @@
                             </div>
 
                             <div class="product-review-state__panel <%= createReviewPanelOpen ? 'is-open' : '' %>" id="createReviewPanel" data-toggle-mode="display">
+                                <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
                                 <form action="<%= reviewFormAction %>" method="POST" enctype="multipart/form-data" class="product-review-form product-review-form--edit">
                                     <div class="product-review-form__header">
                                         <div>
@@ -312,6 +316,13 @@
                                     <div class="product-review-state__summary">
                                         <div class="product-review-item__header">
                                             <div class="product-review-item__identity">
+                                                <span class="product-review-item__avatar">
+                                                    <% if (user.avatar_url) { %>
+                                                        <img src="<%= user.avatar_url %>" alt="<%= user.full_name || 'Bạn' %>">
+                                                    <% } else { %>
+                                                        <%= (user.full_name || 'B').trim().charAt(0).toUpperCase() %>
+                                                    <% } %>
+                                                </span>
                                                 <span class="product-review-item__author"><%= user.full_name || 'Bạn' %></span>
                                             </div>
                                             <span class="product-review-item__date"><%= new Date(existingReview.created_at).toLocaleDateString('vi-VN') %></span>
@@ -357,6 +368,7 @@
                                     </div>
 
                                     <div class="product-review-state__edit <%= editOwnReviewOpen ? 'is-open' : '' %>" id="reviewEditPanel" data-toggle-mode="display">
+                                        <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
                                         <form action="<%= reviewFormAction %>" method="POST" enctype="multipart/form-data" class="product-review-form product-review-form--edit">
                                             <div class="product-review-form__header">
                                                 <div>
@@ -467,11 +479,14 @@
                             <div class="product-review-item">
                                 <div class="product-review-item__header">
                                     <div class="product-review-item__identity">
+                                        <span class="product-review-item__avatar">
+                                            <% if (review.user_avatar) { %>
+                                                <img src="<%= review.user_avatar %>" alt="<%= review.user_name || 'Người dùng' %>">
+                                            <% } else { %>
+                                                <%= (review.user_name || 'N').trim().charAt(0).toUpperCase() %>
+                                            <% } %>
+                                        </span>
                                         <span class="product-review-item__author"><%= review.user_name || 'Người dùng' %></span>
-
-                                        <% if (review.updated_at && review.created_at && new Date(review.updated_at).getTime() !== new Date(review.created_at).getTime()) { %>
-                                            <span class="product-review-item__edited">Đã chỉnh sửa</span>
-                                        <% } %>
                                     </div>
                                     <span class="product-review-item__date"><%= new Date(review.created_at).toLocaleDateString('vi-VN') %></span>
                                 </div>
@@ -513,6 +528,7 @@
 
         <!-- Sản phẩm liên quan cùng danh mục -->
         <% if (relatedProducts && relatedProducts.length > 0) { %>
+            <%# Section gom nhom noi dung chinh cua trang. %>
             <section class="related-products">
                 <div class="home-section__header">
                     <div>
@@ -532,6 +548,7 @@
     </div>
 </div>
 
+<%# Bootstrap du lieu JSON cho script phia client. %>
 <script type="application/json" id="productDetailBootstrap"><%- JSON.stringify({
     productId: product.id,
     variants: product.variants || [],

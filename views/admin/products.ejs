@@ -1,3 +1,4 @@
+<%# File views/admin/products.ejs: hien thi giao dien va du lieu cho trang tuong ung. %>
 <%- include('../partials/admin-header', { currentPage: 'products', pageStyles: ['/css/admin/products.css'] }) %>
 
 <div class="admin-page">
@@ -40,6 +41,7 @@
                     <% } %>
                 </p>
             </div>
+            <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
             <form action="/admin/products" method="GET" class="admin-search-form">
                 <input type="hidden" name="limit" value="<%= pagination ? pagination.limit : 10 %>">
                 <input
@@ -85,6 +87,7 @@
                     </div>
                 </div>
 
+                <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
                 <form action="/admin/products/import" method="POST" enctype="multipart/form-data" class="admin-form">
                     <div class="admin-form__row">
                         <div class="admin-form__group">
@@ -212,6 +215,7 @@
                     <polyline points="6 9 12 15 18 9"/>
                 </svg>
             </h3>
+            <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
             <form id="createProductForm" action="/admin/products" method="POST" enctype="multipart/form-data" class="admin-form admin-section__content">
                 <div class="admin-form__row">
                     <div class="admin-form__group">
@@ -423,6 +427,7 @@
                 </svg>
             </button>
         </div>
+        <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
         <form id="editForm" class="admin-form product-edit-form">
             <input type="hidden" id="editProductId">
             <div class="product-edit-form__grid">
@@ -503,6 +508,7 @@
         <!-- Add New Image -->
         <div class="image-section">
             <h4 class="image-section__title">Thêm ảnh mới</h4>
+            <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
             <form id="addImageForm" enctype="multipart/form-data" class="image-upload">
                 <div class="image-upload__file">
                     <input type="file" id="newImageFile" name="images" accept="image/*" multiple class="admin-form__input">

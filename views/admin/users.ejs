@@ -1,3 +1,4 @@
+<%# File views/admin/users.ejs: hien thi giao dien va du lieu cho trang tuong ung. %>
 <%- include('../partials/admin-header', { currentPage: 'users', pageStyles: ['/css/admin/users.css'] }) %>
 
 <div class="admin-page">
@@ -57,12 +58,12 @@
                                         <div class="user-info__details">
                                             <span class="user-info__name"><%= u.full_name || 'Chưa đặt tên' %></span>
                                             <% if (u.phone) { %>
-                                                <span class="user-info__phone"><%= u.phone %></span>
+                                                <span class="user-info__phone"><%= privacy.maskPhone(u.phone) %></span>
                                             <% } %>
                                         </div>
                                     </div>
                                 </td>
-                                <td><%= u.email %></td>
+                                <td><%= privacy.maskEmail(u.email) %></td>
                                 <td class="text-center">
                                     <% if (u.role === 'admin') { %>
                                         <span class="admin-table__badge admin-table__badge--processing">Admin</span>

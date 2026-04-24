@@ -1,6 +1,7 @@
+// File routes/chatRoutes.js: khai báo endpoint và middleware cho module chatRoutes.
 const express = require('express');
 const router = express.Router();
-const chatController = require('../controllers/chatController');
+const chatController = require('../controllers/chat');
 const { verifyToken, isAdmin } = require('../middleware/auth');
 const { handleChatMediaUpload } = require('../middleware/chatUpload');
 

@@ -1,3 +1,4 @@
+// File public/js/admin/order-detail.js: xử lý tương tác giao diện admin cho module order detail.
 function updateStatusSelectClass(select) {
     if (!select) {
         return;
@@ -6,10 +7,12 @@ function updateStatusSelectClass(select) {
     select.className = `admin-form__select order-status-select order-status-select--${select.value}`;
 }
 
+// Lấy field value.
 function getFieldValue(id) {
     return document.getElementById(id)?.value ?? '';
 }
 
+// Tạo dữ liệu theo dõi payload.
 function buildTrackingPayload(statusValue) {
     return {
         status: statusValue,
@@ -25,6 +28,7 @@ function buildTrackingPayload(statusValue) {
     };
 }
 
+// Khởi tạo quản trị đơn hàng chi tiết trang.
 function initAdminOrderDetailPage() {
     const page = document.querySelector('.admin-page[data-order-id]');
     const orderId = page?.dataset.orderId;
@@ -35,9 +39,11 @@ function initAdminOrderDetailPage() {
     }
 
     updateStatusSelectClass(statusSelect);
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     statusSelect.addEventListener('change', () => updateStatusSelectClass(statusSelect));
 
     document.querySelectorAll('[data-order-detail-action="update-status"]').forEach((button) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', async () => {
             try {
                 const response = await fetch(`/admin/orders/${orderId}/status`, {
@@ -67,4 +73,5 @@ function initAdminOrderDetailPage() {
     });
 }
 
+// Gan su kien nguoi dung cho thanh phan giao dien lien quan.
 document.addEventListener('DOMContentLoaded', initAdminOrderDetailPage);

@@ -1,3 +1,4 @@
+// File services/productVisualEmbeddingService.js: tạo và tra cứu vector ảnh sản phẩm cho tìm kiếm tương tự.
 const crypto = require('crypto');
 const pool = require('../config/database');
 const Product = require('../models/Product');
@@ -6,6 +7,7 @@ const ProductImageEmbedding = require('../models/ProductImageEmbedding');
 const DEFAULT_EMBED_MODEL = 'nvidia/nvclip';
 const DEFAULT_EMBED_BASE_URL = 'https://integrate.api.nvidia.com/v1';
 
+// Lấy endpoint API dùng để tạo visual embedding từ biến môi trường hoặc cấu hình mặc định.
 function resolveEmbedBaseUrl() {
     return String(
         process.env.PRODUCT_VISUAL_EMBED_BASE_URL || process.env.OPENAI_BASE_URL || DEFAULT_EMBED_BASE_URL
@@ -14,20 +16,24 @@ function resolveEmbedBaseUrl() {
         .replace(/\/$/, '');
 }
 
+// Lấy API key cho dịch vụ visual embedding, ưu tiên khóa riêng của sản phẩm.
 function resolveVisualApiKey() {
     return String(
         process.env.PRODUCT_VISUAL_NVIDIA_API_KEY || process.env.NVIDIA_API_KEY || process.env.OPENAI_API_KEY || ''
     ).trim();
 }
 
+// Xác định model embedding ảnh đang được cấu hình cho hệ thống.
 function resolveModel() {
     return String(process.env.PRODUCT_VISUAL_EMBED_MODEL || DEFAULT_EMBED_MODEL).trim() || DEFAULT_EMBED_MODEL;
 }
 
+// Đọc timeout gọi API embedding và đặt ngưỡng tối thiểu để tránh hủy request quá sớm.
 function getVisualEmbeddingTimeoutMs() {
     return Math.max(4000, Number.parseInt(process.env.PRODUCT_VISUAL_EMBED_TIMEOUT_MS, 10) || 10000);
 }
 
+// Gọi HTTP có timeout riêng để request embedding không treo tiến trình.
 async function fetchWithTimeout(url, options = {}, timeoutMs = getVisualEmbeddingTimeoutMs()) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
@@ -52,10 +58,12 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = getVisualEmbeddin
     }
 }
 
+// Kiểm tra hệ thống đã có khóa API để bật tính năng embedding ảnh hay chưa.
 function hasVisualEmbeddingCredentials() {
     return Boolean(resolveVisualApiKey());
 }
 
+// Chuẩn hóa vector theo L2 để so sánh cosine ổn định hơn.
 function l2Normalize(vector = []) {
     const arr = Array.isArray(vector) ? vector.map(Number) : [];
     let sum = 0;
@@ -66,6 +74,7 @@ function l2Normalize(vector = []) {
     return arr.map((v) => v / mag);
 }
 
+// Tính độ tương đồng cosine giữa hai vector ảnh cùng kích thước.
 function cosineSimilarity(left = [], right = []) {
     if (!Array.isArray(left) || !Array.isArray(right) || left.length === 0 || left.length !== right.length) {
         return 0;
@@ -77,15 +86,16 @@ function cosineSimilarity(left = [], right = []) {
     return dot;
 }
 
-/** NV-CLIP hosted API: inline base64 only for images ≤ ~200KB (decoded); jpg/png/jpeg only. */
+/** NV-CLIP hosted API: inline base64 chỉ nhận ảnh đã decode khoảng <= 200KB, định dạng jpg/png/jpeg. */
 const NV_CLIP_MAX_IMAGE_BYTES = 200 * 1024;
 
 /**
- * NV-CLIP chỉ chấp nhận png/jpg/jpeg trong payload; WebP/AVIF/… phải decode thật sang JPEG.
- * Không được "return sớm" với buffer gốc nếu đoán sai định dạng (vd. WebP < 200KB bị coi là jpeg).
+ * NV-CLIP chỉ chấp nhận png/jpg/jpeg trong payload; WebP/AVIF phải decode thật sang JPEG.
+ * Không được trả về buffer gốc nếu đoán sai định dạng, ví dụ WebP nhỏ bị coi là JPEG.
  */
 async function prepareImageBufferForNvClip(buffer) {
     const sharp = require('sharp');
+    // Nén ảnh theo từng mức kích thước/chất lượng để phù hợp giới hạn payload của NV-CLIP.
     const shrink = async (maxSide, quality) =>
         sharp(buffer)
             .rotate()
@@ -119,6 +129,7 @@ async function prepareImageBufferForNvClip(buffer) {
     return { buffer: out, mimeExt: 'jpeg' };
 }
 
+// Trích vector embedding từ response chuẩn OpenAI-compatible của NVIDIA.
 function parseOpenAiEmbeddingResponse(json) {
     if (!json || typeof json !== 'object' || !Array.isArray(json.data) || !json.data.length) {
         return null;
@@ -131,6 +142,7 @@ function parseOpenAiEmbeddingResponse(json) {
     return null;
 }
 
+// Tải ảnh sản phẩm từ URL về buffer để chuẩn bị gửi sang dịch vụ embedding.
 async function fetchImageBuffer(imageUrl) {
     const response = await fetch(String(imageUrl || '').trim(), {
         headers: { 'User-Agent': 'TMDT-VisualEmbed/1.0' },
@@ -142,11 +154,12 @@ async function fetchImageBuffer(imageUrl) {
     return Buffer.from(await response.arrayBuffer());
 }
 
+// Chuyển buffer ảnh thành vector embedding thông qua API NVIDIA/OpenAI-compatible.
 async function embedImageBuffer(imageBuffer, options = {}) {
     const apiKey = resolveVisualApiKey();
     if (!apiKey) {
         throw new Error(
-            'Visual embedding API key missing: set OPENAI_API_KEY (nvapi-…) or PRODUCT_VISUAL_NVIDIA_API_KEY.'
+            'Visual embedding API key missing: set OPENAI_API_KEY (nvapi-...) or PRODUCT_VISUAL_NVIDIA_API_KEY.'
         );
     }
 
@@ -216,15 +229,18 @@ async function embedImageBuffer(imageBuffer, options = {}) {
     throw new Error('NVIDIA visual embedding failed after retries');
 }
 
+// Tạo vector embedding cho ảnh sản phẩm lấy trực tiếp từ URL.
 async function embedImageFromUrl(imageUrl) {
     const buffer = await fetchImageBuffer(imageUrl);
     return embedImageBuffer(buffer);
 }
 
+// Tạo hash nội dung URL ảnh để biết embedding hiện có còn dùng được hay không.
 function hashContent(value) {
     return crypto.createHash('sha256').update(String(value || '')).digest('hex');
 }
 
+// Đồng bộ embedding cho ảnh đại diện của một sản phẩm và lưu vào bảng tìm kiếm ảnh.
 async function syncPrimaryProductImageEmbedding(productId) {
     if (!hasVisualEmbeddingCredentials()) {
         return { skipped: true, reason: 'no_token' };
@@ -251,7 +267,7 @@ async function syncPrimaryProductImageEmbedding(productId) {
         return { skipped: true, reason: 'unchanged' };
     }
 
-    console.log(`[visual-sync] product ${id}: calling NVIDIA embed (fetch + resize + API)…`);
+    console.log(`[visual-sync] product ${id}: calling NVIDIA embed (fetch + resize + API)...`);
     const vector = await embedImageFromUrl(imageUrl);
     await ProductImageEmbedding.upsertForProduct({
         productId: id,
@@ -266,6 +282,7 @@ async function syncPrimaryProductImageEmbedding(productId) {
     return { skipped: false, productId: id };
 }
 
+// Đưa việc đồng bộ embedding ảnh sản phẩm vào hàng đợi nền sau khi dữ liệu thay đổi.
 function scheduleProductVisualEmbeddingSync(productId) {
     if (!hasVisualEmbeddingCredentials()) {
         return;
@@ -277,6 +294,7 @@ function scheduleProductVisualEmbeddingSync(productId) {
     });
 }
 
+// Tìm sản phẩm có ảnh tương tự ảnh đầu vào bằng cosine similarity trên vector đã lưu.
 async function searchSimilarProductsByImageUrl(imageUrl, limit = 12) {
     if (!hasVisualEmbeddingCredentials() || !String(imageUrl || '').trim()) {
         return [];
@@ -335,6 +353,7 @@ async function searchSimilarProductsByImageUrl(imageUrl, limit = 12) {
         .filter(Boolean);
 }
 
+// Quét toàn bộ sản phẩm đang bật để tạo lại embedding ảnh phục vụ tìm kiếm tương tự.
 async function syncAllProductImageEmbeddings(options = {}) {
     if (!hasVisualEmbeddingCredentials()) {
         throw new Error('Visual embedding API key not set (OPENAI_API_KEY or PRODUCT_VISUAL_NVIDIA_API_KEY)');
@@ -355,7 +374,7 @@ async function syncAllProductImageEmbeddings(options = {}) {
     for (let i = 0; i < rows.length; i += 1) {
         const row = rows[i];
         if (i === 0 || (i + 1) % logEvery === 0 || i === rows.length - 1) {
-            console.log(`[visual-sync] … ${i + 1}/${rows.length} (product id ${row.id})`);
+            console.log(`[visual-sync] ... ${i + 1}/${rows.length} (product id ${row.id})`);
         }
         try {
             const result = await syncPrimaryProductImageEmbedding(row.id);

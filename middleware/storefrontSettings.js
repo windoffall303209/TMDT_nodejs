@@ -1,3 +1,4 @@
+// File middleware/storefrontSettings.js: middleware xử lý request cho module storefrontSettings.
 const StorefrontSetting = require('../models/StorefrontSetting');
 
 const SETTINGS_CACHE_TTL_MS = 30 * 1000;
@@ -6,6 +7,7 @@ let cachedSettings = null;
 let cacheExpiresAt = 0;
 let pendingLoad = null;
 
+// Nạp storefront settings.
 async function loadStorefrontSettings() {
     const now = Date.now();
     if (cachedSettings && now < cacheExpiresAt) {
@@ -27,12 +29,14 @@ async function loadStorefrontSettings() {
     return pendingLoad;
 }
 
+// Xử lý invalidate storefront settings cache.
 function invalidateStorefrontSettingsCache() {
     cachedSettings = null;
     cacheExpiresAt = 0;
     pendingLoad = null;
 }
 
+// Xử lý storefront settings.
 async function storefrontSettings(req, res, next) {
     try {
         const settings = await loadStorefrontSettings();

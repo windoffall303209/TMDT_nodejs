@@ -1,3 +1,4 @@
+// File public/js/admin/chat.js: xử lý tương tác giao diện admin cho module chat.
 document.body.classList.add('admin-body--chat');
 document.querySelector('.admin-main-wrapper')?.classList.add('admin-main-wrapper--chat');
 document.querySelector('.admin-main-content')?.classList.add('admin-main-content--chat');
@@ -13,12 +14,27 @@ const adminChatState = {
     listPollInterval: null
 };
 
+// Xử lý show quản trị chat toast.
 function showAdminChatToast(message, type = 'success') {
     if (typeof showGlobalToast === 'function') {
         showGlobalToast(message, type);
     }
 }
 
+// Che email.
+function maskEmail(value) {
+    const email = String(value || '').trim();
+    const atIndex = email.indexOf('@');
+    if (atIndex <= 0) return email || '';
+    const local = email.slice(0, atIndex);
+    const domain = email.slice(atIndex);
+    if (local.length <= 5) {
+        return `${local.slice(0, 1)}****${local.slice(-1)}${domain}`;
+    }
+    return `${local.slice(0, 3)}****${local.slice(-2)}${domain}`;
+}
+
+// Định dạng cuộc trò chuyện time.
 function formatConversationTime(dateString) {
     if (!dateString) {
         return '';
@@ -42,26 +58,31 @@ function formatConversationTime(dateString) {
     return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
 }
 
+// Lấy cuộc trò chuyện display name.
 function getConversationDisplayName(conversation) {
-    return conversation.user_name || conversation.user_email || conversation.guest_name || 'Khách';
+    return conversation.user_name || maskEmail(conversation.user_email) || conversation.guest_name || 'Khách';
 }
 
+// Lấy cuộc trò chuyện email.
 function getConversationEmail(conversation) {
     if (conversation.user_email) {
-        return conversation.user_email;
+        return maskEmail(conversation.user_email);
     }
 
     return conversation.user_id ? 'Khách hàng đã đăng nhập' : 'Khách vãng lai';
 }
 
+// Lấy cuộc trò chuyện trạng thái label.
 function getConversationStatusLabel(status) {
     return status === 'closed' ? 'Đã đóng' : 'Đang mở';
 }
 
+// Lấy cuộc trò chuyện mode label.
 function getConversationModeLabel(mode) {
     return mode === 'manual' ? 'Admin tiếp quản' : 'AI tự động';
 }
 
+// Cập nhật title unread badge.
 function updateTitleUnreadBadge(count) {
     const badge = document.getElementById('adminChatUnreadCountBadge');
     if (!badge) {
@@ -78,6 +99,7 @@ function updateTitleUnreadBadge(count) {
     badge.textContent = `${count} chưa đọc`;
 }
 
+// Cập nhật danh sách summary.
 function updateListSummary() {
     const summary = document.getElementById('chatListSummary');
     if (!summary) {
@@ -95,6 +117,7 @@ function updateListSummary() {
         : totalLabel;
 }
 
+// Lấy filtered conversations.
 function getFilteredConversations() {
     const keyword = String(adminChatState.searchTerm || '').trim().toLowerCase();
     if (!keyword) {
@@ -116,11 +139,13 @@ function getFilteredConversations() {
     });
 }
 
+// Cập nhật chat search.
 function updateChatSearch(value) {
     adminChatState.searchTerm = value || '';
     renderConversationList();
 }
 
+// Tạo cuộc trò chuyện item.
 function createConversationItem(conversation) {
     const button = document.createElement('button');
     button.type = 'button';
@@ -135,6 +160,7 @@ function createConversationItem(conversation) {
         button.classList.add('unread');
     }
 
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     button.addEventListener('click', () => {
         selectConversation(conversation.id);
     });
@@ -211,6 +237,7 @@ function createConversationItem(conversation) {
     return button;
 }
 
+// Hiển thị cuộc trò chuyện danh sách.
 function renderConversationList() {
     const container = document.getElementById('chatListItems');
     if (!container) {
@@ -240,6 +267,7 @@ function renderConversationList() {
     updateTitleUnreadBadge(adminChatState.conversations.filter((conversation) => conversation.unread_count > 0).length);
 }
 
+// Tạo tin nhắn element.
 function createMessageElement(message) {
     const wrapper = document.createElement('div');
     wrapper.className = `admin-chat-msg admin-chat-msg--${message.sender_type}`;
@@ -265,6 +293,7 @@ function createMessageElement(message) {
     return wrapper;
 }
 
+// Hiển thị tin nhắn.
 function renderMessages(messages, scrollToBottom = false) {
     const container = document.getElementById('adminChatMessages');
     if (!container) {
@@ -286,6 +315,7 @@ function renderMessages(messages, scrollToBottom = false) {
     }
 }
 
+// Cập nhật cuộc trò chuyện header.
 function updateConversationHeader(conversation) {
     const name = document.getElementById('chatUserName');
     const email = document.getElementById('chatUserEmail');
@@ -340,6 +370,7 @@ function updateConversationHeader(conversation) {
     }
 }
 
+// Xử lý upsert cuộc trò chuyện.
 function upsertConversation(conversation, messages = null) {
     if (!conversation) {
         return;
@@ -375,6 +406,7 @@ function upsertConversation(conversation, messages = null) {
     });
 }
 
+// Xử lý refresh current cuộc trò chuyện.
 async function refreshCurrentConversation({ forceScroll = false } = {}) {
     if (!adminChatState.currentConversationId) {
         return;
@@ -400,6 +432,7 @@ async function refreshCurrentConversation({ forceScroll = false } = {}) {
     }
 }
 
+// Xử lý select cuộc trò chuyện.
 async function selectConversation(conversationId, options = {}) {
     adminChatState.currentConversationId = conversationId;
     adminChatState.currentConversation = adminChatState.conversations.find((conversation) => conversation.id === conversationId) || null;
@@ -416,6 +449,7 @@ async function selectConversation(conversationId, options = {}) {
     }
 }
 
+// Xử lý refresh cuộc trò chuyện danh sách.
 async function refreshConversationList() {
     try {
         const response = await fetch('/chat/admin/conversations', { credentials: 'same-origin' });
@@ -439,6 +473,7 @@ async function refreshConversationList() {
     }
 }
 
+// Xử lý describe selected quản trị tệp.
 function describeSelectedAdminFiles(files = []) {
     if (!files.length) {
         return '';
@@ -455,6 +490,7 @@ function describeSelectedAdminFiles(files = []) {
         : `${files.length} tệp: ${fileNames}`;
 }
 
+// Cập nhật quản trị attachment preview.
 function updateAdminAttachmentPreview() {
     const fileInput = document.getElementById('adminReplyMediaInput');
     const preview = document.getElementById('adminReplyAttachmentPreview');
@@ -475,6 +511,7 @@ function updateAdminAttachmentPreview() {
     text.textContent = describeSelectedAdminFiles(files);
 }
 
+// Xử lý clear quản trị attachment selection.
 function clearAdminAttachmentSelection() {
     const fileInput = document.getElementById('adminReplyMediaInput');
     if (!fileInput) {
@@ -485,6 +522,7 @@ function clearAdminAttachmentSelection() {
     updateAdminAttachmentPreview();
 }
 
+// Xử lý quản trị reply.
 async function adminReply(event) {
     event.preventDefault();
 
@@ -544,6 +582,7 @@ async function adminReply(event) {
     input.focus();
 }
 
+// Bật/tắt current cuộc trò chuyện mode.
 async function toggleCurrentConversationMode() {
     if (!adminChatState.currentConversationId || !adminChatState.currentConversation) {
         return;
@@ -574,6 +613,7 @@ async function toggleCurrentConversationMode() {
     }
 }
 
+// Bật/tắt current cuộc trò chuyện trạng thái.
 async function toggleCurrentConversationStatus() {
     if (!adminChatState.currentConversationId || !adminChatState.currentConversation) {
         return;
@@ -600,6 +640,7 @@ async function toggleCurrentConversationStatus() {
     }
 }
 
+// Xử lý clear current cuộc trò chuyện.
 function clearCurrentConversation() {
     adminChatState.currentConversationId = null;
     adminChatState.currentConversation = null;
@@ -610,6 +651,7 @@ function clearCurrentConversation() {
     document.getElementById('chatDetailContent').hidden = true;
 }
 
+// Xử lý start chi tiết polling.
 function startDetailPolling() {
     stopDetailPolling();
     adminChatState.detailPollInterval = setInterval(() => {
@@ -617,6 +659,7 @@ function startDetailPolling() {
     }, 3000);
 }
 
+// Xử lý stop chi tiết polling.
 function stopDetailPolling() {
     if (adminChatState.detailPollInterval) {
         clearInterval(adminChatState.detailPollInterval);
@@ -624,6 +667,7 @@ function stopDetailPolling() {
     }
 }
 
+// Xử lý start danh sách polling.
 function startListPolling() {
     if (adminChatState.listPollInterval) {
         return;
@@ -634,6 +678,7 @@ function startListPolling() {
     }, 5000);
 }
 
+// Khởi tạo quản trị chat.
 function initAdminChat() {
     if (!window.ChatRichMessage) {
         return;
@@ -664,6 +709,7 @@ function initAdminChat() {
     }
 }
 
+// Gan su kien nguoi dung cho thanh phan giao dien lien quan.
 window.addEventListener('beforeunload', () => {
     stopDetailPolling();
     if (adminChatState.listPollInterval) {
@@ -671,4 +717,5 @@ window.addEventListener('beforeunload', () => {
     }
 });
 
+// Gan su kien nguoi dung cho thanh phan giao dien lien quan.
 document.addEventListener('DOMContentLoaded', initAdminChat);

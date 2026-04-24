@@ -1,11 +1,14 @@
+// File public/js/admin/categories.js: xử lý tương tác giao diện admin cho module categories.
 let adminCategoriesBootstrap = null;
 
+// Xử lý show danh mục toast.
 function showCategoryToast(message, type = 'success') {
     if (typeof showGlobalToast === 'function') {
         showGlobalToast(message, type);
     }
 }
 
+// Xử lý read danh mục bootstrap.
 function readCategoriesBootstrap() {
     if (adminCategoriesBootstrap) {
         return adminCategoriesBootstrap;
@@ -27,6 +30,7 @@ function readCategoriesBootstrap() {
     return adminCategoriesBootstrap;
 }
 
+// Xử lý slugify danh mục value.
 function slugifyCategoryValue(value) {
     return String(value ?? '')
         .trim()
@@ -39,6 +43,7 @@ function slugifyCategoryValue(value) {
         .replace(/^-+|-+$/g, '');
 }
 
+// Xử lý escape html.
 function escapeHtml(value) {
     return String(value ?? '')
         .replace(/&/g, '&amp;')
@@ -48,6 +53,7 @@ function escapeHtml(value) {
         .replace(/'/g, '&#39;');
 }
 
+// Xử lý show danh mục confirm.
 function showCategoryConfirm(message, title = 'Xác nhận') {
     return new Promise((resolve) => {
         const modal = document.getElementById('confirmModal');
@@ -67,11 +73,13 @@ function showCategoryConfirm(message, title = 'Xác nhận') {
     });
 }
 
+// Bật/tắt danh mục section.
 function toggleCategorySection(titleElement) {
     const section = titleElement.closest('.admin-section--collapsible');
     section?.classList.toggle('is-open');
 }
 
+// Đồng bộ slug field.
 function syncSlugField(nameInput, slugInput) {
     if (!nameInput || !slugInput) {
         return;
@@ -83,6 +91,7 @@ function syncSlugField(nameInput, slugInput) {
         slugInput.value = lastAutoSlug;
     }
 
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     nameInput.addEventListener('input', () => {
         const currentSlug = slugInput.value.trim();
         if (!currentSlug || currentSlug === lastAutoSlug) {
@@ -91,17 +100,20 @@ function syncSlugField(nameInput, slugInput) {
         }
     });
 
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     slugInput.addEventListener('input', () => {
         slugInput.value = slugifyCategoryValue(slugInput.value);
         lastAutoSlug = slugifyCategoryValue(nameInput.value);
     });
 }
 
+// Tìm danh mục theo id.
 function findCategoryById(categoryId) {
     const categories = readCategoriesBootstrap().categories || [];
     return categories.find((category) => Number(category.id) === Number(categoryId)) || null;
 }
 
+// Hiển thị parent select tùy chọn.
 function renderParentSelectOptions(selectElement, currentCategoryId = null, selectedParentId = null) {
     if (!selectElement) {
         return;
@@ -127,6 +139,7 @@ function renderParentSelectOptions(selectElement, currentCategoryId = null, sele
     selectElement.innerHTML = optionsHtml.join('');
 }
 
+// Mở danh mục modal.
 function openCategoryModal(modalId) {
     const modal = document.getElementById(modalId);
     if (!modal) {
@@ -137,6 +150,7 @@ function openCategoryModal(modalId) {
     document.body.style.overflow = 'hidden';
 }
 
+// Đóng danh mục modal.
 function closeCategoryModal(modalId) {
     const modal = document.getElementById(modalId);
     if (!modal) {
@@ -147,6 +161,7 @@ function closeCategoryModal(modalId) {
     document.body.style.overflow = '';
 }
 
+// Xử lý populate edit danh mục form.
 function populateEditCategoryForm(categoryId) {
     const category = findCategoryById(categoryId);
     if (!category) {
@@ -159,6 +174,10 @@ function populateEditCategoryForm(categoryId) {
     document.getElementById('editCategorySlug').value = category.slug || '';
     document.getElementById('editCategoryDisplayOrder').value = String(category.display_order || 0);
     document.getElementById('editCategoryImageUrl').value = category.image_url || '';
+    const imageInput = document.getElementById('editCategoryImage');
+    if (imageInput) {
+        imageInput.value = '';
+    }
     document.getElementById('editCategoryDescription').value = category.description || '';
 
     renderParentSelectOptions(
@@ -170,6 +189,7 @@ function populateEditCategoryForm(categoryId) {
     openCategoryModal('editCategoryModal');
 }
 
+// Xóa danh mục.
 async function deleteCategory(categoryId) {
     const confirmed = await showCategoryConfirm(
         'Danh mục sẽ bị ẩn khỏi hệ thống. Chỉ có thể xóa khi không còn sản phẩm hoặc danh mục con.',
@@ -198,6 +218,7 @@ async function deleteCategory(categoryId) {
     }
 }
 
+// Xóa tất cả danh mục.
 async function deleteAllCategories() {
     const confirmed = await showCategoryConfirm(
         'Thao tác này sẽ xóa vĩnh viễn toàn bộ danh mục có thể xóa trong database, đồng thời xóa luôn sản phẩm, ảnh và biến thể thuộc các danh mục đó. Danh mục gắn với sản phẩm đã nằm trong lịch sử đơn hàng sẽ không thể xóa. Bạn có chắc muốn tiếp tục?',
@@ -226,25 +247,29 @@ async function deleteAllCategories() {
     }
 }
 
+// Xử lý submit edit danh mục form.
 async function submitEditCategoryForm(event) {
     event.preventDefault();
 
     const categoryId = document.getElementById('editCategoryId').value;
-    const payload = {
-        name: document.getElementById('editCategoryName').value,
-        slug: document.getElementById('editCategorySlug').value,
-        parent_id: document.getElementById('editCategoryParentId').value,
-        display_order: document.getElementById('editCategoryDisplayOrder').value,
-        image_url: document.getElementById('editCategoryImageUrl').value,
-        description: document.getElementById('editCategoryDescription').value
-    };
+    const payload = new FormData();
+    payload.append('name', document.getElementById('editCategoryName').value);
+    payload.append('slug', document.getElementById('editCategorySlug').value);
+    payload.append('parent_id', document.getElementById('editCategoryParentId').value);
+    payload.append('display_order', document.getElementById('editCategoryDisplayOrder').value);
+    payload.append('image_url', document.getElementById('editCategoryImageUrl').value);
+    payload.append('description', document.getElementById('editCategoryDescription').value);
+
+    const imageInput = document.getElementById('editCategoryImage');
+    if (imageInput?.files?.[0]) {
+        payload.append('image', imageInput.files[0]);
+    }
 
     try {
         const response = await fetch(`/admin/categories/${categoryId}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
             credentials: 'same-origin',
-            body: JSON.stringify(payload)
+            body: payload
         });
         const result = await response.json();
 
@@ -260,6 +285,7 @@ async function submitEditCategoryForm(event) {
     }
 }
 
+// Xử lý show toast từ truy vấn.
 function showToastFromQuery() {
     const url = new URL(window.location.href);
     const successMessage = url.searchParams.get('success');
@@ -283,11 +309,13 @@ function showToastFromQuery() {
     window.history.replaceState({}, '', url.toString());
 }
 
+// Khởi tạo quản trị danh mục trang.
 function initAdminCategoriesPage() {
     readCategoriesBootstrap();
     showToastFromQuery();
 
     document.querySelectorAll('[data-admin-toggle="section"]').forEach((button) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => toggleCategorySection(button));
     });
 
@@ -301,18 +329,22 @@ function initAdminCategoriesPage() {
     );
 
     document.querySelectorAll('[data-category-action="open-edit-modal"]').forEach((button) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => populateEditCategoryForm(button.dataset.categoryId));
     });
 
     document.querySelectorAll('[data-category-action="delete-category"]').forEach((button) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => deleteCategory(button.dataset.categoryId));
     });
 
     document.querySelectorAll('[data-category-action="delete-all-categories"]').forEach((button) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => deleteAllCategories());
     });
 
     document.querySelectorAll('[data-category-modal-close]').forEach((button) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => closeCategoryModal(button.dataset.categoryModalClose));
     });
 
@@ -322,6 +354,7 @@ function initAdminCategoriesPage() {
         }
     });
 
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
             closeCategoryModal('editCategoryModal');
@@ -331,4 +364,5 @@ function initAdminCategoriesPage() {
     document.getElementById('editCategoryForm')?.addEventListener('submit', submitEditCategoryForm);
 }
 
+// Gan su kien nguoi dung cho thanh phan giao dien lien quan.
 document.addEventListener('DOMContentLoaded', initAdminCategoriesPage);

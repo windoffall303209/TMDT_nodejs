@@ -1,5 +1,51 @@
+// File middleware/auth.js: middleware xử lý request cho module auth.
 const jwt = require('jsonwebtoken');
+const pool = require('../config/database');
 require('dotenv').config();
+
+// Kiểm tra email verification route.
+function isEmailVerificationRoute(req) {
+    const path = (req.originalUrl || req.path || '').split('?')[0];
+    return path === '/auth/verify-email' || path === '/auth/send-verification';
+}
+
+// Tạo dữ liệu đăng nhập điều hướng.
+function buildLoginRedirect(req) {
+    const redirectTarget = req.originalUrl || req.path || '/';
+    return `/auth/login?redirect=${encodeURIComponent(redirectTarget)}`;
+}
+
+// Tạo dữ liệu verify email điều hướng.
+function buildVerifyEmailRedirect(req) {
+    const redirectTarget = req.originalUrl || req.path || '/';
+    return `/auth/verify-email?redirect=${encodeURIComponent(redirectTarget)}`;
+}
+
+// Chuẩn hóa authenticated người dùng.
+function normalizeAuthenticatedUser(decoded, userRow) {
+    return {
+        ...decoded,
+        id: userRow.id,
+        email: userRow.email,
+        role: userRow.role || decoded.role || 'customer',
+        email_verified: userRow.email_verified === true || userRow.email_verified === 1
+    };
+}
+
+// Tìm đang bật xác thực người dùng.
+async function findActiveAuthUser(userId) {
+    const [rows] = await pool.execute(
+        'SELECT id, email, role, email_verified, is_active FROM users WHERE id = ? LIMIT 1',
+        [userId]
+    );
+
+    const user = rows[0];
+    if (!user || user.is_active === false || user.is_active === 0) {
+        return null;
+    }
+
+    return user;
+}
 
 // Verify JWT token middleware
 const verifyToken = async (req, res, next) => {
@@ -17,14 +63,44 @@ const verifyToken = async (req, res, next) => {
         if (!token) {
             // Redirect to login for HTML requests
             if (req.accepts('html')) {
-                return res.redirect('/auth/login');
+                return res.redirect(buildLoginRedirect(req));
             }
             return res.status(401).json({ message: 'Access denied. No token provided.' });
         }
 
         // Verify token
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = decoded;
+        const activeUser = await findActiveAuthUser(decoded.id);
+
+        if (!activeUser) {
+            const { maxAge, ...cookieOptions } = {
+                httpOnly: true,
+                sameSite: 'lax',
+                secure: process.env.NODE_ENV === 'production'
+            };
+            res.clearCookie('token', cookieOptions);
+
+            if (req.accepts('html')) {
+                return res.redirect(buildLoginRedirect(req));
+            }
+
+            return res.status(401).json({ message: 'Account is inactive or no longer exists.' });
+        }
+
+        req.user = normalizeAuthenticatedUser(decoded, activeUser);
+
+        if (!req.user.email_verified && !isEmailVerificationRoute(req)) {
+            if (req.accepts('html')) {
+                return res.redirect(buildVerifyEmailRedirect(req));
+            }
+
+            return res.status(403).json({
+                message: 'Email verification is required before using this account.',
+                code: 'EMAIL_NOT_VERIFIED',
+                redirect: buildVerifyEmailRedirect(req)
+            });
+        }
+
         next();
     } catch (error) {
         // Clear invalid token cookie
@@ -32,7 +108,7 @@ const verifyToken = async (req, res, next) => {
 
         // Redirect to login for HTML requests
         if (req.accepts('html')) {
-            return res.redirect('/auth/login');
+            return res.redirect(buildLoginRedirect(req));
         }
 
         if (error.name === 'TokenExpiredError') {
@@ -80,7 +156,8 @@ const generateToken = (user) => {
         {
             id: user.id,
             email: user.email,
-            role: user.role || 'customer'
+            role: user.role || 'customer',
+            email_verified: user.email_verified === true || user.email_verified === 1
         },
         process.env.JWT_SECRET,
         {

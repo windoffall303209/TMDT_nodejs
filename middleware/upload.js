@@ -1,3 +1,4 @@
+// File middleware/upload.js: middleware xử lý upload ảnh sản phẩm qua Multer và Cloudinary.
 const multer = require('multer');
 const path = require('path');
 const os = require('os');
@@ -21,7 +22,7 @@ const storage = multer.diskStorage({
     }
 });
 
-// File filter - only images
+// Kiểm tra file upload có đúng định dạng ảnh được hỗ trợ hay không.
 const fileFilter = (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|gif|webp/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
@@ -43,6 +44,7 @@ const upload = multer({
     fileFilter: fileFilter
 });
 
+// Tải lên single tệp.
 async function uploadSingleFile(file, folder) {
     const localPath = file.path;
 

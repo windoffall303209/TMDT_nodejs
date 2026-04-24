@@ -1,3 +1,4 @@
+// File config/database.js: cấu hình hệ thống cho module database.
 const mysql = require('mysql2/promise');
 require('dotenv').config();
 

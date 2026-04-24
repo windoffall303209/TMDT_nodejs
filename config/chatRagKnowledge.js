@@ -1,3 +1,4 @@
+// File config/chatRagKnowledge.js: cấu hình hệ thống cho module chatRagKnowledge.
 module.exports = [
     {
         sourceKey: 'store-overview',

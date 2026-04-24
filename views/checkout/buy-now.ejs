@@ -1,7 +1,8 @@
+<%# File views/checkout/buy-now.ejs: hien thi giao dien va du lieu cho trang tuong ung. %>
 <%- include('../partials/header') %>
 
 <link rel="stylesheet" href="/css/checkout.css">
-<link rel="stylesheet" href="/css/leaflet.css">
+<link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
 
 <%
     const selectedQuantity = cart && Array.isArray(cart.items) && cart.items[0]
@@ -16,6 +17,7 @@
 <!-- ===== Trang mua ngay (checkout 1 sản phẩm) ===== -->
 <div class="checkout-page page-shell">
     <div class="container">
+        <%# Section gom nhom noi dung chinh cua trang. %>
         <section class="page-intro page-intro--compact checkout-intro">
             <div>
                 <h1 class="page-intro__title page-intro__title-inline">
@@ -31,6 +33,7 @@
             </div>
         </section>
 
+        <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
         <form action="/orders/buy-now/create" method="POST" id="buyNowForm">
             <input type="hidden" name="product_id" value="<%= product.id %>">
             <input type="hidden" name="quantity" value="<%= selectedQuantity %>">
@@ -54,7 +57,7 @@
                                 <% } %>
                             </div>
                             <div class="order-summary__item-info">
-                                <div class="order-summary__item-name order-summary__item-name--large"><%= product.name %></div>
+                                <a class="order-summary__item-name order-summary__item-name--large order-summary__item-link" href="/products/<%= product.slug %>"><%= product.name %></a>
                                 <% if (typeof selectedVariant !== 'undefined' && selectedVariant) { %>
                                     <div class="order-summary__item-meta">
                                         <% if (selectedVariant.color) { %>Màu: <%= selectedVariant.color %><% } %>
@@ -257,8 +260,46 @@
                             <% } %>
 
                             <div class="voucher-section">
+                                <% if (typeof vouchers !== 'undefined' && vouchers && vouchers.length > 0) { %>
+                                    <div class="voucher-section__available">
+                                        <h4 class="voucher-section__title">Voucher khả dụng</h4>
+                                        <div class="voucher-section__list">
+                                            <% vouchers.forEach((voucher) => { %>
+                                                <div
+                                                    class="voucher-card"
+                                                    data-code="<%= voucher.code %>"
+                                                    data-type="<%= voucher.type %>"
+                                                    data-value="<%= voucher.value %>"
+                                                    data-min-order="<%= voucher.min_order_amount || 0 %>"
+                                                    data-max-discount="<%= voucher.max_discount_amount || 0 %>"
+                                                >
+                                                    <div class="voucher-card__icon"><%= voucher.type === 'percentage' ? '%' : 'đ' %></div>
+                                                    <div class="voucher-card__content">
+                                                        <div class="voucher-card__name"><%= voucher.name %></div>
+                                                        <div class="voucher-card__desc">
+                                                            <% if (voucher.type === 'percentage') { %>
+                                                                Giảm <%= voucher.value %>%<% if (voucher.max_discount_amount) { %> tối đa <%= voucher.max_discount_amount.toLocaleString('vi-VN') %>đ<% } %>
+                                                            <% } else { %>
+                                                                Giảm <%= voucher.value.toLocaleString('vi-VN') %>đ
+                                                            <% } %>
+                                                        </div>
+                                                        <% if (voucher.min_order_amount > 0) { %>
+                                                            <div class="voucher-card__condition">Đơn tối thiểu <%= voucher.min_order_amount.toLocaleString('vi-VN') %>đ</div>
+                                                        <% } %>
+                                                    </div>
+                                                    <div class="voucher-card__code"><%= voucher.code %></div>
+                                                </div>
+                                            <% }) %>
+                                        </div>
+                                    </div>
+                                <% } %>
+
                                 <div class="voucher-section__input-group">
-                                    <input type="text" id="voucherCode" name="voucher_code" placeholder="Nhập mã giảm giá" class="voucher-section__input">
+                                    <div class="voucher-section__input-wrap">
+                                        <input type="text" id="voucherCode" placeholder="Nhập mã giảm giá" class="voucher-section__input" autocomplete="off">
+                                        <button type="button" data-checkout-action="clear-voucher" class="voucher-section__clear" hidden aria-label="Xóa voucher">×</button>
+                                    </div>
+                                    <input type="hidden" id="appliedVoucherCode" name="voucher_code" value="">
                                     <button type="button" data-checkout-action="apply-voucher" class="voucher-section__btn">Áp dụng</button>
                                 </div>
                                 <div id="voucherMessage" class="voucher-section__message"></div>
@@ -288,7 +329,8 @@
     </div>
 </div>
 
-<script src="/js/leaflet.js"></script>
+<script src="/vendor/leaflet/leaflet.js"></script>
+<%# Bootstrap du lieu JSON cho script phia client. %>
 <script type="application/json" id="checkoutBootstrapData"><%- JSON.stringify({
     mode: 'buy-now',
     productId: product.id,

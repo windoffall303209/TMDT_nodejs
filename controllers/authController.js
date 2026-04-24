@@ -23,6 +23,7 @@ const crypto = require('crypto');
 const axios = require('axios');
 const { uploadToCloudinary } = require('../config/cloudinary');
 
+// Lấy xác thực cookie tùy chọn.
 function getAuthCookieOptions() {
     return {
         httpOnly: true,
@@ -32,15 +33,63 @@ function getAuthCookieOptions() {
     };
 }
 
+// Kiểm tra google xác thực configured.
 function isGoogleAuthConfigured() {
     return Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
 }
 
+// Kiểm tra verified email.
+function hasVerifiedEmail(user) {
+    return user?.email_verified === true || user?.email_verified === 1;
+}
+
+// Gửi email verification code.
+async function sendEmailVerificationCode(user) {
+    const verificationCode = await User.generateVerificationCode(user.id);
+    return emailService.sendVerificationEmail(user, verificationCode);
+}
+
+// Lấy verify email điều hướng.
+function getVerifyEmailRedirect(emailSent) {
+    return emailSent ? '/auth/verify-email?sent=1' : '/auth/verify-email?error=send_failed';
+}
+
+// Lấy an toàn điều hướng path.
+function getSafeRedirectPath(value, fallback = '/') {
+    if (typeof value !== 'string') {
+        return fallback;
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed || !trimmed.startsWith('/') || trimmed.startsWith('//')) {
+        return fallback;
+    }
+
+    if (trimmed.startsWith('/auth/login')) {
+        return fallback;
+    }
+
+    return trimmed;
+}
+
+// Xử lý append điều hướng param.
+function appendRedirectParam(url, redirectPath) {
+    const safeRedirect = getSafeRedirectPath(redirectPath, '');
+    if (!safeRedirect) {
+        return url;
+    }
+
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}redirect=${encodeURIComponent(safeRedirect)}`;
+}
+
+// Lấy google callback url.
 function getGoogleCallbackUrl(req) {
     return process.env.GOOGLE_CALLBACK_URL
         || `${req.protocol}://${req.get('host')}/auth/google/callback`;
 }
 
+// Lấy google xác thực url.
 function getGoogleAuthUrl(req, state) {
     const params = new URLSearchParams({
         client_id: process.env.GOOGLE_CLIENT_ID,
@@ -55,6 +104,7 @@ function getGoogleAuthUrl(req, state) {
     return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 }
 
+// Xử lý exchange google code cho profile.
 async function exchangeGoogleCodeForProfile(req, code) {
     const tokenResponse = await axios.post(
         'https://oauth2.googleapis.com/token',
@@ -230,10 +280,34 @@ exports.register = async (req, res) => {
             if (req.accepts('html')) {
                 return res.render('auth/register', {
                     error: errors.join('. '),
-                    formData: req.body
+                    formData: req.body,
+                    loginEmail: null
                 });
             }
             return res.status(400).json({ message: errors.join('. '), errors });
+        }
+
+        const existingUser = await User.findByEmail(trimmedEmail);
+        if (existingUser) {
+            const message = hasVerifiedEmail(existingUser)
+                ? 'Email đã tồn tại. Vui lòng đăng nhập để tiếp tục.'
+                : 'Email đã tồn tại nhưng chưa xác thực. Vui lòng đăng nhập để nhận lại mã xác thực.';
+
+            if (req.accepts('html')) {
+                return res.status(409).render('auth/register', {
+                    error: message,
+                    formData: { ...req.body, email: trimmedEmail },
+                    loginEmail: trimmedEmail
+                });
+            }
+
+            return res.status(409).json({
+                message,
+                code: 'EMAIL_EXISTS',
+                requiresLogin: true,
+                requiresEmailVerification: !hasVerifiedEmail(existingUser),
+                redirect: `/auth/login?email=${encodeURIComponent(trimmedEmail)}`
+            });
         }
 
         // Tạo user mới trong database
@@ -245,38 +319,54 @@ exports.register = async (req, res) => {
             marketing_consent: marketing_consent === 'on' || marketing_consent === true
         });
 
-        // Gửi email chào mừng (async, không chờ kết quả)
-        emailService.sendWelcomeEmail(user).catch(err => console.error('Email error:', err));
-
         // Tạo JWT token cho user
         const token = generateToken(user);
 
         // Lưu token vào cookie (httpOnly để bảo mật)
         res.cookie('token', token, getAuthCookieOptions());
 
-        // Redirect về trang chủ nếu là request HTML
+        let verificationEmailSent = false;
+        try {
+            verificationEmailSent = await sendEmailVerificationCode(user);
+        } catch (emailError) {
+            console.error('Verification email error:', emailError);
+        }
+
+        // Redirect sang trang xác thực email nếu là request HTML
         if (req.accepts('html')) {
-            return res.redirect('/');
+            return res.redirect(getVerifyEmailRedirect(verificationEmailSent));
         }
 
         // Trả về JSON cho API request
         res.status(201).json({
-            message: 'Registration successful',
-            user: { id: user.id, email: user.email, full_name: user.full_name },
+            message: 'Đăng ký thành công. Vui lòng xác thực email để hoàn tất tài khoản.',
+            requiresEmailVerification: true,
+            emailSent: verificationEmailSent,
+            redirect: '/auth/verify-email',
+            user: { id: user.id, email: user.email, full_name: user.full_name, email_verified: false },
             token
         });
     } catch (error) {
         console.error('Registration error:', error);
+        const isDuplicateEmail = error.message === 'Email already exists';
+        const errorMessage = isDuplicateEmail
+            ? 'Email đã tồn tại. Vui lòng đăng nhập để tiếp tục.'
+            : error.message;
+        const normalizedEmail = (req.body.email || '').trim().toLowerCase();
 
         // Hiển thị lại form đăng ký với lỗi
         if (req.accepts('html')) {
-            return res.render('auth/register', {
-                error: error.message,
-                formData: req.body
+            return res.status(isDuplicateEmail ? 409 : 400).render('auth/register', {
+                error: errorMessage,
+                formData: req.body,
+                loginEmail: isDuplicateEmail ? normalizedEmail : null
             });
         }
 
-        res.status(400).json({ message: error.message });
+        res.status(isDuplicateEmail ? 409 : 400).json({
+            message: errorMessage,
+            code: isDuplicateEmail ? 'EMAIL_EXISTS' : undefined
+        });
     }
 };
 
@@ -296,15 +386,17 @@ exports.register = async (req, res) => {
  */
 exports.login = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password, redirect } = req.body;
+        const trimmedEmail = (email || '').trim().toLowerCase();
+        const redirectPath = getSafeRedirectPath(redirect, '');
 
         // Validate dữ liệu bắt buộc
-        if (!email || !password) {
+        if (!trimmedEmail || !password) {
             return res.status(400).json({ message: 'Email and password are required' });
         }
 
         // Tìm user theo email
-        const user = await User.findByEmail(email);
+        const user = await User.findByEmail(trimmedEmail);
         if (!user) {
             throw new Error('Email hoặc mật khẩu không đúng');
         }
@@ -326,6 +418,32 @@ exports.login = async (req, res) => {
         // Lưu token vào cookie
         res.cookie('token', token, getAuthCookieOptions());
 
+        if (!hasVerifiedEmail(user)) {
+            let verificationEmailSent = false;
+            try {
+                verificationEmailSent = await sendEmailVerificationCode(user);
+            } catch (emailError) {
+                console.error('Verification email error:', emailError);
+            }
+
+            const message = verificationEmailSent
+                ? 'Tài khoản chưa xác thực email. Mã xác nhận mới đã được gửi đến email của bạn.'
+                : 'Tài khoản chưa xác thực email. Vui lòng yêu cầu gửi lại mã xác nhận.';
+
+            if (req.accepts('html')) {
+                return res.redirect(appendRedirectParam(getVerifyEmailRedirect(verificationEmailSent), redirectPath));
+            }
+
+            return res.status(403).json({
+                message,
+                code: 'EMAIL_NOT_VERIFIED',
+                requiresEmailVerification: true,
+                emailSent: verificationEmailSent,
+                redirect: appendRedirectParam('/auth/verify-email', redirectPath),
+                token
+            });
+        }
+
         // Merge giỏ hàng của khách (session) vào tài khoản đã đăng nhập
         if (req.sessionID) {
             const Cart = require('../models/Cart');
@@ -336,13 +454,14 @@ exports.login = async (req, res) => {
 
         // Redirect về trang chủ
         if (req.accepts('html')) {
-            return res.redirect('/');
+            return res.redirect(redirectPath || '/');
         }
 
         // Trả về JSON cho API
         res.json({
             message: 'Login successful',
             user: { id: user.id, email: user.email, full_name: user.full_name, role: user.role },
+            redirect: redirectPath || '/',
             token
         });
     } catch (error) {
@@ -353,6 +472,7 @@ exports.login = async (req, res) => {
             return res.render('auth/login', {
                 error: error.message,
                 email: req.body.email,
+                redirect: getSafeRedirectPath(req.body.redirect, ''),
                 googleAuthEnabled: isGoogleAuthConfigured()
             });
         }
@@ -467,7 +587,7 @@ exports.updateProfile = async (req, res) => {
  * @param {Object} res - Response object từ Express
  */
 exports.showRegister = (req, res) => {
-    res.render('auth/register', { error: null, formData: {} });
+    res.render('auth/register', { error: null, formData: {}, loginEmail: null });
 };
 
 /**
@@ -479,14 +599,17 @@ exports.showRegister = (req, res) => {
 exports.showLogin = (req, res) => {
     const requestedError = typeof req.query.error === 'string' ? req.query.error.trim() : '';
     const requestedEmail = typeof req.query.email === 'string' ? req.query.email.trim() : '';
+    const redirect = getSafeRedirectPath(req.query.redirect, '');
 
     res.render('auth/login', {
         error: requestedError || null,
         email: requestedEmail,
+        redirect,
         googleAuthEnabled: isGoogleAuthConfigured()
     });
 };
 
+// Xử lý start google đăng nhập.
 exports.startGoogleLogin = async (req, res) => {
     try {
         if (!isGoogleAuthConfigured()) {
@@ -494,10 +617,17 @@ exports.startGoogleLogin = async (req, res) => {
         }
 
         const state = crypto.randomBytes(24).toString('hex');
+        const redirectPath = getSafeRedirectPath(req.query.redirect, '');
         res.cookie('google_oauth_state', state, {
             ...getAuthCookieOptions(),
             maxAge: 10 * 60 * 1000
         });
+        if (redirectPath) {
+            res.cookie('post_auth_redirect', redirectPath, {
+                ...getAuthCookieOptions(),
+                maxAge: 10 * 60 * 1000
+            });
+        }
 
         return res.redirect(getGoogleAuthUrl(req, state));
     } catch (error) {
@@ -506,6 +636,7 @@ exports.startGoogleLogin = async (req, res) => {
     }
 };
 
+// Xử lý google callback.
 exports.handleGoogleCallback = async (req, res) => {
     const { maxAge, ...cookieOptions } = getAuthCookieOptions();
 
@@ -516,8 +647,10 @@ exports.handleGoogleCallback = async (req, res) => {
 
         const { code, state, error } = req.query;
         const expectedState = req.cookies?.google_oauth_state;
+        const redirectPath = getSafeRedirectPath(req.cookies?.post_auth_redirect, '');
 
         res.clearCookie('google_oauth_state', cookieOptions);
+        res.clearCookie('post_auth_redirect', cookieOptions);
 
         if (error) {
             return res.redirect('/auth/login?error=' + encodeURIComponent('Đăng nhập Google đã bị hủy.'));
@@ -540,7 +673,7 @@ exports.handleGoogleCallback = async (req, res) => {
             });
         }
 
-        return res.redirect('/');
+        return res.redirect(redirectPath || '/');
     } catch (error) {
         console.error('Google auth callback error:', error);
         return res.redirect('/auth/login?error=' + encodeURIComponent(error.message || 'Không thể đăng nhập với Google.'));
@@ -581,6 +714,7 @@ function normalizeAddressPayload(body = {}) {
     };
 }
 
+// Tạo địa chỉ.
 exports.createAddress = async (req, res) => {
     try {
         const Address = require('../models/Address');
@@ -655,6 +789,7 @@ exports.updateAddress = async (req, res) => {
     }
 };
 
+// Xóa địa chỉ.
 exports.deleteAddress = async (req, res) => {
     try {
         const Address = require('../models/Address');
@@ -682,6 +817,7 @@ exports.deleteAddress = async (req, res) => {
     }
 };
 
+// Cập nhật full profile.
 exports.updateFullProfile = async (req, res) => {
     try {
         const { full_name, phone, birthday } = req.body;
@@ -861,19 +997,26 @@ exports.showVerifyEmail = async (req, res) => {
             return res.redirect('/auth/login');
         }
 
-        // Nếu email đã xác nhận, redirect về profile
+        const redirect = getSafeRedirectPath(req.query.redirect, '');
+
+        // Nếu email đã xác nhận, quay lại luồng sau đăng nhập/đăng ký
         if (user.email_verified) {
-            return res.redirect('/user/profile');
+            return res.redirect(redirect || '/');
         }
+
+        const sendFailed = req.query.error === 'send_failed';
+        const codeSent = req.query.sent === '1';
 
         res.render('auth/verify-email', {
             user,
-            error: null,
-            success: null
+            error: sendFailed ? 'Không thể gửi mã xác nhận tự động. Vui lòng bấm gửi lại mã.' : null,
+            success: codeSent ? 'Mã xác nhận đã được gửi đến email của bạn.' : null,
+            codeSent,
+            redirect
         });
     } catch (error) {
         console.error('Show verify email error:', error);
-        res.redirect('/user/profile');
+        res.redirect('/auth/login');
     }
 };
 
@@ -906,11 +1049,8 @@ exports.sendVerificationCode = async (req, res) => {
             });
         }
 
-        // Tạo mã xác nhận 6 số
-        const verificationCode = await User.generateVerificationCode(req.user.id);
-
-        // Gửi email xác nhận
-        const emailSent = await emailService.sendVerificationEmail(user, verificationCode);
+        // Tạo mã xác nhận 6 số và gửi email xác nhận
+        const emailSent = await sendEmailVerificationCode(user);
 
         if (!emailSent) {
             return res.status(500).json({
@@ -948,7 +1088,7 @@ exports.verifyEmailCode = async (req, res) => {
         const { code } = req.body;
 
         // Validate mã xác nhận
-        if (!code || code.length !== 6) {
+        if (!code || !/^\d{6}$/.test(code)) {
             return res.status(400).json({
                 success: false,
                 message: 'Vui lòng nhập mã xác nhận 6 số'
@@ -963,6 +1103,13 @@ exports.verifyEmailCode = async (req, res) => {
                 success: false,
                 message: result.message
             });
+        }
+
+        const verifiedUser = await User.findById(req.user.id);
+        if (verifiedUser) {
+            const token = generateToken(verifiedUser);
+            res.cookie('token', token, getAuthCookieOptions());
+            emailService.sendWelcomeEmail(verifiedUser).catch(err => console.error('Welcome email error:', err));
         }
 
         res.json({

@@ -1,3 +1,4 @@
+// File __tests__/startup.test.js: kiểm thử tự động cho module startup.test.
 process.env.NODE_ENV = 'test';
 
 const app = require('../app');

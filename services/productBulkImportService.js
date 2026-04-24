@@ -1,3 +1,4 @@
+// File services/productBulkImportService.js: gom logic service cho module productBulkImportService.
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -13,10 +14,12 @@ const BULK_IMPORT_FOLDER = 'tmdt_ecommerce/products/bulk-import';
 const DEFAULT_IMAGE_URL = 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600';
 const EXPORT_PRODUCT_LIMIT = 100000;
 
+// Chuẩn hóa text.
 function normalizeText(value) {
     return String(value ?? '').trim();
 }
 
+// Chuẩn hóa lookup key.
 function normalizeLookupKey(value) {
     return normalizeText(value)
         .toLowerCase()
@@ -27,6 +30,7 @@ function normalizeLookupKey(value) {
         .trim();
 }
 
+// Chuẩn hóa import path.
 function normalizeImportPath(value) {
     return normalizeText(value)
         .replace(/\\/g, '/')
@@ -35,11 +39,13 @@ function normalizeImportPath(value) {
         .toLowerCase();
 }
 
+// Phân tích boolean.
 function parseBoolean(value) {
     const normalized = normalizeLookupKey(value);
     return ['1', 'true', 'yes', 'y', 'co', 'x', 'on'].includes(normalized);
 }
 
+// Phân tích optional integer.
 function parseOptionalInteger(value, fieldName) {
     const normalized = normalizeText(value);
     if (!normalized) {
@@ -54,6 +60,7 @@ function parseOptionalInteger(value, fieldName) {
     return parsed;
 }
 
+// Phân tích optional decimal.
 function parseOptionalDecimal(value, fieldName) {
     const normalized = normalizeText(value);
     if (!normalized) {
@@ -68,6 +75,7 @@ function parseOptionalDecimal(value, fieldName) {
     return parsed;
 }
 
+// Tạo slug chuẩn hóa từ chuỗi đầu vào.
 function slugify(text) {
     return normalizeText(text)
         .toLowerCase()
@@ -78,6 +86,7 @@ function slugify(text) {
         .replace(/(^-|-$)/g, '');
 }
 
+// Dọn dẹp path.
 function cleanupPath(targetPath) {
     if (!targetPath) {
         return;
@@ -90,6 +99,7 @@ function cleanupPath(targetPath) {
     }
 }
 
+// Tìm sheet name.
 function findSheetName(workbook, expectedName) {
     const normalizedExpectedName = normalizeLookupKey(expectedName);
     return workbook.SheetNames.find(
@@ -97,6 +107,7 @@ function findSheetName(workbook, expectedName) {
     ) || null;
 }
 
+// Xử lý read sheet rows.
 function readSheetRows(workbook, sheetName) {
     const matchedSheetName = findSheetName(workbook, sheetName);
     if (!matchedSheetName) {
@@ -117,10 +128,12 @@ function readSheetRows(workbook, sheetName) {
     }));
 }
 
+// Kiểm tra meaningful row.
 function isMeaningfulRow(row, keys) {
     return keys.some((key) => normalizeText(row[key]));
 }
 
+// Phân tích workbook.
 function parseWorkbook(workbookPath) {
     if (!workbookPath || !fs.existsSync(workbookPath)) {
         throw new Error('Workbook file was not found');
@@ -176,6 +189,7 @@ function parseWorkbook(workbookPath) {
     };
 }
 
+// Tạo dữ liệu instruction rows.
 function buildInstructionRows() {
     return [
         ['Sheet', 'Purpose', 'Required columns', 'Notes'],
@@ -186,6 +200,7 @@ function buildInstructionRows() {
     ];
 }
 
+// Tạo workbook buffer.
 function createWorkbookBuffer({ productsRows, imagesRows, variantsRows }) {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(buildInstructionRows()), 'Instructions');
@@ -195,6 +210,7 @@ function createWorkbookBuffer({ productsRows, imagesRows, variantsRows }) {
     return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
 }
 
+// Tạo dữ liệu danh mục maps.
 function buildCategoryMaps(categories = []) {
     const byId = new Map();
     const bySlug = new Map();
@@ -213,6 +229,7 @@ function buildCategoryMaps(categories = []) {
     return { byId, bySlug, byName };
 }
 
+// Xác định danh mục id.
 function resolveCategoryId(productRow, categoryMaps) {
     let resolvedFromSlug = null;
     let resolvedFromName = null;
@@ -259,6 +276,7 @@ function resolveCategoryId(productRow, categoryMaps) {
     return chosenCategory.id;
 }
 
+// Tạo zip ảnh index.
 function createZipImageIndex(zipPath) {
     if (!zipPath) {
         return {
@@ -329,6 +347,7 @@ function createZipImageIndex(zipPath) {
     };
 }
 
+// Xử lý group rows theo sản phẩm key.
 function groupRowsByProductKey(rows = [], label) {
     const groupedRows = new Map();
 
@@ -346,6 +365,7 @@ function groupRowsByProductKey(rows = [], label) {
     return groupedRows;
 }
 
+// Kiểm tra hợp lệ workbook links.
 function validateWorkbookLinks(products, images, variants) {
     const productKeys = new Set();
 
@@ -374,6 +394,7 @@ function validateWorkbookLinks(products, images, variants) {
     });
 }
 
+// Tải lên ảnh từ source.
 async function uploadImageFromSource(imageSource, zipIndex, uploadCache) {
     if (imageSource.imageUrl) {
         return imageSource.imageUrl;
@@ -402,6 +423,7 @@ async function uploadImageFromSource(imageSource, zipIndex, uploadCache) {
     return uploadResult.url;
 }
 
+// Đảm bảo sản phẩm ảnh.
 async function ensureProductImage(productId, imageSource, context) {
     const sourceKey = imageSource.imageUrl
         ? `url:${normalizeText(imageSource.imageUrl)}`
@@ -424,6 +446,7 @@ async function ensureProductImage(productId, imageSource, context) {
     return image.id;
 }
 
+// Tạo dữ liệu biến thể payload.
 function buildVariantPayload(variantRow) {
     return {
         size: normalizeText(variantRow.size) || null,
@@ -434,6 +457,7 @@ function buildVariantPayload(variantRow) {
     };
 }
 
+// Nhập single sản phẩm.
 async function importSingleProduct(productRow, groupedImages, groupedVariants, categoryMaps, zipIndex, uploadCache) {
     let createdProductId = null;
 
@@ -577,6 +601,7 @@ async function importSingleProduct(productRow, groupedImages, groupedVariants, c
     }
 }
 
+// Nhập sản phẩm từ workbook.
 async function importProductsFromWorkbook({ workbookPath, zipPath }) {
     const workbookData = parseWorkbook(workbookPath);
     validateWorkbookLinks(workbookData.products, workbookData.images, workbookData.variants);
@@ -621,6 +646,7 @@ async function importProductsFromWorkbook({ workbookPath, zipPath }) {
     }
 }
 
+// Tạo dữ liệu export sản phẩm key.
 function buildExportProductKey(product) {
     if (product?.sku) {
         return normalizeText(product.sku);
@@ -629,6 +655,7 @@ function buildExportProductKey(product) {
     return `PRD-${product.id}`;
 }
 
+// Xuất sản phẩm vào workbook buffer.
 async function exportProductsToWorkbookBuffer(options = {}) {
     const search = normalizeText(options.search);
     const products = await Product.findAll({
@@ -693,6 +720,7 @@ async function exportProductsToWorkbookBuffer(options = {}) {
     return createWorkbookBuffer({ productsRows, imagesRows, variantsRows });
 }
 
+// Tạo sản phẩm import template buffer.
 function createProductImportTemplateBuffer() {
     const productsRows = [
         {

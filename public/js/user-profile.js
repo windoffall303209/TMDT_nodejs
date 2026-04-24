@@ -1,29 +1,51 @@
+// File public/js/user-profile.js: xử lý tương tác giao diện phía trình duyệt cho module user profile.
 function togglePassword(button) {
     const wrapper = button.parentElement;
     const input = wrapper.querySelector('input');
-    const icon = button.querySelector('.eye-icon');
+    const eyeOpen = button.querySelector('.eye-open');
+    const eyeClosed = button.querySelector('.eye-closed');
+    const isHidden = input.type === 'password';
 
-    if (input.type === 'password') {
-        input.type = 'text';
-        icon.textContent = 'hide';
-        button.classList.add('active');
-    } else {
-        input.type = 'password';
-        icon.textContent = 'show';
-        button.classList.remove('active');
-    }
+    input.type = isHidden ? 'text' : 'password';
+    button.classList.toggle('active', isHidden);
+    button.setAttribute('aria-pressed', String(isHidden));
+    if (eyeOpen) eyeOpen.hidden = isHidden;
+    if (eyeClosed) eyeClosed.hidden = !isHidden;
 }
 
+// Xử lý show developing alert.
 function showDevelopingAlert() {
     showGlobalToast('Tính năng này đang được phát triển. Vui lòng quay lại sau.', 'info');
 }
 
+// Xử lý show profile alert.
 function showProfileAlert(message, type = 'success') {
     if (typeof showGlobalToast === 'function') {
         showGlobalToast(message, type);
     }
 }
 
+// Che số điện thoại.
+function maskPhone(value) {
+    const phone = String(value || '').trim();
+    if (!phone) return 'Chưa cập nhật';
+    return `${'*'.repeat(Math.max(phone.length - 2, 0))}${phone.slice(-2)}`;
+}
+
+// Che ngày sinh.
+function maskBirthday(value) {
+    const dateValue = String(value || '').slice(0, 10);
+    return /^\d{4}-\d{2}-\d{2}$/.test(dateValue) ? dateValue.slice(0, 4) : 'Chưa cập nhật';
+}
+
+// Cập nhật private value.
+function updatePrivateValue(type, maskedValue) {
+    const valueEl = document.querySelector(`.private-value[data-private-type="${type}"]`);
+    if (!valueEl) return;
+    valueEl.textContent = maskedValue;
+}
+
+// Khởi tạo avatar upload.
 function initAvatarUpload() {
     const avatarInput = document.getElementById('avatarInput');
     const avatarImage = document.getElementById('avatarImage');
@@ -31,6 +53,7 @@ function initAvatarUpload() {
 
     if (!avatarInput) return;
 
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     avatarInput.addEventListener('change', async function(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -74,10 +97,12 @@ function initAvatarUpload() {
     });
 }
 
+// Khởi tạo profile form.
 function initProfileForm() {
     const profileForm = document.getElementById('profileForm');
     if (!profileForm) return;
 
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     profileForm.addEventListener('submit', async function(event) {
         event.preventDefault();
 
@@ -104,6 +129,8 @@ function initProfileForm() {
                 if (sidebarName && data.full_name) {
                     sidebarName.textContent = data.full_name;
                 }
+                updatePrivateValue('phone', maskPhone(data.phone));
+                updatePrivateValue('birthday', maskBirthday(data.birthday));
             } else {
                 showProfileAlert(result.message || 'Lỗi cập nhật', 'error');
             }
@@ -117,10 +144,12 @@ function initProfileForm() {
     });
 }
 
+// Khởi tạo mật khẩu form.
 function initPasswordForm() {
     const passwordForm = document.getElementById('passwordForm');
     if (!passwordForm) return;
 
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     passwordForm.addEventListener('submit', async function(event) {
         event.preventDefault();
 
@@ -171,16 +200,19 @@ function initPasswordForm() {
     });
 }
 
+// Gan su kien nguoi dung cho thanh phan giao dien lien quan.
 document.addEventListener('DOMContentLoaded', function() {
     initAvatarUpload();
     initProfileForm();
     initPasswordForm();
 
     document.querySelectorAll('.password-toggle').forEach((button) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => togglePassword(button));
     });
 
     document.querySelectorAll('[data-profile-action="show-developing"]').forEach((button) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', showDevelopingAlert);
     });
 });

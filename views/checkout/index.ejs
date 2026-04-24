@@ -1,11 +1,13 @@
+<%# File views/checkout/index.ejs: hien thi giao dien va du lieu cho trang tuong ung. %>
 <%- include('../partials/header') %>
 
 <link rel="stylesheet" href="/css/checkout.css">
-<link rel="stylesheet" href="/css/leaflet.css">
+<link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
 
 <!-- ===== Trang checkout từ giỏ hàng ===== -->
 <div class="checkout-page page-shell">
     <div class="container">
+        <%# Section gom nhom noi dung chinh cua trang. %>
         <section class="page-intro page-intro--compact checkout-intro">
             <div>
                 <h1 class="page-intro__title page-intro__title-inline">
@@ -28,6 +30,7 @@
                 <a href="/products" class="btn btn-primary checkout-empty__btn">Tiếp tục mua sắm</a>
             </div>
         <% } else { %>
+            <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
             <form action="/orders/create" method="POST" id="checkoutForm">
                 <input type="hidden" name="selected_cart_item_ids" value="<%= Array.isArray(selectedCartItemIds) ? selectedCartItemIds.join(',') : '' %>">
 
@@ -211,7 +214,11 @@
                                             <% } %>
                                         </div>
                                         <div class="order-summary__item-info">
-                                            <div class="order-summary__item-name"><%= item.product_name %></div>
+                                            <% if (item.product_slug) { %>
+                                                <a class="order-summary__item-name order-summary__item-link" href="/products/<%= item.product_slug %>"><%= item.product_name %></a>
+                                            <% } else { %>
+                                                <div class="order-summary__item-name"><%= item.product_name %></div>
+                                            <% } %>
                                             <% if (item.size || item.color) { %>
                                                 <div class="order-summary__item-meta">
                                                     <% if (item.color) { %>Màu: <%= item.color %><% } %>
@@ -281,7 +288,11 @@
                                     <% } %>
 
                                     <div class="voucher-section__input-group">
-                                        <input type="text" id="voucherCode" name="voucher_code" placeholder="Nhập mã giảm giá" class="voucher-section__input">
+                                        <div class="voucher-section__input-wrap">
+                                            <input type="text" id="voucherCode" placeholder="Nhập mã giảm giá" class="voucher-section__input" autocomplete="off">
+                                            <button type="button" data-checkout-action="clear-voucher" class="voucher-section__clear" hidden aria-label="Xóa voucher">×</button>
+                                        </div>
+                                        <input type="hidden" id="appliedVoucherCode" name="voucher_code" value="">
                                         <button type="button" data-checkout-action="apply-voucher" class="voucher-section__btn">Áp dụng</button>
                                     </div>
                                     <div id="voucherMessage" class="voucher-section__message"></div>
@@ -312,7 +323,8 @@
     </div>
 </div>
 
-<script src="/js/leaflet.js"></script>
+<script src="/vendor/leaflet/leaflet.js"></script>
+<%# Bootstrap du lieu JSON cho script phia client. %>
 <script type="application/json" id="checkoutBootstrapData"><%- JSON.stringify({
     mode: 'cart',
     subtotal: cart.subtotal,

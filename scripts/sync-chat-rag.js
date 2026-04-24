@@ -1,3 +1,4 @@
+// File scripts/sync-chat-rag.js: script hỗ trợ thao tác sync chat rag.
 require('dotenv').config();
 
 const { syncChatRagIndex } = require('../services/chatRagService');

@@ -1,9 +1,11 @@
+<%# File views/partials/footer.ejs: hien thi giao dien va du lieu cho trang tuong ung. %>
 </main>
 <% const extraPageScripts = Array.isArray(typeof pageScripts !== 'undefined' ? pageScripts : null) ? pageScripts : []; %>
 
 <!-- ===== Footer: newsletter, dải dịch vụ, liên kết, scripts ===== -->
 <footer class="footer">
     <!-- Khối đăng ký nhận newsletter -->
+    <%# Section gom nhom noi dung chinh cua trang. %>
     <section class="footer-newsletter" id="newsletter-section">
         <div class="container footer-newsletter__inner">
             <div class="newsletter-content">
@@ -13,6 +15,7 @@
             </div>
 
             <div class="newsletter-actions">
+                <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
                 <form id="newsletter-form" class="newsletter-form">
                     <input type="email" name="email" id="newsletter-email" placeholder="Email của bạn" required>
                     <button type="submit" id="newsletter-btn">Đăng ký ngay</button>
@@ -26,6 +29,7 @@
         </div>
     </section>
 
+    <%# Section gom nhom noi dung chinh cua trang. %>
     <section class="footer-service-strip">
         <div class="container footer-service-strip__grid">
             <div class="footer-service-card">

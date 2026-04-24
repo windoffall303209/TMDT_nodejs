@@ -1,3 +1,4 @@
+// File routes/index.js: khai báo endpoint và middleware cho module index.
 const express = require('express');
 const router = express.Router();
 const productController = require('../controllers/productController');

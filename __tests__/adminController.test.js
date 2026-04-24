@@ -1,3 +1,4 @@
+// File __tests__/adminController.test.js: kiểm thử tự động cho module adminController.test.
 ﻿process.env.NODE_ENV = 'test';
 
 jest.mock('../models/Order', () => ({
@@ -96,6 +97,7 @@ const categoryBulkImportService = require('../services/categoryBulkImportService
 const Sale = require('../models/Sale');
 const Voucher = require('../models/Voucher');
 
+// Tạo response giả lập cho test.
 function createRes() {
     const res = {};
     res.status = jest.fn().mockReturnValue(res);

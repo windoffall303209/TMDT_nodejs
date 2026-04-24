@@ -1,12 +1,15 @@
+// File scripts/reconcile-product-category-ids.js: script hỗ trợ thao tác reconcile product category ids.
 const path = require('path');
 const XLSX = require('xlsx');
 
 const pool = require('../config/database');
 
+// Chuẩn hóa text.
 function normalizeText(value) {
     return String(value ?? '').trim();
 }
 
+// Chuẩn hóa lookup key.
 function normalizeLookupKey(value) {
     return normalizeText(value)
         .toLowerCase()
@@ -17,6 +20,7 @@ function normalizeLookupKey(value) {
         .trim();
 }
 
+// Phân tích args.
 function parseArgs(argv) {
     const args = {
         workbookPath: path.resolve(process.cwd(), 'yody-products-import.xlsx'),
@@ -39,6 +43,7 @@ function parseArgs(argv) {
     return args;
 }
 
+// Xử lý read workbook sản phẩm.
 function readWorkbookProducts(workbookPath) {
     const workbook = XLSX.readFile(workbookPath);
     const sheet = workbook.Sheets.Products || workbook.Sheets.products;
@@ -56,6 +61,7 @@ function readWorkbookProducts(workbookPath) {
     }));
 }
 
+// Tạo dữ liệu workbook indexes.
 function buildWorkbookIndexes(rows) {
     const bySku = new Map();
     const bySlug = new Map();
@@ -76,6 +82,7 @@ function buildWorkbookIndexes(rows) {
     return { bySku, bySlug, byName };
 }
 
+// Tạo dữ liệu danh mục maps.
 function buildCategoryMaps(categories) {
     const byId = new Map();
     const bySlug = new Map();
@@ -93,6 +100,7 @@ function buildCategoryMaps(categories) {
     return { byId, bySlug, byName };
 }
 
+// Xác định target danh mục.
 function resolveTargetCategory(row, categoryMaps) {
     if (row.categorySlug) {
         return categoryMaps.bySlug.get(normalizeLookupKey(row.categorySlug)) || null;
@@ -115,6 +123,7 @@ function resolveTargetCategory(row, categoryMaps) {
     return null;
 }
 
+// Tìm workbook row.
 function findWorkbookRow(product, indexes) {
     if (product.sku) {
         const bySku = indexes.bySku.get(normalizeLookupKey(product.sku));
@@ -137,6 +146,7 @@ function findWorkbookRow(product, indexes) {
     return null;
 }
 
+// Chạy luồng chính của script.
 async function main() {
     const { workbookPath, apply } = parseArgs(process.argv.slice(2));
     const workbookRows = readWorkbookProducts(workbookPath);

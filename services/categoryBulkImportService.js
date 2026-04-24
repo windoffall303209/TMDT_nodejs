@@ -1,11 +1,14 @@
+// File services/categoryBulkImportService.js: gom logic service cho module categoryBulkImportService.
 const XLSX = require('xlsx');
 
 const Category = require('../models/Category');
 
+// Chuẩn hóa text.
 function normalizeText(value) {
     return String(value ?? '').trim();
 }
 
+// Chuẩn hóa lookup key.
 function normalizeLookupKey(value) {
     return normalizeText(value)
         .toLowerCase()
@@ -16,6 +19,7 @@ function normalizeLookupKey(value) {
         .trim();
 }
 
+// Tạo slug chuẩn hóa từ chuỗi đầu vào.
 function slugify(text) {
     return normalizeText(text)
         .toLowerCase()
@@ -26,6 +30,7 @@ function slugify(text) {
         .replace(/(^-|-$)/g, '');
 }
 
+// Tìm sheet name.
 function findSheetName(workbook, expectedName) {
     const normalizedExpectedName = normalizeLookupKey(expectedName);
     return workbook.SheetNames.find(
@@ -33,6 +38,7 @@ function findSheetName(workbook, expectedName) {
     ) || null;
 }
 
+// Xử lý read sheet rows.
 function readSheetRows(workbook, sheetName) {
     const matchedSheetName = findSheetName(workbook, sheetName);
     if (!matchedSheetName) {
@@ -53,10 +59,12 @@ function readSheetRows(workbook, sheetName) {
     }));
 }
 
+// Kiểm tra meaningful row.
 function isMeaningfulRow(row, keys) {
     return keys.some((key) => normalizeText(row[key]));
 }
 
+// Phân tích optional integer.
 function parseOptionalInteger(value, fallback = 0) {
     const normalizedValue = normalizeText(value);
     if (!normalizedValue) {
@@ -71,6 +79,7 @@ function parseOptionalInteger(value, fallback = 0) {
     return parsedValue;
 }
 
+// Phân tích optional id.
 function parseOptionalId(value) {
     const normalizedValue = normalizeText(value);
     if (!normalizedValue) {
@@ -85,6 +94,7 @@ function parseOptionalId(value) {
     return parsedValue;
 }
 
+// Phân tích workbook.
 function parseWorkbook(workbookPath) {
     const workbook = XLSX.readFile(workbookPath);
     const categoryRows = readSheetRows(workbook, 'Categories')
@@ -106,6 +116,7 @@ function parseWorkbook(workbookPath) {
     }));
 }
 
+// Tạo workbook buffer.
 function createWorkbookBuffer(categoryRows) {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(
@@ -120,6 +131,7 @@ function createWorkbookBuffer(categoryRows) {
     return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
 }
 
+// Tạo danh mục import template buffer.
 function createCategoryImportTemplateBuffer() {
     return createWorkbookBuffer([
         {
@@ -134,6 +146,7 @@ function createCategoryImportTemplateBuffer() {
     ]);
 }
 
+// Xuất danh mục vào workbook buffer.
 async function exportCategoriesToWorkbookBuffer(options = {}) {
     const [categories, allCategories] = await Promise.all([
         Category.findAllForAdmin(options.search ? { search: options.search } : {}),
@@ -161,6 +174,7 @@ async function exportCategoriesToWorkbookBuffer(options = {}) {
     return createWorkbookBuffer(rows);
 }
 
+// Nhập danh mục từ workbook.
 async function importCategoriesFromWorkbook({ workbookPath }) {
     const rows = parseWorkbook(workbookPath);
     const existingCategories = await Category.findAllAny();

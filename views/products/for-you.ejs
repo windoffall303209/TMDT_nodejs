@@ -1,24 +1,27 @@
+<%# File views/products/for-you.ejs: hien thi giao dien va du lieu cho trang tuong ung. %>
 <%- include('../partials/header') %>
 
 <link rel="stylesheet" href="/css/product-list.css">
 
 <div class="catalog-page page-shell">
     <div class="container">
+        <%# Section gom nhom noi dung chinh cua trang. %>
         <section class="page-intro page-intro--compact catalog-intro catalog-intro--compact">
             <div class="catalog-intro__content">
                 <h1 class="page-intro__title page-intro__title-inline">
                     <span>For You</span>
                     <span class="page-intro__slash">/</span>
-                    <span>Gợi ý dành riêng cho bạn</span>
+                    <span>Cập nhật theo 5 đơn gần nhất</span>
                 </h1>
             </div>
         </section>
 
         <% if (products && products.length > 0) { %>
+            <%# Section gom nhom noi dung chinh cua trang. %>
             <section class="catalog-toolbar">
                 <div class="catalog-toolbar__summary">
                     <span class="catalog-toolbar__count"><%= products.length.toLocaleString('vi-VN') %></span>
-                    <span class="catalog-toolbar__summary-label">sản phẩm gợi ý</span>
+                    <span class="catalog-toolbar__summary-label">sản phẩm gợi ý từ lịch sử mua mới nhất</span>
                 </div>
             </section>
 
@@ -32,7 +35,7 @@
                 <h3><%= user ? 'Chưa có đủ lịch sử mua hàng để gợi ý' : 'Bạn cần đăng nhập để xem gợi ý cá nhân' %></h3>
                 <p>
                     <%= user
-                        ? 'Khi bạn hoàn tất một vài đơn hàng, trang For You sẽ tự gợi ý tối đa 30 sản phẩm tương tự.'
+                        ? 'Khi bạn có đơn hàng hợp lệ, trang For You sẽ phân tích 5 đơn gần nhất và gợi ý sản phẩm tương tự theo danh mục, màu, size và tên sản phẩm.'
                         : 'Đăng nhập rồi mua hàng, hệ thống sẽ dựa vào lịch sử đơn để gợi ý sản phẩm phù hợp.' %>
                 </p>
                 <a href="<%= user ? '/products' : '/auth/login' %>" class="btn btn-primary">

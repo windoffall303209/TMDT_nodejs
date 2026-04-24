@@ -1,5 +1,7 @@
+// File public/js/admin/admin-shell.js: xử lý tương tác giao diện admin cho module admin shell.
 let adminSavedScrollY = 0;
 
+// Khởi tạo quản trị mobile menu.
 function initAdminMobileMenu() {
     const button = document.getElementById('adminMobileMenuBtn');
     const sidebar = document.getElementById('adminSidebar');
@@ -11,6 +13,7 @@ function initAdminMobileMenu() {
 
     button.dataset.initialized = 'true';
 
+    // Mở menu.
     function openMenu() {
         adminSavedScrollY = window.scrollY;
         button.classList.add('active');
@@ -20,6 +23,7 @@ function initAdminMobileMenu() {
         document.body.style.top = `-${adminSavedScrollY}px`;
     }
 
+    // Đóng menu.
     function closeMenu() {
         button.classList.remove('active');
         sidebar.classList.remove('active');
@@ -29,6 +33,7 @@ function initAdminMobileMenu() {
         window.scrollTo(0, adminSavedScrollY);
     }
 
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     button.addEventListener('click', () => {
         if (sidebar.classList.contains('active')) {
             closeMenu();
@@ -39,12 +44,14 @@ function initAdminMobileMenu() {
 
     overlay?.addEventListener('click', closeMenu);
 
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
             closeMenu();
         }
     });
 
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     window.addEventListener('resize', () => {
         if (window.innerWidth > 1100) {
             closeMenu();
@@ -52,6 +59,7 @@ function initAdminMobileMenu() {
     });
 }
 
+// Khởi tạo quản trị notice toast.
 function initAdminNoticeToast() {
     const params = new URLSearchParams(window.location.search);
     const notice = params.get('notice');
@@ -70,6 +78,7 @@ function initAdminNoticeToast() {
     window.history.replaceState({}, '', nextUrl);
 }
 
+// Gan su kien nguoi dung cho thanh phan giao dien lien quan.
 document.addEventListener('DOMContentLoaded', () => {
     initAdminMobileMenu();
     initAdminNoticeToast();

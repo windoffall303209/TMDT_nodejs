@@ -1,9 +1,11 @@
+// File scripts/check-no-inline-view-assets.js: script hỗ trợ thao tác check no inline view assets.
 const fs = require('fs');
 const path = require('path');
 
 const viewsRoot = path.join(__dirname, '..', 'views');
 const violations = [];
 
+// Xử lý record violation.
 function recordViolation(filePath, type, snippet) {
     violations.push({
         file: path.relative(path.join(__dirname, '..'), filePath),
@@ -12,6 +14,7 @@ function recordViolation(filePath, type, snippet) {
     });
 }
 
+// Xử lý scan tệp.
 function scanFile(filePath) {
     const content = fs.readFileSync(filePath, 'utf8');
 
@@ -35,6 +38,7 @@ function scanFile(filePath) {
     styleAttrMatches.forEach((match) => recordViolation(filePath, 'style-attr', match));
 }
 
+// Duyệt đệ quy cây thư mục để quét file.
 function walk(dirPath) {
     for (const entry of fs.readdirSync(dirPath, { withFileTypes: true })) {
         const fullPath = path.join(dirPath, entry.name);

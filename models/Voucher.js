@@ -1,6 +1,8 @@
+// File models/Voucher.js: thao tác dữ liệu database cho model Voucher.
 const pool = require('../config/database');
 
 class Voucher {
+    // Chuẩn hóa sản phẩm ID.
     static normalizeProductIds(productIds = []) {
         if (!Array.isArray(productIds)) {
             return [];
@@ -13,6 +15,7 @@ class Voucher {
         )];
     }
 
+    // Chuẩn hóa discount giá trị.
     static normalizeDiscountValue(type, value) {
         const normalizedValue = Number(value);
 
@@ -27,6 +30,7 @@ class Voucher {
         return normalizedValue;
     }
 
+    // Tìm tất cả.
     static async findAll(filters = {}) {
         let query = 'SELECT * FROM vouchers WHERE 1=1';
         const params = [];
@@ -51,16 +55,19 @@ class Voucher {
         return rows;
     }
 
+    // Tìm theo ID.
     static async findById(id) {
         const [rows] = await pool.execute('SELECT * FROM vouchers WHERE id = ?', [id]);
         return rows[0] || null;
     }
 
+    // Tìm theo mã.
     static async findByCode(code) {
         const [rows] = await pool.execute('SELECT * FROM vouchers WHERE code = ?', [String(code || '').toUpperCase()]);
         return rows[0] || null;
     }
 
+    // Tạo bản ghi mới.
     static async create(data) {
         const {
             code, name, description, type, value,
@@ -101,6 +108,7 @@ class Voucher {
         };
     }
 
+    // Cập nhật bản ghi hiện có.
     static async update(id, data) {
         const {
             code, name, description, type, value,
@@ -139,6 +147,7 @@ class Voucher {
         return this.findById(id);
     }
 
+    // Thao tác với set applicable sản phẩm.
     static async setApplicableProducts(voucherId, productIds = [], connection = pool) {
         const normalizedProductIds = this.normalizeProductIds(productIds);
 
@@ -160,6 +169,7 @@ class Voucher {
         );
     }
 
+    // Lấy applicable sản phẩm ID.
     static async getApplicableProductIds(voucherId) {
         const [rows] = await pool.execute(
             'SELECT product_id FROM voucher_products WHERE voucher_id = ? ORDER BY product_id ASC',
@@ -169,6 +179,7 @@ class Voucher {
         return rows.map((row) => row.product_id);
     }
 
+    // Lấy applicable sản phẩm map.
     static async getApplicableProductsMap(voucherIds = []) {
         if (!Array.isArray(voucherIds) || voucherIds.length === 0) {
             return new Map();
@@ -206,6 +217,7 @@ class Voucher {
         return assignments;
     }
 
+    // Tính eligible subtotal.
     static calculateEligibleSubtotal(voucherProductIds, cartItems = [], orderAmount = 0) {
         if (!Array.isArray(voucherProductIds) || voucherProductIds.length === 0) {
             return Number(orderAmount) || 0;
@@ -223,14 +235,17 @@ class Voucher {
         }, 0);
     }
 
+    // Xóa bản ghi theo điều kiện truyền vào.
     static async delete(id) {
         await pool.execute('DELETE FROM vouchers WHERE id = ?', [id]);
     }
 
+    // Cập nhật trạng thái.
     static async updateStatus(id, isActive) {
         await pool.execute('UPDATE vouchers SET is_active = ? WHERE id = ?', [isActive, id]);
     }
 
+    // Kiểm tra hợp lệ validate.
     static async validate(code, userId, orderAmount, cartItems = []) {
         const voucher = await this.findByCode(code);
 
@@ -309,6 +324,7 @@ class Voucher {
         };
     }
 
+    // Thao tác với record usage.
     static async recordUsage(voucherId, userId, orderId, discountAmount) {
         await pool.execute(
             'INSERT INTO voucher_usage (voucher_id, user_id, order_id, discount_amount) VALUES (?, ?, ?, ?)',
@@ -321,6 +337,7 @@ class Voucher {
         );
     }
 
+    // Đếm tổng số bản ghi.
     static async count(filters = {}) {
         let query = 'SELECT COUNT(*) as total FROM vouchers WHERE 1=1';
         const params = [];

@@ -1,10 +1,19 @@
+<%# File views/checkout/confirmation.ejs: hien thi giao dien va du lieu cho trang tuong ung. %>
 <%- include('../partials/header') %>
 
 <link rel="stylesheet" href="/css/orders.css">
 
+<%
+    const isPaymentSettled = order.payment_status === 'paid' || ['delivered', 'completed'].includes(order.status);
+    const paymentStatusMessage = isPaymentSettled
+        ? 'Đơn hàng đã được thanh toán.'
+        : (order.payment_method === 'cod' ? 'Đơn hàng sẽ được thanh toán khi nhận hàng.' : 'Đơn hàng đang chờ thanh toán.');
+%>
+
 <!-- ===== Trang xác nhận đặt hàng thành công ===== -->
 <div class="confirmation-page page-shell">
     <div class="container confirmation-page__container">
+        <%# Section gom nhom noi dung chinh cua trang. %>
         <section class="confirmation-hero">
             <div class="confirmation-hero__icon">OK</div>
             <h1 class="confirmation-hero__title page-intro__title-inline page-intro__title-inline--center">
@@ -19,6 +28,7 @@
         </section>
 
         <div class="confirmation-layout">
+            <%# Section gom nhom noi dung chinh cua trang. %>
             <section class="confirmation-card">
                 <h3>Chi tiết đơn hàng</h3>
                 <div class="confirmation-items">
@@ -33,7 +43,11 @@
                                     <% } %>
                                 </div>
                                 <div class="order-item__info">
-                                    <div class="order-item__name"><%= item.product_name %></div>
+                                    <% if (item.product_slug) { %>
+                                        <a class="order-item__name order-item__name-link" href="/products/<%= item.product_slug %>"><%= item.product_name %></a>
+                                    <% } else { %>
+                                        <div class="order-item__name"><%= item.product_name %></div>
+                                    <% } %>
                                     <% if (item.variant_color || item.variant_size) { %>
                                         <div class="order-item__meta">
                                             <% if (item.variant_color) { %>Màu: <%= item.variant_color %><% } %>
@@ -51,6 +65,7 @@
             </section>
 
             <aside class="confirmation-side">
+                <%# Section gom nhom noi dung chinh cua trang. %>
                 <section class="confirmation-card">
                     <h3>Tổng tiền</h3>
                     <div class="confirmation-summary">
@@ -69,6 +84,7 @@
                     </div>
                 </section>
 
+                <%# Section gom nhom noi dung chinh cua trang. %>
                 <section class="confirmation-card">
                     <h3>Giao đến</h3>
                     <div class="confirmation-block">
@@ -77,6 +93,7 @@
                     </div>
                 </section>
 
+                <%# Section gom nhom noi dung chinh cua trang. %>
                 <section class="confirmation-card">
                     <h3>Thanh toán</h3>
                     <div class="confirmation-block">
@@ -91,7 +108,10 @@
                                 <%= order.payment_method %>
                             <% } %>
                         </strong>
-                        <p><%= order.payment_status === 'paid' ? 'Đơn hàng đã được thanh toán.' : 'Đơn hàng đang chờ thanh toán.' %></p>
+                        <p><%= paymentStatusMessage %></p>
+                        <% if (order.status === 'pending_payment' && order.payment_status !== 'paid' && (order.payment_method === 'vnpay' || order.payment_method === 'momo')) { %>
+                            <a href="/orders/<%= order.order_code %>/pay" class="btn btn-primary confirmation-pay-now">Thanh toán ngay</a>
+                        <% } %>
                     </div>
                 </section>
             </aside>
@@ -99,6 +119,9 @@
 
         <div class="confirmation-actions">
             <a href="/" class="btn btn-primary">Về trang chủ</a>
+            <% if (order.status === 'pending_payment' && order.payment_status !== 'paid' && (order.payment_method === 'vnpay' || order.payment_method === 'momo')) { %>
+                <a href="/orders/<%= order.order_code %>/pay" class="btn btn-primary">Thanh toán ngay</a>
+            <% } %>
             <a href="/orders/<%= order.order_code %>/tracking" class="btn btn-secondary">Theo dõi đơn hàng</a>
             <a href="/orders/history" class="btn btn-secondary">Xem lịch sử đơn hàng</a>
         </div>

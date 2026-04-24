@@ -4,15 +4,18 @@
 const POPUP_BANNER_STORAGE_PREFIX = 'popupBanner:lastSeen:';
 const POPUP_BANNER_COOLDOWN_MS = 6 * 60 * 60 * 1000;
 
+// Lấy popup banner element.
 function getPopupBannerElement() {
     return document.getElementById('popupBanner');
 }
 
+// Lấy popup banner storage key.
 function getPopupBannerStorageKey(popupBanner) {
     const bannerKey = popupBanner?.dataset.popupBannerKey || 'default';
     return `${POPUP_BANNER_STORAGE_PREFIX}${bannerKey}`;
 }
 
+// Xử lý read popup banner timestamp.
 function readPopupBannerTimestamp(storageKey) {
     try {
         const rawValue = window.localStorage.getItem(storageKey);
@@ -26,6 +29,7 @@ function readPopupBannerTimestamp(storageKey) {
     }
 }
 
+// Xử lý write popup banner timestamp.
 function writePopupBannerTimestamp(storageKey, timestamp) {
     try {
         window.localStorage.setItem(storageKey, String(timestamp));
@@ -34,6 +38,7 @@ function writePopupBannerTimestamp(storageKey, timestamp) {
     }
 }
 
+// Xóa popup banner timestamp.
 function removePopupBannerTimestamp(storageKey) {
     try {
         window.localStorage.removeItem(storageKey);
@@ -42,6 +47,7 @@ function removePopupBannerTimestamp(storageKey) {
     }
 }
 
+// Kiểm tra hide popup banner.
 function shouldHidePopupBanner(popupBanner) {
     if (!popupBanner) return true;
 
@@ -60,11 +66,13 @@ function shouldHidePopupBanner(popupBanner) {
     return false;
 }
 
+// Xử lý mark popup banner as seen.
 function markPopupBannerAsSeen(popupBanner) {
     if (!popupBanner) return;
     writePopupBannerTimestamp(getPopupBannerStorageKey(popupBanner), Date.now());
 }
 
+// Đóng popup.
 function closePopup() {
     const popupBanner = getPopupBannerElement();
     if (!popupBanner) return;
@@ -73,10 +81,12 @@ function closePopup() {
     markPopupBannerAsSeen(popupBanner);
 }
 
+// Gan su kien nguoi dung cho thanh phan giao dien lien quan.
 document.addEventListener('DOMContentLoaded', function() {
     const popupBanner = getPopupBannerElement();
 
     document.querySelectorAll('[data-popup-close]').forEach((element) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         element.addEventListener('click', closePopup);
     });
 
@@ -88,6 +98,7 @@ document.addEventListener('DOMContentLoaded', function() {
             markPopupBannerAsSeen(popupBanner);
         }
 
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         window.addEventListener('storage', (event) => {
             if (event.key === getPopupBannerStorageKey(popupBanner) && event.newValue) {
                 popupBanner.hidden = true;
@@ -108,6 +119,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentIndex = 0;
     let autoSlideTimer = null;
 
+    // Xử lý go vào slide.
     function goToSlide(index) {
         slides[currentIndex].classList.remove('is-active');
         if (dots[currentIndex]) dots[currentIndex].classList.remove('is-active');
@@ -118,11 +130,13 @@ document.addEventListener('DOMContentLoaded', function() {
         if (dots[currentIndex]) dots[currentIndex].classList.add('is-active');
     }
 
+    // Xử lý start auto slide.
     function startAutoSlide() {
         stopAutoSlide();
         autoSlideTimer = setInterval(() => goToSlide(currentIndex + 1), 5000);
     }
 
+    // Xử lý stop auto slide.
     function stopAutoSlide() {
         if (autoSlideTimer) {
             clearInterval(autoSlideTimer);
@@ -143,6 +157,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Dot indicators
     dots.forEach((dot) => {
+        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         dot.addEventListener('click', () => {
             goToSlide(parseInt(dot.dataset.carouselDot, 10));
             startAutoSlide();
@@ -151,6 +166,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Pause on hover
     carousel.addEventListener('mouseenter', stopAutoSlide);
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     carousel.addEventListener('mouseleave', startAutoSlide);
 
     startAutoSlide();

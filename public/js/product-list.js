@@ -9,6 +9,7 @@ let currentFilter = 'all';
 
 // Filter buttons
 document.querySelectorAll('.filter-btn').forEach(btn => {
+    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     btn.addEventListener('click', function() {
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
         this.classList.add('active');

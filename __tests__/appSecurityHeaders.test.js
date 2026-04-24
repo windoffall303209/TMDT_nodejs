@@ -1,3 +1,4 @@
+// File __tests__/appSecurityHeaders.test.js: kiểm thử tự động cho module appSecurityHeaders.test.
 process.env.NODE_ENV = 'test';
 
 jest.mock('../middleware/auth', () => ({
@@ -5,6 +6,10 @@ jest.mock('../middleware/auth', () => ({
 }));
 
 jest.mock('../middleware/headerCategories', () => jest.fn((req, res, next) => next()));
+
+jest.mock('../middleware/storefrontSettings', () => ({
+    storefrontSettings: jest.fn((req, res, next) => next())
+}));
 
 jest.mock('../routes', () => {
     const express = require('express');

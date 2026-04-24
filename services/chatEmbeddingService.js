@@ -1,3 +1,4 @@
+// File services/chatEmbeddingService.js: gom logic service cho module chatEmbeddingService.
 function resolveEmbeddingModel() {
     const explicitModel = String(process.env.OPENAI_EMBEDDING_MODEL || '').trim();
     if (explicitModel) {
@@ -12,15 +13,18 @@ function resolveEmbeddingModel() {
     return 'text-embedding-3-small';
 }
 
+// Kiểm tra use asymmetric input type.
 function shouldUseAsymmetricInputType(modelName = '') {
     const normalized = String(modelName || '').toLowerCase();
     return normalized.includes('embedqa') || normalized.includes('e5');
 }
 
+// Lấy embedding timeout ms.
 function getEmbeddingTimeoutMs() {
     return Math.max(3000, Number.parseInt(process.env.EMBEDDING_FETCH_TIMEOUT_MS, 10) || 8000);
 }
 
+// Xử lý estimate token count.
 function estimateTokenCount(value = '') {
     const normalized = String(value || '').trim();
     if (!normalized) {
@@ -35,6 +39,7 @@ function estimateTokenCount(value = '') {
     return Math.max(approxByChars, Math.ceil(regexTokens * 1.6));
 }
 
+// Tải với timeout.
 async function fetchWithTimeout(url, options = {}, timeoutMs = getEmbeddingTimeoutMs()) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
@@ -59,6 +64,7 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = getEmbeddingTimeo
     }
 }
 
+// Xử lý read json response safely.
 async function readJsonResponseSafely(response, label) {
     if (typeof response?.text !== 'function') {
         const data = typeof response?.json === 'function' ? await response.json() : null;
@@ -88,6 +94,7 @@ async function readJsonResponseSafely(response, label) {
     }
 }
 
+// Tạo embedding.
 async function createEmbeddings(inputs, options = {}) {
     const normalizedInputs = Array.isArray(inputs)
         ? inputs.map((item) => String(item || '').trim()).filter(Boolean)
@@ -139,6 +146,7 @@ async function createEmbeddings(inputs, options = {}) {
     }));
 }
 
+// Tạo embedding.
 async function createEmbedding(input, options = {}) {
     const results = await createEmbeddings([input], options);
     return results[0] || { embedding: [], model: options.model || resolveEmbeddingModel() };

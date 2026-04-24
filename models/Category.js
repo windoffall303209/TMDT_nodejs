@@ -1,6 +1,8 @@
+// File models/Category.js: thao tác dữ liệu database cho model Category.
 const pool = require('../config/database');
 
 class Category {
+    // Tìm tất cả.
     static async findAll() {
         const query = `
             SELECT c.*,
@@ -18,6 +20,7 @@ class Category {
         return rows;
     }
 
+    // Tìm tất cả any.
     static async findAllAny() {
         const query = `
             SELECT *
@@ -29,6 +32,7 @@ class Category {
         return rows;
     }
 
+    // Tìm root danh mục.
     static async findRootCategories(limit = null) {
         const parsedLimit = Number.parseInt(limit, 10);
         const hasLimit = Number.isInteger(parsedLimit) && parsedLimit > 0;
@@ -53,6 +57,7 @@ class Category {
         return rows;
     }
 
+    // Tìm tất cả for admin.
     static async findAllForAdmin(options = {}) {
         const search = typeof options.search === 'string' ? options.search.trim() : '';
 
@@ -87,30 +92,35 @@ class Category {
         return rows;
     }
 
+    // Tìm theo ID.
     static async findById(id) {
         const query = 'SELECT * FROM categories WHERE id = ? AND is_active = TRUE';
         const [rows] = await pool.execute(query, [id]);
         return rows[0] || null;
     }
 
+    // Tìm theo ID any.
     static async findByIdAny(id) {
         const query = 'SELECT * FROM categories WHERE id = ?';
         const [rows] = await pool.execute(query, [id]);
         return rows[0] || null;
     }
 
+    // Tìm theo slug.
     static async findBySlug(slug) {
         const query = 'SELECT * FROM categories WHERE slug = ? AND is_active = TRUE';
         const [rows] = await pool.execute(query, [slug]);
         return rows[0] || null;
     }
 
+    // Tìm theo slug any.
     static async findBySlugAny(slug) {
         const query = 'SELECT * FROM categories WHERE slug = ?';
         const [rows] = await pool.execute(query, [slug]);
         return rows[0] || null;
     }
 
+    // Tìm with sản phẩm.
     static async findWithProducts(categoryId, limit = 10) {
         const category = await this.findById(categoryId);
         if (!category) return null;
@@ -139,6 +149,7 @@ class Category {
         return category;
     }
 
+    // Tạo bản ghi mới.
     static async create(categoryData, options = {}) {
         const { name, slug, description, parent_id, image_url, display_order } = categoryData;
         const explicitId = Number.isInteger(Number(options.id)) ? Number(options.id) : null;
@@ -177,6 +188,7 @@ class Category {
         return { id: explicitId || result.insertId, ...categoryData, is_active: true };
     }
 
+    // Cập nhật bản ghi hiện có.
     static async update(id, categoryData) {
         const {
             name,
@@ -213,11 +225,13 @@ class Category {
         return this.findById(id);
     }
 
+    // Xóa bản ghi theo điều kiện truyền vào.
     static async delete(id) {
         const query = 'UPDATE categories SET is_active = FALSE WHERE id = ?';
         await pool.execute(query, [id]);
     }
 
+    // Xóa tất cả permanently.
     static async deleteAllPermanently() {
         const connection = await pool.getConnection();
 
@@ -268,6 +282,7 @@ class Category {
         }
     }
 
+    // Lấy usage stats.
     static async getUsageStats(id) {
         const query = `
             SELECT
@@ -287,6 +302,7 @@ class Category {
         return rows[0] || { product_count: 0, child_count: 0 };
     }
 
+    // Thao tác với creates circular reference.
     static async createsCircularReference(categoryId, parentId) {
         if (!parentId) {
             return false;
@@ -311,11 +327,13 @@ class Category {
         return false;
     }
 
+    // Lấy top danh mục.
     static async getTopCategories(limit = 3) {
         const safeLimit = Number.parseInt(limit, 10) || 3;
         return this.findRootCategories(safeLimit);
     }
 
+    // Tạo dữ liệu tree.
     static buildTree(categories = []) {
         const normalizedCategories = Array.isArray(categories)
             ? categories.map((category) => ({

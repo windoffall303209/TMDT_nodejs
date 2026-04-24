@@ -1,3 +1,4 @@
+<%# File views/partials/catalog-sidebar.ejs: hien thi giao dien va du lieu cho trang tuong ung. %>
 <%
     const sidebarFilters = filters || {};
     const sidebarCategories = Array.isArray(categories) ? categories : [];
@@ -170,6 +171,7 @@
     </button>
 
     <div class="catalog-sidebar__panel" id="catalogSidebarPanel">
+        <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
         <form method="get" action="<%= sidebarPath %>" class="catalog-sidebar__form">
             <% if (sidebarCurrentSort && sidebarCurrentSort !== 'newest') { %>
                 <input type="hidden" name="sort" value="<%= sidebarCurrentSort %>">
@@ -194,6 +196,7 @@
                 </a>
             </div>
 
+            <%# Section gom nhom noi dung chinh cua trang. %>
             <section class="catalog-sidebar__section">
                 <div class="catalog-sidebar__section-head">
                     <h3 class="catalog-sidebar__section-title">Danh mục</h3>
@@ -305,6 +308,7 @@
                 <% } %>
             </section>
 
+            <%# Section gom nhom noi dung chinh cua trang. %>
             <section class="catalog-sidebar__section">
                 <h3 class="catalog-sidebar__section-title">Giá</h3>
 
@@ -341,6 +345,7 @@
                 </div>
             </section>
 
+            <%# Section gom nhom noi dung chinh cua trang. %>
             <section class="catalog-sidebar__section">
                 <h3 class="catalog-sidebar__section-title">Đánh giá</h3>
                 <div class="catalog-sidebar__option-list">
@@ -361,6 +366,7 @@
                 </div>
             </section>
 
+            <%# Section gom nhom noi dung chinh cua trang. %>
             <section class="catalog-sidebar__section">
                 <h3 class="catalog-sidebar__section-title">Khuyến mãi</h3>
                 <div class="catalog-sidebar__option-list">
