@@ -1,4 +1,4 @@
-// File controllers/admin/bannerController.js: điều phối handler admin cho module bannerController.
+// Controller admin xử lý nghiệp vụ quản trị bannercontroller và chuẩn bị dữ liệu cho view/API quản trị.
 const legacy = require('./legacy');
 
 // Xử lý banner quảng cáo và sắp xếp thứ tự hiển thị.

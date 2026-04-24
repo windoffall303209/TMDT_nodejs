@@ -105,8 +105,6 @@ function showConfirm(message, title = 'Xác nhận', yesText = 'Xác nhận', ye
                 closeModal(false);
             }
         };
-
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         document.addEventListener('keydown', handleEscape);
         window.setTimeout(() => {
             if (requiredText && typingInput) {
@@ -385,7 +383,6 @@ function renderCreateImagesPreview() {
     `).join('');
 
     preview.querySelectorAll('.product-upload-preview__remove').forEach(button => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => {
             removeCreateMainUpload(decodeURIComponent(button.dataset.fileKey));
         });
@@ -948,7 +945,6 @@ function addVariantRow(mode, data = {}) {
 
     row.querySelectorAll('input, select').forEach(input => {
         const eventName = input.type === 'file' ? 'change' : (input.tagName === 'SELECT' ? 'change' : 'input');
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         input.addEventListener(eventName, () => {
             if (input.classList.contains('variant-image-file')) {
                 handleVariantFileSelection(input, mode).catch(error => {
@@ -1114,11 +1110,8 @@ function initAdminProducts() {
     });
 
     document.querySelectorAll('[data-admin-toggle="section"]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => toggleProductSection(button));
     });
-
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     document.addEventListener('click', (event) => {
         const actionButton = event.target.closest('[data-product-action]');
         if (actionButton) {
@@ -1226,7 +1219,6 @@ function initAdminProducts() {
     }
 
     if (autoSkuCheckbox && createSkuInput) {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         autoSkuCheckbox.addEventListener('change', function() {
             if (this.checked) {
                 createSkuInput.readOnly = true;
@@ -1246,7 +1238,5 @@ function initAdminProducts() {
 
     syncCreateMainImageOptions();
 }
-
-// Gan su kien nguoi dung cho thanh phan giao dien lien quan.
 document.addEventListener('DOMContentLoaded', initAdminProducts);
 

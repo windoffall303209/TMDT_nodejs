@@ -1,4 +1,4 @@
-// File public/js/chat-widget.js: xử lý tương tác giao diện phía trình duyệt cho module chat widget.
+// Điều phối tương tác trình duyệt cho chat widget, tách khỏi template EJS.
 const chatState = window.__tmdtChatWidgetState || (window.__tmdtChatWidgetState = {
     open: false,
     loaded: false,
@@ -645,8 +645,6 @@ function initChatWidget() {
     chatState.initialized = true;
     runChatTaskWhenIdle(() => refreshChatBadge());
     syncExpandButton();
-
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     toggleButton.addEventListener('click', toggleChatWidget);
     document.querySelector('.chat-widget__close')?.addEventListener('click', toggleChatWidget);
     document.getElementById('chatForm')?.addEventListener('submit', sendChatMessage);
@@ -654,12 +652,7 @@ function initChatWidget() {
     fileInput?.addEventListener('change', updateAttachmentPreview);
     attachmentClearButton?.addEventListener('click', clearAttachmentSelection);
     expandButton?.addEventListener('click', toggleChatExpand);
-
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     document.addEventListener('visibilitychange', syncChatAfterFocus);
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     window.addEventListener('pagehide', stopChatPolling, { passive: true });
 }
-
-// Gan su kien nguoi dung cho thanh phan giao dien lien quan.
 document.addEventListener('DOMContentLoaded', initChatWidget);

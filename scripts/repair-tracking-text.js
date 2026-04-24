@@ -1,4 +1,4 @@
-// File scripts/repair-tracking-text.js: script hỗ trợ thao tác repair tracking text.
+// Script bảo trì repair theo dõi đơn hàng text, dùng khi cần kiểm tra hoặc đồng bộ dữ liệu dự án.
 const pool = require('../config/database');
 
 const PRESETS = {

@@ -6,7 +6,7 @@
  * - Đăng ký tài khoản mới
  * - Đăng nhập / Đăng xuất
  * - Quản lý profile người dùng
- * - Upload avatar
+ * - T?i avatar
  * - Đổi mật khẩu
  * - Quản lý địa chỉ giao hàng
  * =============================================================================
@@ -142,7 +142,7 @@ async function exchangeGoogleCodeForProfile(req, code) {
 }
 
 // =============================================================================
-// CẤU HÌNH UPLOAD AVATAR
+// CẤU HÌNH T?I AVATAR
 // =============================================================================
 
 /**
@@ -167,7 +167,7 @@ const avatarStorage = multer.diskStorage({
 });
 
 /**
- * Middleware upload avatar với các ràng buộc
+ * Middleware t?i avatar với các ràng buộc
  * - Giới hạn dung lượng: 5MB
  * - Chỉ chấp nhận file ảnh: jpeg, jpg, png, gif, webp
  * - Upload lên Cloudinary, xóa file tạm sau khi upload
@@ -908,11 +908,11 @@ exports.changePassword = async (req, res) => {
 };
 
 // =============================================================================
-// UPLOAD AVATAR
+// T?I AVATAR
 // =============================================================================
 
 /**
- * Xử lý upload avatar
+ * Xử lý t?i avatar
  *
  * @description Upload và cập nhật ảnh đại diện của người dùng
  *
@@ -927,7 +927,7 @@ exports.handleAvatarUpload = (req, res) => {
     uploadAvatar(req, res, async (err) => {
         // Xử lý lỗi upload
         if (err) {
-            console.error('Avatar upload error:', err);
+            console.error('Avatar l?i upload:', err);
             return res.status(400).json({
                 success: false,
                 message: err.message || 'Lỗi upload ảnh'

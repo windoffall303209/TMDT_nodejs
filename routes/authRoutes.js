@@ -1,4 +1,4 @@
-// File routes/authRoutes.js: khai báo endpoint và middleware cho module authRoutes.
+// Khai báo route authroutes và nối middleware/controller tương ứng.
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');

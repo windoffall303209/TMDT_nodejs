@@ -1,4 +1,4 @@
-// File server.js: mã nguồn cho module server.
+// Nạp cấu hình môi trường và khởi động HTTP server cho Express app.
 require('dotenv').config();
 const app = require('./app');
 

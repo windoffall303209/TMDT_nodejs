@@ -1,17 +1,4 @@
-/**
- * =============================================================================
- * ADMIN CONTROLLER - i�u khi�n trang qu�n tr�
- * =============================================================================
- * File n�y ch�a c�c h�m x� l� logic cho trang Admin:
- * - Dashboard: Th�ng k� t�ng quan
- * - Qu�n l� s�n ph�m: CRUD s�n ph�m, qu�n l� �nh
- * - Qu�n l� �n h�ng: Xem, c�p nh�t tr�ng th�i
- * - Qu�n l� ng��i d�ng: Xem, kh�a/m� kh�a t�i kho�n
- * - Qu�n l� banner: CRUD banner qu�ng c�o
- * - Qu�n l� khuy�n m�i: CRUD ch��ng tr�nh sale
- * - Email marketing: G�i email h�ng lo�t
- * =============================================================================
- */
+
 
 const Order = require('../../models/Order');
 const ReturnRequest = require('../../models/ReturnRequest');
@@ -184,7 +171,7 @@ function buildAdminNoticeRedirect(path, message, type = 'success') {
     return `${path}?${params.toString()}`;
 }
 
-// Dọn dẹp import upload tệp.
+// Dọn dẹp file import đã upload tạm.
 function cleanupImportUploadFiles(files) {
     const fs = require('fs');
     const fileList = Array.isArray(files)
@@ -489,20 +476,9 @@ async function getDashboardAnalytics() {
 }
 
 // =============================================================================
-// DASHBOARD - Trang t�ng quan
 // =============================================================================
 
-/**
- * Hi�n th� trang Dashboard (T�ng quan)
- *
- * @description L�y c�c th�ng k� t�ng quan v� �n h�ng, doanh thu
- *              v� danh s�ch �n h�ng g�n �y � hi�n th� tr�n dashboard
- *
- * @param {Object} req - Request object t� Express
- * @param {Object} res - Response object t� Express
- *
- * @returns {void} Render trang admin/dashboard v�i d� li�u th�ng k�
- */
+
 exports.getDashboard = async (req, res) => {
     try {
         const allowedRecentLimits = new Set([5, 10, 15]);
@@ -523,8 +499,6 @@ exports.getDashboard = async (req, res) => {
                 hidden: 0
             }
         };
-
-        // Kh�i t�o object th�ng k� v�i gi� tr� m�c �nh
         let stats = {
             total_orders: 0,        // T�ng s� �n h�ng
             pending_payment_orders: 0,
@@ -542,7 +516,6 @@ exports.getDashboard = async (req, res) => {
         stats.processing_orders = 0;
 
         try {
-            // L�y th�ng k� t� database
             const [orderStats, dashboardAnalytics, recentOrdersData] = await Promise.all([
                 Order.getStatistics(),
                 getDashboardAnalytics(),
@@ -572,10 +545,7 @@ exports.getDashboard = async (req, res) => {
             };
         } catch (err) {
             console.error('Dashboard data error:', err);
-            // S� d�ng gi� tr� m�c �nh n�u l�i
         }
-
-        // Render trang dashboard v�i d� li�u
         res.render('admin/dashboard', {
             stats,
             recentOrders,
@@ -591,7 +561,6 @@ exports.getDashboard = async (req, res) => {
 };
 
 // =============================================================================
-// QU�N L� DANH M�C - Categories Management
 // =============================================================================
 
 exports.getCategories = async (req, res) => {
@@ -795,20 +764,9 @@ exports.deleteAllCategories = async (req, res) => {
 };
 
 // =============================================================================
-// QU�N L� S�N PH�M - Products Management
 // =============================================================================
 
-/**
- * Hi�n th� danh s�ch s�n ph�m
- *
- * @description L�y danh s�ch t�t c� s�n ph�m v� danh m�c
- *              � hi�n th� tr�n trang qu�n l� s�n ph�m
- *
- * @param {Object} req - Request object t� Express
- * @param {Object} res - Response object t� Express
- *
- * @returns {void} Render trang admin/products v�i danh s�ch s�n ph�m
- */
+
 exports.getProducts = async (req, res) => {
     try {
         let products = [];
@@ -930,28 +888,7 @@ exports.importProducts = async (req, res) => {
     }
 };
 
-/**
- * T�o s�n ph�m m�i
- *
- * @description Nh�n d� li�u t� form t�o s�n ph�m, t� �ng t�o slug n�u kh�ng c�,
- *              l�u s�n ph�m v�o database v� x� l� upload �nh
- *
- * @param {Object} req - Request object t� Express
- * @param {Object} req.body - D� li�u s�n ph�m t� form
- * @param {number} req.body.category_id - ID danh m�c
- * @param {string} req.body.name - T�n s�n ph�m
- * @param {string} [req.body.slug] - Slug URL (t� �ng t�o n�u kh�ng c�)
- * @param {string} req.body.description - M� t� s�n ph�m
- * @param {number} req.body.price - Gi� s�n ph�m
- * @param {number} req.body.stock_quantity - S� l��ng t�n kho
- * @param {string} req.body.sku - M� SKU
- * @param {number} [req.body.sale_id] - ID ch��ng tr�nh khuy�n m�i
- * @param {string} [req.body.is_featured] - S�n ph�m n�i b�t ('on' = true)
- * @param {Array} [req.files] - Danh s�ch file �nh upload
- * @param {Object} res - Response object t� Express
- *
- * @returns {Redirect} Redirect v� trang danh s�ch s�n ph�m
- */
+
 exports.createProduct = async (req, res) => {
     try {
         const { category_id, name, description, price, stock_quantity, sku, sale_id, is_featured } = req.body;
@@ -1006,19 +943,7 @@ exports.createProduct = async (req, res) => {
     }
 };
 
-/**
- * C�p nh�t th�ng tin s�n ph�m
- *
- * @description Nh�n d� li�u c�p nh�t t� form v� l�u v�o database
- *
- * @param {Object} req - Request object t� Express
- * @param {Object} req.params - Tham s� URL
- * @param {number} req.params.id - ID s�n ph�m c�n c�p nh�t
- * @param {Object} req.body - D� li�u c�p nh�t
- * @param {Object} res - Response object t� Express
- *
- * @returns {Redirect} Redirect v� trang danh s�ch s�n ph�m
- */
+
 exports.updateProduct = async (req, res) => {
     try {
         const { id } = req.params;
@@ -1060,22 +985,10 @@ exports.updateProduct = async (req, res) => {
     }
 };
 
-/**
- * X�a s�n ph�m
- *
- * @description X�a s�n ph�m kh�i database d�a tr�n ID
- *
- * @param {Object} req - Request object t� Express
- * @param {Object} req.params - Tham s� URL
- * @param {number} req.params.id - ID s�n ph�m c�n x�a
- * @param {Object} res - Response object t� Express
- *
- * @returns {JSON} Tr� v� JSON v�i th�ng b�o th�nh c�ng/th�t b�i
- */
+
 exports.deleteProduct = async (req, res) => {
     try {
         const { id } = req.params;
-        // X�a s�n ph�m (s� cascade x�a c� �nh li�n quan)
         await Product.delete(id);
         res.json({ message: 'Product deleted successfully' });
     } catch (error) {
@@ -1103,25 +1016,14 @@ exports.deleteAllProducts = async (req, res) => {
 };
 
 // =============================================================================
-// QU�N L� �N H�NG - Orders Management
 // =============================================================================
 
-/**
- * Hi�n th� danh s�ch �n h�ng
- *
- * @description L�y danh s�ch t�t c� �n h�ng � hi�n th� tr�n trang qu�n l�
- *
- * @param {Object} req - Request object t� Express
- * @param {Object} res - Response object t� Express
- *
- * @returns {void} Render trang admin/orders v�i danh s�ch �n h�ng
- */
+
 exports.getOrders = async (req, res) => {
     try {
         let orders = [];
         const searchQuery = typeof req.query.search === 'string' ? req.query.search.trim() : '';
         try {
-            // L�y 50 �n h�ng g�n nh�t
             orders = await Order.findAll({
                 limit: 50,
                 offset: 0,
@@ -1130,8 +1032,6 @@ exports.getOrders = async (req, res) => {
         } catch (err) {
             console.error('Orders data error:', err);
         }
-
-        // Render trang qu�n l� �n h�ng
         res.render('admin/orders', {
             orders,
             searchQuery,
@@ -1143,12 +1043,7 @@ exports.getOrders = async (req, res) => {
     }
 };
 
-/**
- * Hi�n th� chi ti�t �n h�ng
- *
- * @param {Object} req - Request object t� Express
- * @param {Object} res - Response object t� Express
- */
+
 exports.getOrderDetail = async (req, res) => {
     try {
         const { id } = req.params;
@@ -1166,19 +1061,9 @@ exports.getOrderDetail = async (req, res) => {
 
 
 // =============================================================================
-// QU�N L� NG��I D�NG - Users Management
 // =============================================================================
 
-/**
- * Hi�n th� danh s�ch ng��i d�ng
- *
- * @description L�y danh s�ch t�t c� ng��i d�ng � ng k�
- *
- * @param {Object} req - Request object t� Express
- * @param {Object} res - Response object t� Express
- *
- * @returns {void} Render trang admin/users v�i danh s�ch ng��i d�ng
- */
+
 exports.getUsers = async (req, res) => {
     try {
         let users = [];
@@ -1190,7 +1075,6 @@ exports.getUsers = async (req, res) => {
 
         try {
             users = await User.findAll({ limit, offset });
-            // �m t�ng ng��i d�ng
             const pool = require('../../config/database');
             const [countResult] = await pool.execute('SELECT COUNT(*) as total FROM users');
             totalItems = countResult[0].total;
@@ -1211,18 +1095,11 @@ exports.getUsers = async (req, res) => {
     }
 };
 
-/**
- * Xem chi ti�t ng��i d�ng (API JSON)
- *
- * @param {Object} req - Request object t� Express
- * @param {Object} res - Response object t� Express
- */
+
 exports.getUserDetail = async (req, res) => {
     try {
         const { id } = req.params;
         const pool = require('../../config/database');
-
-        // L�y user info (bao g�m c� b� kh�a)
         const [users] = await pool.execute(
             'SELECT id, email, full_name, phone, avatar_url, birthday, role, email_verified, marketing_consent, is_active, created_at FROM users WHERE id = ?',
             [id]
@@ -1231,15 +1108,11 @@ exports.getUserDetail = async (req, res) => {
         if (!userData) {
             return res.status(404).json({ success: false, message: 'Kh�ng t�m th�y ng��i d�ng' });
         }
-
-        // L�y �a ch�
         const [addresses] = await pool.execute(
             'SELECT * FROM addresses WHERE user_id = ? ORDER BY is_default DESC',
             [id]
         );
         userData.addresses = addresses;
-
-        // L�y 5 �n h�ng g�n nh�t
         const [orders] = await pool.execute(
             'SELECT id, order_code, total_amount, final_amount, status, payment_status, created_at FROM orders WHERE user_id = ? ORDER BY created_at DESC LIMIT 5',
             [id]
@@ -1252,24 +1125,11 @@ exports.getUserDetail = async (req, res) => {
     }
 };
 
-/**
- * C�p nh�t tr�ng th�i ng��i d�ng (Kh�a/M� kh�a)
- *
- * @description Kh�a ho�c m� kh�a t�i kho�n ng��i d�ng
- *
- * @param {Object} req - Request object t� Express
- * @param {Object} req.params.id - ID ng��i d�ng
- * @param {Object} req.body.is_active - Tr�ng th�i m�i ('true' ho�c 'false')
- * @param {Object} res - Response object t� Express
- *
- * @returns {JSON} Tr� v� JSON v�i th�ng b�o th�nh c�ng/th�t b�i
- */
+
 exports.updateUserStatus = async (req, res) => {
     try {
         const { id } = req.params;
         const { is_active } = req.body;
-
-        // C�p nh�t tr�ng th�i (chuy�n string 'true'/'false' th�nh boolean)
         await User.updateStatus(id, is_active === 'true');
         res.json({ message: 'User status updated successfully' });
     } catch (error) {
@@ -1278,19 +1138,9 @@ exports.updateUserStatus = async (req, res) => {
 };
 
 // =============================================================================
-// QU�N L� BANNER - Banners Management
 // =============================================================================
 
-/**
- * Hi�n th� danh s�ch banner
- *
- * @description L�y danh s�ch t�t c� banner qu�ng c�o
- *
- * @param {Object} req - Request object t� Express
- * @param {Object} res - Response object t� Express
- *
- * @returns {void} Render trang admin/banners v�i danh s�ch banner
- */
+
 exports.getBanners = async (req, res) => {
     try {
         let banners = [];
@@ -1299,8 +1149,6 @@ exports.getBanners = async (req, res) => {
         } catch (err) {
             console.error('Banners data error:', err);
         }
-
-        // Render trang qu�n l� banner
         res.render('admin/banners', {
             banners,
             user: req.user,
@@ -1311,38 +1159,14 @@ exports.getBanners = async (req, res) => {
     }
 };
 
-/**
- * T�o banner m�i
- *
- * @description T�o banner qu�ng c�o m�i v�i �nh upload ho�c URL
- *
- * @param {Object} req - Request object t� Express
- * @param {Object} req.body - D� li�u banner
- * @param {string} req.body.title - Ti�u � banner
- * @param {string} req.body.subtitle - Ti�u � ph�
- * @param {string} req.body.description - M� t�
- * @param {string} req.body.link_url - URL khi click v�o banner
- * @param {string} req.body.button_text - Text n�t CTA
- * @param {number} req.body.display_order - Th� t� hi�n th�
- * @param {string} [req.body.start_date] - Ng�y b�t �u hi�n th�
- * @param {string} [req.body.end_date] - Ng�y k�t th�c hi�n th�
- * @param {Object} [req.file] - File �nh upload
- * @param {Object} res - Response object t� Express
- *
- * @returns {Redirect} Redirect v� trang danh s�ch banner
- */
+
 exports.createBanner = async (req, res) => {
     try {
-        // L�y d� li�u t� form
         const { title, subtitle, description, link_url, button_text, display_order, start_date, end_date } = req.body;
-
-        // X� l� �nh upload (�u ti�n URL Cloudinary)
         let image_url = '';
         if (req.file) {
             image_url = req.file.cloudinaryUrl || `/uploads/${req.file.filename}`;
         }
-
-        // T�o banner trong database
         await Banner.create({
             title,
             subtitle,
@@ -1354,29 +1178,16 @@ exports.createBanner = async (req, res) => {
             start_date: start_date || null,
             end_date: end_date || null
         });
-
-        // Redirect v� trang danh s�ch
         res.redirect('/admin/banners');
     } catch (error) {
         res.status(400).json({ message: error.message });
     }
 };
 
-/**
- * X�a banner
- *
- * @description X�a banner kh�i database
- *
- * @param {Object} req - Request object t� Express
- * @param {Object} req.params.id - ID banner c�n x�a
- * @param {Object} res - Response object t� Express
- *
- * @returns {JSON} Tr� v� JSON v�i th�ng b�o th�nh c�ng/th�t b�i
- */
+
 exports.deleteBanner = async (req, res) => {
     try {
         const pool = require('../../config/database');
-        // X�a banner t� database
         await pool.execute('DELETE FROM banners WHERE id = ?', [req.params.id]);
         res.json({ success: true, message: 'Banner deleted' });
     } catch (error) {
@@ -1385,19 +1196,9 @@ exports.deleteBanner = async (req, res) => {
 };
 
 // =============================================================================
-// QU�N L� KHUY�N M�I - Sales Management
 // =============================================================================
 
-/**
- * Hi�n th� danh s�ch khuy�n m�i
- *
- * @description L�y danh s�ch t�t c� ch��ng tr�nh khuy�n m�i
- *
- * @param {Object} req - Request object t� Express
- * @param {Object} res - Response object t� Express
- *
- * @returns {void} Render trang admin/sales v�i danh s�ch khuy�n m�i
- */
+
 exports.getSales = async (req, res) => {
     try {
         let sales = [];
@@ -1416,8 +1217,6 @@ exports.getSales = async (req, res) => {
         } catch (err) {
             console.error('Sales data error:', err);
         }
-
-        // Render trang qu�n l� khuy�n m�i
         res.render('admin/sales', {
             sales,
             products,
@@ -1431,23 +1230,7 @@ exports.getSales = async (req, res) => {
     }
 };
 
-/**
- * T�o ch��ng tr�nh khuy�n m�i m�i
- *
- * @description T�o khuy�n m�i m�i v�i lo�i gi�m gi� (% ho�c s� ti�n c� �nh)
- *
- * @param {Object} req - Request object t� Express
- * @param {Object} req.body - D� li�u khuy�n m�i
- * @param {string} req.body.name - T�n ch��ng tr�nh
- * @param {string} req.body.description - M� t�
- * @param {string} req.body.type - Lo�i gi�m gi� ('percentage' ho�c 'fixed')
- * @param {number} req.body.value - Gi� tr� gi�m (% ho�c s� ti�n)
- * @param {string} req.body.start_date - Ng�y b�t �u
- * @param {string} req.body.end_date - Ng�y k�t th�c
- * @param {Object} res - Response object t� Express
- *
- * @returns {Redirect} Redirect v� trang danh s�ch khuy�n m�i
- */
+
 exports.createSale = async (req, res) => {
     try {
         const { name, description, type, value, start_date, end_date } = req.body;
@@ -1455,8 +1238,6 @@ exports.createSale = async (req, res) => {
         const shouldNotifySubscribers = parseChecked(req.body.notify_subscribers);
         const normalizedValue = normalizeDiscountValueOrThrow(type, value, 'Gi� tr� khuy�n m�i');
         assertDateRangeValid(start_date, end_date, 'Th�i gian khuy�n m�i');
-
-        // T�o khuy�n m�i trong database
         const sale = await Sale.create({
             name,
             description,
@@ -1486,17 +1267,13 @@ exports.createSale = async (req, res) => {
 
             return res.redirect(buildAdminNoticeRedirect('/admin/sales', '� t�o khuy�n m�i nh�ng ch�a g�i email th�nh c�ng. Vui l�ng ki�m tra c�u h�nh email.', 'error'));
         }
-
-        // Redirect v� trang danh s�ch
         res.redirect(buildAdminNoticeRedirect('/admin/sales', '� t�o khuy�n m�i th�nh c�ng.'));
     } catch (error) {
         res.redirect(buildAdminNoticeRedirect('/admin/sales', error.message || 'Kh�ng th� t�o khuy�n m�i.', 'error'));
     }
 };
 
-/**
- * C�p nh�t ch��ng tr�nh khuy�n m�i
- */
+
 exports.updateSale = async (req, res) => {
     try {
         const { id } = req.params;
@@ -1529,9 +1306,7 @@ exports.updateSale = async (req, res) => {
     }
 };
 
-/**
- * Ng�ng v� g� �p d�ng khuy�n m�i kh�i s�n ph�m
- */
+
 exports.deleteSale = async (req, res) => {
     try {
         const { id } = req.params;
@@ -1601,33 +1376,15 @@ exports.sendSaleAnnouncementEmail = async (req, res) => {
 // EMAIL MARKETING
 // =============================================================================
 
-/**
- * G�i email marketing h�ng lo�t
- *
- * @description G�i email qu�ng c�o �n t�t c� ng��i d�ng � �ng � nh�n marketing
- *
- * @param {Object} req - Request object t� Express
- * @param {Object} req.body - N�i dung email
- * @param {string} req.body.subject - Ti�u � email
- * @param {string} req.body.content - N�i dung email (HTML)
- * @param {Object} res - Response object t� Express
- *
- * @returns {JSON} Tr� v� JSON v�i s� l��ng email � g�i th�nh c�ng
- */
+
 exports.sendMarketingEmail = async (req, res) => {
     try {
         const { subject, content } = req.body;
-
-        // L�y danh s�ch ng��i d�ng � �ng � nh�n email marketing
         const users = await User.getMarketingList();
-
-        // G�i email h�ng lo�t
         const result = await emailService.sendMarketingEmail(users, {
             subject,
             content
         });
-
-        // Tr� v� k�t qu�
         res.json({
             message: `Email sent to ${result.success}/${result.total} users`
         });
@@ -1637,20 +1394,9 @@ exports.sendMarketingEmail = async (req, res) => {
 };
 
 // =============================================================================
-// QU�N L� �NH S�N PH�M - Product Images Management
 // =============================================================================
 
-/**
- * L�y danh s�ch �nh c�a s�n ph�m
- *
- * @description L�y t�t c� �nh c�a m�t s�n ph�m, s�p x�p �nh ch�nh l�n �u
- *
- * @param {Object} req - Request object t� Express
- * @param {Object} req.params.id - ID s�n ph�m
- * @param {Object} res - Response object t� Express
- *
- * @returns {JSON} Tr� v� JSON v�i danh s�ch �nh: { images: [...] }
- */
+
 exports.getProductImages = async (req, res) => {
     try {
         const images = await Product.getImages(req.params.id);
@@ -1660,34 +1406,18 @@ exports.getProductImages = async (req, res) => {
     }
 };
 
-/**
- * Th�m �nh s�n ph�m b�ng URL
- *
- * @description Th�m �nh m�i cho s�n ph�m b�ng c�ch nh�p URL �nh
- *
- * @param {Object} req - Request object t� Express
- * @param {Object} req.params.id - ID s�n ph�m
- * @param {Object} req.body.image_url - URL c�a �nh
- * @param {boolean} [req.body.is_primary] - �t l�m �nh ch�nh
- * @param {Object} res - Response object t� Express
- *
- * @returns {JSON} Tr� v� JSON v�i th�ng b�o th�nh c�ng/th�t b�i
- */
+
 exports.addProductImageUrl = async (req, res) => {
     try {
         const pool = require('../../config/database');
         const { image_url, is_primary } = req.body;
         const productId = req.params.id;
-
-        // N�u �t l�m �nh ch�nh, b� flag is_primary c�a c�c �nh kh�c
         if (is_primary) {
             await pool.execute(
                 'UPDATE product_images SET is_primary = FALSE WHERE product_id = ?',
                 [productId]
             );
         }
-
-        // Th�m �nh m�i v�o database
         await pool.execute(
             'INSERT INTO product_images (product_id, image_url, is_primary) VALUES (?, ?, ?)',
             [productId, image_url, is_primary || false]
@@ -1701,19 +1431,7 @@ exports.addProductImageUrl = async (req, res) => {
     }
 };
 
-/**
- * Upload �nh s�n ph�m
- *
- * @description Upload file �nh t� m�y t�nh v� l�u v�o server
- *
- * @param {Object} req - Request object t� Express
- * @param {Object} req.params.id - ID s�n ph�m
- * @param {Object} req.file - File �nh upload (t� multer)
- * @param {string} req.body.is_primary - �t l�m �nh ch�nh ('true'/'false')
- * @param {Object} res - Response object t� Express
- *
- * @returns {JSON} Tr� v� JSON v�i th�ng b�o th�nh c�ng/th�t b�i
- */
+
 exports.uploadProductImage = async (req, res) => {
     try {
         const productId = req.params.id;
@@ -1746,17 +1464,7 @@ exports.uploadProductImage = async (req, res) => {
     }
 };
 
-/**
- * X�a �nh s�n ph�m
- *
- * @description X�a m�t �nh kh�i s�n ph�m
- *
- * @param {Object} req - Request object t� Express
- * @param {Object} req.params.imageId - ID c�a �nh c�n x�a
- * @param {Object} res - Response object t� Express
- *
- * @returns {JSON} Tr� v� JSON v�i th�ng b�o th�nh c�ng/th�t b�i
- */
+
 exports.deleteProductImage = async (req, res) => {
     try {
         const pool = require('../../config/database');
@@ -1778,43 +1486,24 @@ exports.deleteProductImage = async (req, res) => {
     }
 };
 
-/**
- * �t �nh l�m �nh ch�nh
- *
- * @description �t m�t �nh l�m �nh ch�nh (primary) c�a s�n ph�m.
- *              B� flag is_primary c�a c�c �nh kh�c c�ng s�n ph�m
- *
- * @param {Object} req - Request object t� Express
- * @param {Object} req.params.imageId - ID c�a �nh c�n �t l�m ch�nh
- * @param {Object} res - Response object t� Express
- *
- * @returns {JSON} Tr� v� JSON v�i th�ng b�o th�nh c�ng/th�t b�i
- */
+
 exports.setPrimaryImage = async (req, res) => {
     try {
         const pool = require('../../config/database');
         const imageId = req.params.imageId;
-
-        // L�y product_id t� �nh n�y
         const [image] = await pool.execute(
             'SELECT product_id FROM product_images WHERE id = ?',
             [imageId]
         );
-
-        // Ki�m tra �nh c� t�n t�i kh�ng
         if (image.length === 0) {
             return res.status(404).json({ message: 'Image not found' });
         }
 
         const productId = image[0].product_id;
-
-        // B� flag is_primary c�a t�t c� �nh c�ng s�n ph�m
         await pool.execute(
             'UPDATE product_images SET is_primary = FALSE WHERE product_id = ?',
             [productId]
         );
-
-        // �t �nh n�y l�m �nh ch�nh
         await pool.execute(
             'UPDATE product_images SET is_primary = TRUE WHERE id = ?',
             [imageId]
@@ -1829,12 +1518,9 @@ exports.setPrimaryImage = async (req, res) => {
 };
 
 // =============================================================================
-// QU�N L� VOUCHER - Vouchers Management
 // =============================================================================
 
-/**
- * Hi�n th� danh s�ch voucher
- */
+
 exports.getVouchers = async (req, res) => {
     try {
         let vouchers = [];
@@ -1867,9 +1553,7 @@ exports.getVouchers = async (req, res) => {
     }
 };
 
-/**
- * T�o voucher m�i
- */
+
 exports.createVoucher = async (req, res) => {
     try {
         const {
@@ -1924,9 +1608,7 @@ exports.createVoucher = async (req, res) => {
     }
 };
 
-/**
- * C�p nh�t voucher
- */
+
 exports.updateVoucher = async (req, res) => {
     try {
         const { id } = req.params;
@@ -1961,9 +1643,7 @@ exports.updateVoucher = async (req, res) => {
     }
 };
 
-/**
- * X�a voucher
- */
+
 exports.deleteVoucher = async (req, res) => {
     try {
         const { id } = req.params;
@@ -1974,9 +1654,7 @@ exports.deleteVoucher = async (req, res) => {
     }
 };
 
-/**
- * C�p nh�t tr�ng th�i voucher
- */
+
 exports.updateVoucherStatus = async (req, res) => {
     try {
         const { id } = req.params;
@@ -2036,7 +1714,6 @@ exports.sendVoucherAnnouncementEmail = async (req, res) => {
 };
 
 // =============================================================================
-// BI�N TH� S�N PH�M - PRODUCT VARIANTS
 // =============================================================================
 
 exports.getProductVariants = async (req, res) => {
@@ -2076,7 +1753,6 @@ exports.deleteProductVariant = async (req, res) => {
 };
 
 // =============================================================================
-// C�I �T GIAO DI�N STOREFRONT - STOREFRONT SETTINGS
 // =============================================================================
 
 exports.getStorefrontSettings = async (req, res) => {
@@ -2122,7 +1798,6 @@ exports.updateStorefrontSettings = async (req, res) => {
 };
 
 // =============================================================================
-// QU�N L� BANNER - Banners Management
 // =============================================================================
 
 exports.toggleBannerActive = async (req, res) => {
@@ -2312,6 +1987,5 @@ exports.updateReturnRequestStatus = async (req, res) => {
         return res.status(400).json({ message: error.message });
     }
 };
-
 
 

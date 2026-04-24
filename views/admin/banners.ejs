@@ -1,4 +1,4 @@
-<%# File views/admin/banners.ejs: hien thi giao dien va du lieu cho trang tuong ung. %>
+<%# Template admin render màn quản trị banner với dữ liệu từ controller quản trị. %>
 <%- include('../partials/admin-header', { currentPage: 'banners', pageStyles: ['/css/admin/banners.css'] }) %>
 
 <div class="admin-page">
@@ -23,7 +23,6 @@
                     <polyline points="6 9 12 15 18 9"/>
                 </svg>
             </h3>
-            <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
             <form action="/admin/banners" method="POST" enctype="multipart/form-data" class="admin-form admin-section__content">
                 <div class="admin-form__row">
                     <div class="admin-form__group">
@@ -58,7 +57,7 @@
 
         <!-- Lưới banner hiện có -->
         <% if (banners && banners.length > 0) { %>
-            <p style="margin-bottom:12px; color:#888; font-size:13px;">💡 Kéo thả để sắp xếp thứ tự banner. Thứ tự sẽ tự động lưu.</p>
+            <p class="banners-sort-hint">Keo tha de sap xep thu tu banner. Thu tu se tu dong luu.</p>
             <div class="banners-grid" id="bannersGrid">
                 <% banners.forEach((banner, index) => { %>
                     <div class="banner-card<%= banner.is_active === 0 || banner.is_active === false ? ' banner-card--hidden' : '' %>" data-banner-id="<%= banner.id %>" draggable="true">
@@ -76,7 +75,7 @@
                             <% } %>
                             <div class="banner-card__order">#<%= index + 1 %></div>
                             <!-- Nhãn trạng thái hiển thị/ẩn -->
-                            <div class="banner-card__status-badge" style="position:absolute; top:8px; left:8px; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; letter-spacing:.3px; <%= (banner.is_active === 0 || banner.is_active === false) ? 'background:rgba(244,67,54,.9); color:#fff;' : 'background:rgba(76,175,80,.9); color:#fff;' %>">
+                            <div class="banner-card__status-badge <%= (banner.is_active === 0 || banner.is_active === false) ? 'banner-card__status-badge--hidden' : 'banner-card__status-badge--active' %>">
                                 <%= (banner.is_active === 0 || banner.is_active === false) ? 'Đang ẩn' : 'Đang hiện' %>
                             </div>
                             <div class="banner-card__overlay">
@@ -143,7 +142,7 @@
     </div>
 </div>
 
-<!-- Toast Container -->
+<!-- Vùng hiển thị toast phản hồi thao tác banner. -->
 <div id="toastContainer"></div>
 
 <!-- Confirm Modal -->
@@ -169,7 +168,7 @@
 
 <!-- Edit Banner Modal -->
 <div id="editBannerModal" class="admin-modal">
-    <div class="admin-modal__content" style="max-width:540px;">
+    <div class="admin-modal__content admin-modal__content--banner-edit">
         <div class="admin-modal__header">
             <h3 class="admin-modal__title">Sửa Banner</h3>
             <button type="button" class="admin-modal__close" id="editBannerClose" aria-label="Đóng">
@@ -179,25 +178,24 @@
                 </svg>
             </button>
         </div>
-        <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
         <form id="editBannerForm" class="admin-form">
             <input type="hidden" id="editBannerId">
-            <div class="admin-form__group" style="margin-bottom:16px;">
+            <div class="admin-form__group admin-form__group--modal">
                 <label class="admin-form__label">Tiêu đề <span>*</span></label>
                 <input type="text" id="editBannerTitle" required class="admin-form__input">
             </div>
-            <div class="admin-form__group" style="margin-bottom:16px;">
+            <div class="admin-form__group admin-form__group--modal">
                 <label class="admin-form__label">Phụ đề</label>
                 <input type="text" id="editBannerSubtitle" class="admin-form__input">
             </div>
-            <div class="admin-form__group" style="margin-bottom:16px;">
+            <div class="admin-form__group admin-form__group--modal">
                 <label class="admin-form__label">Link URL</label>
                 <input type="text" id="editBannerLinkUrl" class="admin-form__input">
             </div>
-            <div class="admin-form__group" style="margin-bottom:16px;">
+            <div class="admin-form__group admin-form__group--modal">
                 <label class="admin-form__label">Thay đổi hình ảnh</label>
                 <input type="file" id="editBannerImage" accept="image/*" class="admin-form__input">
-                <p style="font-size:12px;color:#888;margin-top:4px;">Để trống nếu không muốn đổi ảnh</p>
+                <p class="admin-form__hint admin-form__hint--compact">De trong neu khong muon doi anh.</p>
             </div>
             <div class="admin-modal__buttons">
                 <button type="button" class="admin-btn admin-btn--ghost" id="editBannerCancel">Hủy</button>

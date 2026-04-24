@@ -1,4 +1,4 @@
-// File controllers/admin/marketingController.js: điều phối handler admin cho module marketingController.
+// Controller admin xử lý nghiệp vụ quản trị marketingcontroller và chuẩn bị dữ liệu cho view/API quản trị.
 const legacy = require('./legacy');
 
 // Xử lý khuyến mãi, voucher và email marketing trong admin.

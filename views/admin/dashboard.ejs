@@ -1,4 +1,4 @@
-<%# File views/admin/dashboard.ejs: hien thi giao dien va du lieu cho trang tuong ung. %>
+<%# Template admin render màn quản trị dashboard quản trị với dữ liệu từ controller quản trị. %>
 <%- include('../partials/admin-header', { currentPage: 'dashboard', pageStyles: ['/css/admin/dashboard.css'] }) %>
 
 <div class="admin-page">
@@ -217,7 +217,6 @@
                         <p class="dashboard-section__subtext">Đang hiển thị <strong data-dashboard-limit-label><%= Math.min(recentLimit, recentOrders.length) %></strong> đơn hàng mới nhất.</p>
                     </div>
                     <div class="dashboard-section__actions">
-                        <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
                         <form class="dashboard-limit-form">
                             <label for="dashboardRecentLimit">Hiển thị</label>
                             <select id="dashboardRecentLimit" name="recent_limit" class="admin-form__select dashboard-limit-form__select" data-dashboard-recent-limit>

@@ -1,4 +1,4 @@
-// File __tests__/headerNavigation.test.js: kiểm thử tự động cho module headerNavigation.test.
+// Kiểm thử tự động cho tests headernavigation.test để giữ ổn định hành vi quan trọng.
 process.env.NODE_ENV = 'test';
 
 const fs = require('fs');

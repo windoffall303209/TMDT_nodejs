@@ -1,4 +1,4 @@
-// File public/js/register.js: xử lý tương tác giao diện phía trình duyệt cho module register.
+// Điều phối tương tác trình duyệt cho đăng ký, tách khỏi template EJS.
 function togglePassword(inputId, button) {
     const input = document.getElementById(inputId);
     if (!input || !button) {
@@ -17,8 +17,6 @@ function togglePassword(inputId, button) {
         if (eyeClosed) eyeClosed.hidden = true;
     }
 }
-
-// Gan su kien nguoi dung cho thanh phan giao dien lien quan.
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('registerForm');
     const fullName = document.getElementById('full_name');
@@ -172,20 +170,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // =========================================================================
 
     fullName.addEventListener('blur', validateFullName);
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     email.addEventListener('blur', validateEmail);
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     phone.addEventListener('blur', validatePhone);
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     password.addEventListener('blur', validatePassword);
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     confirmPassword.addEventListener('blur', validateConfirmPassword);
 
     // Live feedback cho password match khi đang gõ
     password.addEventListener('input', function() {
         if (confirmPassword.value) validateConfirmPassword();
     });
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     confirmPassword.addEventListener('input', validateConfirmPassword);
 
     // =========================================================================
@@ -193,7 +186,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // =========================================================================
 
     document.querySelectorAll('[data-password-target]').forEach(function(button) {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', function() {
             togglePassword(button.dataset.passwordTarget, button);
         });

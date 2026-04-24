@@ -1,4 +1,4 @@
-/* File public/css/tracking.css: dinh nghia style cho khu vuc giao dien tuong ung. */
+/* Định nghĩa giao diện storefront cho theo dõi đơn hàng. */
 .tracking-page__container {
     display: grid;
     gap: 22px;

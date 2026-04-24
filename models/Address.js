@@ -1,4 +1,4 @@
-// File models/Address.js: thao tác dữ liệu database cho model Address.
+// Model truy vấn và chuẩn hóa dữ liệu address trong MySQL.
 const pool = require('../config/database');
 
 class Address {

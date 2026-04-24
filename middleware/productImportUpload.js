@@ -1,4 +1,4 @@
-// File middleware/productImportUpload.js: middleware xử lý request cho module productImportUpload.
+// Middleware xử lý productimportupload trước khi request đi vào controller.
 const fs = require('fs');
 const multer = require('multer');
 const os = require('os');

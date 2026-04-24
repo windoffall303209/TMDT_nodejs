@@ -1,4 +1,4 @@
-// File controllers/chat/legacy.js: xu ly logic chat khach hang va admin.
+// Controller chat xử lý luồng chat handler cũ giữa khách hàng, admin và service AI.
 
 const Chat = require('../../models/Chat');
 const Product = require('../../models/Product');

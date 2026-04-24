@@ -1,4 +1,4 @@
-// File public/js/admin/users.js: xử lý tương tác giao diện admin cho module users.
+// Điều phối tương tác trình duyệt cho màn quản trị người dùng trong khu vực admin.
 function maskEmail(value) {
     const email = String(value || '').trim();
     const atIndex = email.indexOf('@');
@@ -209,19 +209,16 @@ function initAdminUsersPage() {
     });
 
     document.querySelectorAll('[data-user-action="view"]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => viewUser(button.dataset.userId));
     });
 
     document.querySelectorAll('[data-user-action="toggle-status"]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => {
             toggleUserStatus(button.dataset.userId, button.dataset.userActive === 'true');
         });
     });
 
     document.querySelectorAll('[data-user-action="close-modal"]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', closeUserDetailModal);
     });
 
@@ -231,6 +228,4 @@ function initAdminUsersPage() {
         }
     });
 }
-
-// Gan su kien nguoi dung cho thanh phan giao dien lien quan.
 document.addEventListener('DOMContentLoaded', initAdminUsersPage);

@@ -1,4 +1,4 @@
-// File __tests__/adminController.test.js: kiểm thử tự động cho module adminController.test.
+// Kiểm thử tự động cho tests admincontroller.test để giữ ổn định hành vi quan trọng.
 ﻿process.env.NODE_ENV = 'test';
 
 jest.mock('../models/Order', () => ({

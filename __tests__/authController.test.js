@@ -1,4 +1,4 @@
-// File __tests__/authController.test.js: kiểm thử tự động cho module authController.test.
+// Kiểm thử tự động cho tests authcontroller.test để giữ ổn định hành vi quan trọng.
 process.env.NODE_ENV = 'test';
 
 jest.mock('../models/User', () => ({
@@ -6,6 +6,7 @@ jest.mock('../models/User', () => ({
     findByEmail: jest.fn(),
     findById: jest.fn(),
     verifyPassword: jest.fn(),
+    syncGoogleProfile: jest.fn(),
     generateVerificationCode: jest.fn(),
     verifyEmailCode: jest.fn()
 }));
@@ -31,6 +32,11 @@ jest.mock('../config/cloudinary', () => ({
     uploadToCloudinary: jest.fn()
 }));
 
+jest.mock('axios', () => ({
+    post: jest.fn(),
+    get: jest.fn()
+}));
+
 jest.mock('multer', () => {
     const multer = jest.fn(() => ({
         single: jest.fn(() => (req, res, next) => {
@@ -47,7 +53,9 @@ const User = require('../models/User');
 const Cart = require('../models/Cart');
 const Address = require('../models/Address');
 const emailService = require('../services/emailService');
+const axios = require('axios');
 const authController = require('../controllers/authController');
+const adminAuthController = require('../controllers/adminAuthController');
 
 // Tạo response giả lập cho test.
 function createRes() {
@@ -184,5 +192,204 @@ describe('authController', () => {
         expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
             success: true
         }));
+    });
+});
+
+describe('adminAuthController', () => {
+    let consoleErrorSpy;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        delete process.env.GOOGLE_CLIENT_ID;
+        delete process.env.GOOGLE_CLIENT_SECRET;
+        delete process.env.GOOGLE_ADMIN_CALLBACK_URL;
+        consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        consoleErrorSpy?.mockRestore();
+    });
+
+    it('renders the standalone admin login page', () => {
+        const req = {
+            query: {
+                redirect: '/admin/products'
+            }
+        };
+        const res = createRes();
+
+        adminAuthController.showLogin(req, res);
+
+        expect(res.render).toHaveBeenCalledWith('admin/login', expect.objectContaining({
+            error: null,
+            email: '',
+            redirect: '/admin/products',
+            user: null
+        }));
+    });
+
+    it('rejects valid customer credentials from the admin login page', async () => {
+        User.findByEmail.mockResolvedValue({
+            id: 10,
+            email: 'customer@example.com',
+            password_hash: 'hash',
+            role: 'customer',
+            is_active: true,
+            email_verified: true
+        });
+        User.verifyPassword.mockResolvedValue(true);
+
+        const req = {
+            body: {
+                email: 'customer@example.com',
+                password: 'Secret123',
+                redirect: '/admin/dashboard'
+            },
+            accepts: jest.fn(() => true)
+        };
+        const res = createRes();
+
+        await adminAuthController.login(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(401);
+        expect(res.cookie).not.toHaveBeenCalled();
+        expect(res.render).toHaveBeenCalledWith('admin/login', expect.objectContaining({
+            error: 'Tài khoản này không có quyền truy cập admin.'
+        }));
+    });
+
+    it('logs in an active verified admin and redirects inside the admin area', async () => {
+        User.findByEmail.mockResolvedValue({
+            id: 1,
+            email: 'admin@example.com',
+            full_name: 'Admin User',
+            password_hash: 'hash',
+            role: 'admin',
+            is_active: true,
+            email_verified: true
+        });
+        User.verifyPassword.mockResolvedValue(true);
+
+        const req = {
+            body: {
+                email: 'admin@example.com',
+                password: 'Secret123',
+                redirect: '/admin/orders'
+            },
+            accepts: jest.fn(() => true)
+        };
+        const res = createRes();
+
+        await adminAuthController.login(req, res);
+
+        expect(res.cookie).toHaveBeenCalledWith('token', 'test-token', expect.objectContaining({
+            httpOnly: true,
+            sameSite: 'lax',
+            secure: false
+        }));
+        expect(res.redirect).toHaveBeenCalledWith('/admin/orders');
+    });
+
+    it('starts the dedicated admin Google login flow', () => {
+        process.env.GOOGLE_CLIENT_ID = 'google-client';
+        process.env.GOOGLE_CLIENT_SECRET = 'google-secret';
+
+        const req = {
+            query: {
+                redirect: '/admin/orders'
+            },
+            protocol: 'http',
+            get: jest.fn(() => 'localhost:3000')
+        };
+        const res = createRes();
+
+        adminAuthController.startGoogleLogin(req, res);
+
+        expect(res.cookie).toHaveBeenCalledWith('admin_google_oauth_state', expect.any(String), expect.objectContaining({
+            httpOnly: true,
+            maxAge: 10 * 60 * 1000
+        }));
+        expect(res.cookie).toHaveBeenCalledWith('admin_post_auth_redirect', '/admin/orders', expect.objectContaining({
+            httpOnly: true,
+            maxAge: 10 * 60 * 1000
+        }));
+        expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('https://accounts.google.com/o/oauth2/v2/auth?'));
+        expect(res.redirect.mock.calls[0][0]).toContain(encodeURIComponent('http://localhost:3000/admin/google/callback'));
+    });
+
+    it('accepts Google login only for an existing admin account', async () => {
+        process.env.GOOGLE_CLIENT_ID = 'google-client';
+        process.env.GOOGLE_CLIENT_SECRET = 'google-secret';
+        axios.post.mockResolvedValue({
+            data: {
+                access_token: 'google-token'
+            }
+        });
+        axios.get.mockResolvedValue({
+            data: {
+                email: 'admin@example.com',
+                name: 'Admin User',
+                picture: 'https://example.com/avatar.png',
+                verified_email: true
+            }
+        });
+        User.findByEmail.mockResolvedValue({
+            id: 1,
+            email: 'admin@example.com',
+            full_name: 'Admin User',
+            role: 'admin',
+            is_active: true,
+            email_verified: true
+        });
+        User.syncGoogleProfile.mockResolvedValue({
+            id: 1,
+            email: 'admin@example.com',
+            full_name: 'Admin User',
+            role: 'admin',
+            is_active: true,
+            email_verified: true
+        });
+
+        const req = {
+            query: {
+                code: 'oauth-code',
+                state: 'state-token'
+            },
+            cookies: {
+                admin_google_oauth_state: 'state-token',
+                admin_post_auth_redirect: '/admin/dashboard'
+            },
+            protocol: 'https',
+            get: jest.fn(() => 'shop.example.com')
+        };
+        const res = createRes();
+
+        await adminAuthController.handleGoogleCallback(req, res);
+
+        expect(User.findByEmail).toHaveBeenCalledWith('admin@example.com');
+        expect(User.syncGoogleProfile).toHaveBeenCalledWith(1, expect.objectContaining({
+            full_name: 'Admin User',
+            avatar_url: 'https://example.com/avatar.png'
+        }));
+        expect(res.cookie).toHaveBeenCalledWith('token', 'test-token', expect.objectContaining({
+            httpOnly: true
+        }));
+        expect(res.redirect).toHaveBeenCalledWith('/admin/dashboard');
+    });
+
+    it('clears the auth cookie and returns to admin login on logout', () => {
+        const req = {
+            accepts: jest.fn(() => true)
+        };
+        const res = createRes();
+
+        adminAuthController.logout(req, res);
+
+        expect(res.clearCookie).toHaveBeenCalledWith('token', expect.objectContaining({
+            httpOnly: true,
+            sameSite: 'lax',
+            secure: false
+        }));
+        expect(res.redirect).toHaveBeenCalledWith('/admin/login');
     });
 });

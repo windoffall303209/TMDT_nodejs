@@ -1,4 +1,4 @@
-<%# File views/admin/users.ejs: hien thi giao dien va du lieu cho trang tuong ung. %>
+<%# Template admin render màn quản trị người dùng với dữ liệu từ controller quản trị. %>
 <%- include('../partials/admin-header', { currentPage: 'users', pageStyles: ['/css/admin/users.css'] }) %>
 
 <div class="admin-page">
@@ -136,7 +136,7 @@
     </div>
 </div>
 
-<!-- Toast Container -->
+<!-- Vùng hiển thị toast phản hồi thao tác người dùng. -->
 <div id="toastContainer"></div>
 
 <!-- Confirm Modal -->

@@ -1,4 +1,4 @@
-// File public/js/auth/forgot-password.js: xử lý tương tác giao diện phía trình duyệt cho module forgot password.
+// Điều phối tương tác trình duyệt cho xác thực quên mật khẩu mật khẩu, tách khỏi template EJS.
 document.addEventListener('DOMContentLoaded', function() {
     const alertContainer = document.getElementById('alert-container');
     const stepEmail = document.getElementById('step-email');
@@ -94,7 +94,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Handle code input
     codeInputs.forEach((input, index) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         input.addEventListener('input', (e) => {
             const value = e.target.value;
             e.target.value = value.replace(/[^0-9]/g, '');
@@ -110,15 +109,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             updateFullCode();
         });
-
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Backspace' && !e.target.value && index > 0) {
                 codeInputs[index - 1].focus();
             }
         });
-
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         input.addEventListener('paste', (e) => {
             e.preventDefault();
             const pastedData = e.clipboardData.getData('text').replace(/[^0-9]/g, '').slice(0, 6);

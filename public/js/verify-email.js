@@ -79,7 +79,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Handle code input
     codeInputs.forEach((input, index) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         input.addEventListener('input', (e) => {
             const value = e.target.value;
 
@@ -99,8 +98,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // Update full code
             updateFullCode();
         });
-
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         input.addEventListener('keydown', (e) => {
             // Handle backspace
             if (e.key === 'Backspace' && !e.target.value && index > 0) {

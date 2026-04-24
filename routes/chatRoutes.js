@@ -1,4 +1,4 @@
-// File routes/chatRoutes.js: khai báo endpoint và middleware cho module chatRoutes.
+// Khai báo route chatroutes và nối middleware/controller tương ứng.
 const express = require('express');
 const router = express.Router();
 const chatController = require('../controllers/chat');

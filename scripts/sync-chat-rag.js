@@ -1,4 +1,4 @@
-// File scripts/sync-chat-rag.js: script hỗ trợ thao tác sync chat rag.
+// Script bảo trì sync chat RAG, dùng khi cần kiểm tra hoặc đồng bộ dữ liệu dự án.
 require('dotenv').config();
 
 const { syncChatRagIndex } = require('../services/chatRagService');

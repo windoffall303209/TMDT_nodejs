@@ -1,4 +1,4 @@
-// File public/js/admin/chat.js: xử lý tương tác giao diện admin cho module chat.
+// Điều phối tương tác trình duyệt cho màn quản trị chat trong khu vực admin.
 document.body.classList.add('admin-body--chat');
 document.querySelector('.admin-main-wrapper')?.classList.add('admin-main-wrapper--chat');
 document.querySelector('.admin-main-content')?.classList.add('admin-main-content--chat');
@@ -159,8 +159,6 @@ function createConversationItem(conversation) {
     if (conversation.unread_count > 0 && conversation.id !== adminChatState.currentConversationId) {
         button.classList.add('unread');
     }
-
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     button.addEventListener('click', () => {
         selectConversation(conversation.id);
     });
@@ -708,14 +706,10 @@ function initAdminChat() {
         selectConversation(initialConversation.id, { focusInput: false });
     }
 }
-
-// Gan su kien nguoi dung cho thanh phan giao dien lien quan.
 window.addEventListener('beforeunload', () => {
     stopDetailPolling();
     if (adminChatState.listPollInterval) {
         clearInterval(adminChatState.listPollInterval);
     }
 });
-
-// Gan su kien nguoi dung cho thanh phan giao dien lien quan.
 document.addEventListener('DOMContentLoaded', initAdminChat);

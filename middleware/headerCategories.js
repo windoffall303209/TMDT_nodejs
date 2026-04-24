@@ -1,4 +1,4 @@
-// File middleware/headerCategories.js: middleware xử lý request cho module headerCategories.
+// Nạp danh mục hiển thị trên header để mọi trang storefront dùng chung dữ liệu điều hướng.
 const Category = require('../models/Category');
 
 // Xử lý header danh mục.

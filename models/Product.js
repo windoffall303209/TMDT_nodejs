@@ -1619,7 +1619,7 @@ ${this.getVariantAggregateSelect('p')}
     }
 
     // =============================================================================
-    // TẠO SẢN PHẨM MỚI - CREATE PRODUCT
+    // Tạo sản phẩm mới từ dữ liệu quản trị.
     // =============================================================================
 
     /**
@@ -1665,7 +1665,7 @@ ${this.getVariantAggregateSelect('p')}
     }
 
     // =============================================================================
-    // CẬP NHẬT SẢN PHẨM - UPDATE PRODUCT
+    // Cập nhật thông tin sản phẩm hiện có.
     // =============================================================================
 
     /**
@@ -1705,11 +1705,11 @@ ${this.getVariantAggregateSelect('p')}
     }
 
     // =============================================================================
-    // XÓA SẢN PHẨM - DELETE PRODUCT (SOFT DELETE)
+    // Xóa mềm sản phẩm để giữ lịch sử đơn hàng.
     // =============================================================================
 
     /**
-     * Xóa sản phẩm (soft delete)
+     * Xóa mềm sản phẩm khỏi danh sách đang bán.
      *
      * @description Không xóa thật sự mà chỉ đánh dấu is_active = FALSE.
      *              Giúp giữ lại dữ liệu để báo cáo và có thể khôi phục.
@@ -1830,7 +1830,7 @@ ${this.getVariantAggregateSelect('p')}
     }
 
     // =============================================================================
-    // CẬP NHẬT TỒN KHO - UPDATE STOCK
+    // Cập nhật tồn kho sau khi có thay đổi đơn hàng hoặc nhập hàng.
     // =============================================================================
 
     /**

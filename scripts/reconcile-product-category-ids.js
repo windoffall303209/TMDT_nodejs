@@ -1,4 +1,4 @@
-// File scripts/reconcile-product-category-ids.js: script hỗ trợ thao tác reconcile product category ids.
+// Script bảo trì reconcile sản phẩm danh mục ids, dùng khi cần kiểm tra hoặc đồng bộ dữ liệu dự án.
 const path = require('path');
 const XLSX = require('xlsx');
 

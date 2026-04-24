@@ -1,4 +1,4 @@
-// File public/js/toast.js: xử lý tương tác giao diện phía trình duyệt cho module toast.
+// Điều phối tương tác trình duyệt cho toast, tách khỏi template EJS.
 (function() {
     const TOAST_ROOT_ID = 'globalToastContainer';
     const DIALOG_ROOT_ID = 'globalDialogRoot';
@@ -340,7 +340,7 @@
         document.head.appendChild(style);
     }
 
-    // Đảm bảo toast container.
+    // Tạo vùng chứa toast một lần để các thông báo dùng chung cùng một vị trí.
     function ensureToastContainer() {
         let container = document.getElementById(TOAST_ROOT_ID);
         if (!container) {
@@ -510,8 +510,6 @@
                     closeConfirmDialog(true);
                 }
             };
-
-            // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
             document.addEventListener('keydown', activeKeyHandler);
 
             requestAnimationFrame(() => {

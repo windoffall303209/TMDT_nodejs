@@ -1,4 +1,4 @@
-// File services/adminProductVariantService.js: gom logic service cho module adminProductVariantService.
+// Service gom logic adminproductvariantservice để controller không phải lặp xử lý nghiệp vụ.
 const Product = require('../models/Product');
 
 // Chuẩn hóa text.

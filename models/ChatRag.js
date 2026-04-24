@@ -1,4 +1,4 @@
-// File models/ChatRag.js: thao tác dữ liệu database cho model ChatRag.
+// Model truy vấn và chuẩn hóa dữ liệu chatrag trong MySQL.
 const pool = require('../config/database');
 
 class ChatRag {

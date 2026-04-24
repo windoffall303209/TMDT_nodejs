@@ -1,4 +1,4 @@
-// File public/js/admin/sales.js: xử lý tương tác giao diện admin cho module sales.
+// Điều phối tương tác trình duyệt cho màn quản trị khuyến mãi trong khu vực admin.
 const adminSalesBootstrap = JSON.parse(document.getElementById('adminSalesBootstrap').textContent);
 const adminSaleProducts = adminSalesBootstrap.products || [];
 const adminSubscriberCount = Number(adminSalesBootstrap.subscriberCount || 0);
@@ -384,8 +384,6 @@ function toggleSection(titleElement) {
     const section = titleElement.closest('.admin-section--collapsible');
     section.classList.toggle('is-open');
 }
-
-// Gan su kien nguoi dung cho thanh phan giao dien lien quan.
 document.addEventListener('DOMContentLoaded', function() {
     renderProductChecklist('createSaleProducts', [], {
         prefix: 'create-sale',
@@ -395,49 +393,40 @@ document.addEventListener('DOMContentLoaded', function() {
     toggleSaleValueConstraints('editSaleType', 'editSaleValue', 'editSaleValueWarning');
 
     document.querySelectorAll('[data-admin-toggle="section"]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => toggleSection(button));
     });
 
     document.querySelectorAll('[data-sale-action="scroll-to-form"]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', openAddSaleForm);
     });
 
     document.querySelectorAll('[data-sale-action="open-email-modal"]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => openSaleEmailModal());
     });
 
     document.querySelectorAll('[data-checklist-search]').forEach((input) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         input.addEventListener('input', () => filterProductChecklist(input, input.dataset.checklistSearch));
     });
 
     document.querySelectorAll('[data-checklist-toggle]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => {
             setChecklistState(button.dataset.checklistTarget, button.dataset.checklistToggle === 'all');
         });
     });
 
     document.querySelectorAll('[data-sale-action="edit"]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => editSale(button.dataset.saleId));
     });
 
     document.querySelectorAll('[data-sale-action="delete"]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => deleteSale(button.dataset.saleId));
     });
 
     document.querySelectorAll('[data-sale-action="email"]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => confirmAndSendSaleEmail(button.dataset.saleId));
     });
 
     document.querySelectorAll('[data-sale-modal-close]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => closeModal(button.dataset.saleModalClose));
     });
 
@@ -453,8 +442,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!modal) {
             return;
         }
-
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         modal.addEventListener('click', function(event) {
             if (event.target === modal) {
                 modal.style.display = 'none';

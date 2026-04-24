@@ -1,4 +1,4 @@
-// File public/js/product-detail.js: xử lý tương tác giao diện phía trình duyệt cho module product detail.
+// Điều phối tương tác trình duyệt cho sản phẩm chi tiết, tách khỏi template EJS.
 const productDetailState = {
     currentImageIndex: 0,
     productImages: [],
@@ -470,7 +470,6 @@ function showLoginRequiredDialog(payload = {}) {
         `;
         document.body.appendChild(dialog);
         dialog.querySelectorAll('[data-login-dialog-close]').forEach((button) => {
-            // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
             button.addEventListener('click', () => {
                 dialog.classList.remove('is-open');
                 document.body.classList.remove('login-required-dialog-open');
@@ -573,9 +572,7 @@ function bindGalleryEvents() {
     const mainImage = getMainImageElement();
     if (mainImage && mainImage.dataset.galleryBound !== 'true') {
         mainImage.dataset.galleryBound = 'true';
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         mainImage.addEventListener('load', showMainImage);
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         mainImage.addEventListener('error', showGalleryFallback);
     }
 
@@ -583,7 +580,6 @@ function bindGalleryEvents() {
         if (thumb.dataset.galleryBound === 'true') return;
 
         thumb.dataset.galleryBound = 'true';
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         thumb.addEventListener('click', () => {
             const thumbIndexValue = parseInt(thumb.dataset.index, 10);
             const imageUrl =
@@ -598,7 +594,6 @@ function bindGalleryEvents() {
         if (button.dataset.galleryBound === 'true') return;
 
         button.dataset.galleryBound = 'true';
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => {
             if (button.dataset.galleryNav === 'prev') {
                 prevImage();
@@ -674,13 +669,9 @@ function initQuantitySelectorLegacy() {
             showNotification(`Số lượng tồn kho chỉ còn ${maxStock} sản phẩm`, 'warning');
         }
     });
-
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     qtyInput.addEventListener('input', () => {
         qtyInput.value = qtyInput.value.replace(/[^0-9]/g, '');
     });
-
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     qtyInput.addEventListener('blur', () => {
         let val = parseInt(qtyInput.value, 10);
         if (!val || val < 1) val = 1;
@@ -730,12 +721,10 @@ function initCollapsibleSection(toggleId, bodyId) {
     if (!toggle || !body) return;
 
     setCollapsibleSectionState(toggle, body, body.classList.contains('is-open'));
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     toggle.addEventListener('click', () => {
         const isOpen = !body.classList.contains('is-open');
         setCollapsibleSectionState(toggle, body, isOpen);
     });
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     window.addEventListener('resize', () => refreshCollapsibleSection(body));
 }
 
@@ -772,7 +761,6 @@ function bindToggleLabel(toggleId, panelId, afterToggle) {
     if (!toggle || !panel) return;
 
     updateToggleLabel(toggle, panel.classList.contains('is-open'));
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     toggle.addEventListener('click', () => {
         window.requestAnimationFrame(() => {
             const isOpen = panel.classList.contains('is-open');
@@ -901,8 +889,6 @@ function initReviewMediaInput() {
         refreshCollapsibleSection(reviewBody);
         refreshReviewPanels();
     };
-
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     input.addEventListener('change', renderPreview);
     renderPreview();
 }
@@ -1015,13 +1001,9 @@ function initQuantitySelector() {
 
         showNotification(`Số lượng tồn kho chỉ còn ${Math.max(0, maxStock).toLocaleString('vi-VN')} sản phẩm`, 'warning');
     });
-
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     qtyInput.addEventListener('input', () => {
         qtyInput.value = qtyInput.value.replace(/[^0-9]/g, '');
     });
-
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     qtyInput.addEventListener('blur', () => {
         let value = parseInt(qtyInput.value, 10);
         if (!value || value < 1) {
@@ -1031,8 +1013,6 @@ function initQuantitySelector() {
         qtyInput.value = value;
         syncQuantityInputWithStock(true);
     });
-
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     qtyInput.addEventListener('keydown', (event) => {
         if (event.key !== 'Enter') {
             return;
@@ -1071,22 +1051,18 @@ function initProductDetailPage() {
     syncQuantityInputWithStock();
 
     document.querySelectorAll('.variant-btn').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => handleVariantButtonClick(button));
     });
 
     document.querySelectorAll('[data-product-action="add-to-cart"]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', addToCartWithVariant);
     });
 
     document.querySelectorAll('[data-product-action="buy-now"]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', buyNowWithVariant);
     });
 
     document.querySelectorAll('[data-scroll-to-reviews]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', scrollToReviewsSection);
     });
 }
@@ -1104,25 +1080,19 @@ function initProductDetailPageLegacy() {
     clearTransientReviewQueryState();
 
     document.querySelectorAll('.variant-btn').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => handleVariantButtonClick(button));
     });
 
     document.querySelectorAll('[data-product-action="add-to-cart"]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', addToCartWithVariant);
     });
 
     document.querySelectorAll('[data-product-action="buy-now"]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', buyNowWithVariant);
     });
 
     document.querySelectorAll('[data-scroll-to-reviews]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', scrollToReviewsSection);
     });
 }
-
-// Gan su kien nguoi dung cho thanh phan giao dien lien quan.
 document.addEventListener('DOMContentLoaded', initProductDetailPage);

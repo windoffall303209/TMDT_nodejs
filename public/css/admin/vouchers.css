@@ -249,7 +249,7 @@
     background: #059669;
 }
 
-/* Page Header */
+/* Tiêu đề và thanh thao tác của màn mã giảm giá. */
 .admin-page-header {
     display: flex;
     justify-content: space-between;
@@ -270,7 +270,7 @@
     margin: 0;
 }
 
-/* Admin Form Row */
+/* Hàng form nhập điều kiện áp dụng mã giảm giá. */
 .admin-form__row {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -323,7 +323,7 @@
     margin: 0;
 }
 
-/* Buttons */
+/* Cụm nút thao tác nhanh cho mã giảm giá. */
 .admin-btn--ghost {
     background: transparent;
     color: var(--admin-text-secondary);

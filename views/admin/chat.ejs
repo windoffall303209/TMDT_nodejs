@@ -1,4 +1,4 @@
-<%# File views/admin/chat.ejs: hien thi giao dien va du lieu cho trang tuong ung. %>
+<%# Template admin render màn quản trị chat với dữ liệu từ controller quản trị. %>
 <%- include('../partials/admin-header', { currentPage: 'chat', pageStyles: ['/css/chat-rich-message.css', '/css/admin/chat.css'] }) %>
 
 
@@ -18,7 +18,6 @@
     </h1>
 
     <div class="admin-chat-layout">
-        <%# Section gom nhom noi dung chinh cua trang. %>
         <section class="admin-chat-list">
             <div class="admin-chat-list__header">
                 <div>
@@ -37,8 +36,6 @@
             </div>
             <div class="admin-chat-list__items" id="chatListItems"></div>
         </section>
-
-        <%# Section gom nhom noi dung chinh cua trang. %>
         <section class="admin-chat-detail">
             <div class="admin-chat-detail__empty" id="chatDetailEmpty">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5">
@@ -70,7 +67,6 @@
                 <div class="admin-chat-detail__messages" id="adminChatMessages"></div>
 
                 <div class="admin-chat-detail__input">
-                    <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
                     <form id="adminReplyForm" >
                         <button type="button" class="admin-chat-detail__attach-btn" id="adminReplyAttachBtn" aria-label="Gửi ảnh hoặc video">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

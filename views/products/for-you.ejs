@@ -1,11 +1,10 @@
-<%# File views/products/for-you.ejs: hien thi giao dien va du lieu cho trang tuong ung. %>
+<%# Template EJS render sản phẩm gợi ý cho bạn cho storefront hoặc tài khoản người dùng. %>
 <%- include('../partials/header') %>
 
 <link rel="stylesheet" href="/css/product-list.css">
 
 <div class="catalog-page page-shell">
     <div class="container">
-        <%# Section gom nhom noi dung chinh cua trang. %>
         <section class="page-intro page-intro--compact catalog-intro catalog-intro--compact">
             <div class="catalog-intro__content">
                 <h1 class="page-intro__title page-intro__title-inline">
@@ -17,7 +16,6 @@
         </section>
 
         <% if (products && products.length > 0) { %>
-            <%# Section gom nhom noi dung chinh cua trang. %>
             <section class="catalog-toolbar">
                 <div class="catalog-toolbar__summary">
                     <span class="catalog-toolbar__count"><%= products.length.toLocaleString('vi-VN') %></span>

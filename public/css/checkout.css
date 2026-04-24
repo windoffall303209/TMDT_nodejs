@@ -1,4 +1,4 @@
-/* File public/css/checkout.css: dinh nghia style cho khu vuc giao dien tuong ung. */
+/* Định nghĩa giao diện storefront cho thanh toán. */
 .checkout-intro {
     display: flex;
     align-items: flex-end;

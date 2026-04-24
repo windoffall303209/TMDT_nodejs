@@ -1,4 +1,4 @@
-// File models/ProductImageEmbedding.js: thao tác dữ liệu database cho model ProductImageEmbedding.
+// Model truy vấn và chuẩn hóa dữ liệu productimageembedding trong MySQL.
 const pool = require('../config/database');
 
 class ProductImageEmbedding {

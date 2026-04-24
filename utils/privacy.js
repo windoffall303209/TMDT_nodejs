@@ -1,4 +1,4 @@
-// File utils/privacy.js: hàm tiện ích dùng chung cho module privacy.
+// Helper che dữ liệu nhạy cảm trước khi ghi log hoặc trả về giao diện.
 function maskEmail(value) {
     const email = String(value || '').trim();
     const atIndex = email.indexOf('@');

@@ -1,4 +1,4 @@
-// File services/chatEmbeddingService.js: gom logic service cho module chatEmbeddingService.
+// Service gom logic chatembeddingservice để controller không phải lặp xử lý nghiệp vụ.
 function resolveEmbeddingModel() {
     const explicitModel = String(process.env.OPENAI_EMBEDDING_MODEL || '').trim();
     if (explicitModel) {

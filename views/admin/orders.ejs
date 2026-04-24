@@ -1,4 +1,4 @@
-<%# File views/admin/orders.ejs: hien thi giao dien va du lieu cho trang tuong ung. %>
+<%# Template admin render màn quản trị đơn hàng với dữ liệu từ controller quản trị. %>
 <%- include('../partials/admin-header', { currentPage: 'orders', pageStyles: ['/css/admin/orders.css'] }) %>
 
 <div class="admin-page">
@@ -65,7 +65,6 @@
                     <% } %>
                 </p>
             </div>
-            <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
             <form action="/admin/orders" method="GET" class="admin-search-form">
                 <input
                     type="search"
@@ -198,7 +197,7 @@
     </div>
 </div>
 
-<!-- Toast Container -->
+<!-- Vùng hiển thị toast phản hồi thao tác đơn hàng. -->
 <div id="toastContainer"></div>
 
 

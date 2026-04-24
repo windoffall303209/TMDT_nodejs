@@ -1,10 +1,9 @@
-// File public/js/category.js: xử lý tương tác giao diện phía trình duyệt cho module category.
+// Điều phối tương tác trình duyệt cho danh mục, tách khỏi template EJS.
 const filterButtons = document.querySelectorAll('.filter-btn');
 const sortSelect = document.getElementById('sortProducts');
 const productCount = document.getElementById('productCount');
 
 filterButtons.forEach((button) => {
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     button.addEventListener('click', function() {
         filterButtons.forEach((item) => item.classList.remove('active'));
         this.classList.add('active');
@@ -30,7 +29,6 @@ function filterProducts(filter) {
 }
 
 if (sortSelect) {
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     sortSelect.addEventListener('change', function() {
         const currentUrl = new URL(window.location.href);
         const grid = document.getElementById('productsGrid');

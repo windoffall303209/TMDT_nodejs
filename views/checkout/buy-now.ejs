@@ -1,4 +1,4 @@
-<%# File views/checkout/buy-now.ejs: hien thi giao dien va du lieu cho trang tuong ung. %>
+<%# Template EJS render thanh toán buy now cho storefront hoặc tài khoản người dùng. %>
 <%- include('../partials/header') %>
 
 <link rel="stylesheet" href="/css/checkout.css">
@@ -17,7 +17,6 @@
 <!-- ===== Trang mua ngay (checkout 1 sản phẩm) ===== -->
 <div class="checkout-page page-shell">
     <div class="container">
-        <%# Section gom nhom noi dung chinh cua trang. %>
         <section class="page-intro page-intro--compact checkout-intro">
             <div>
                 <h1 class="page-intro__title page-intro__title-inline">
@@ -32,8 +31,6 @@
                 <span class="checkout-step">Hoàn tất</span>
             </div>
         </section>
-
-        <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
         <form action="/orders/buy-now/create" method="POST" id="buyNowForm">
             <input type="hidden" name="product_id" value="<%= product.id %>">
             <input type="hidden" name="quantity" value="<%= selectedQuantity %>">

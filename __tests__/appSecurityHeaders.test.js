@@ -1,4 +1,4 @@
-// File __tests__/appSecurityHeaders.test.js: kiểm thử tự động cho module appSecurityHeaders.test.
+// Kiểm thử tự động cho tests appsecurityheaders.test để giữ ổn định hành vi quan trọng.
 process.env.NODE_ENV = 'test';
 
 jest.mock('../middleware/auth', () => ({

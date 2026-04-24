@@ -1,4 +1,4 @@
-<%# File views/partials/chat-widget.ejs: hien thi giao dien va du lieu cho trang tuong ung. %>
+<%# Partial EJS dùng lại cho chat widget để các view giữ cấu trúc thống nhất. %>
 <!-- Chat Widget - Được include trong footer.ejs -->
 <!-- ===== Khung tổng của chat widget nổi ===== -->
 <div id="chatWidget" class="chat-widget">
@@ -55,7 +55,6 @@
 
         <div class="chat-widget__input-area">
             <!-- Vùng soạn tin: văn bản + tệp đính kèm media -->
-            <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
             <form id="chatForm">
                 <button type="button" class="chat-widget__attach-btn" id="chatAttachBtn" aria-label="Gửi ảnh hoặc video">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

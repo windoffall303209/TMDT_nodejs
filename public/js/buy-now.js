@@ -1,4 +1,4 @@
-// File public/js/buy-now.js: xử lý tương tác giao diện phía trình duyệt cho module buy now.
+// Điều phối tương tác trình duyệt cho buy now, tách khỏi template EJS.
 let currentDiscount = 0;
 let buyNowRuntimeData = null;
 
@@ -179,7 +179,6 @@ function initBuyNow() {
     readBuyNowBootstrapData();
 
     document.querySelectorAll('input[name="payment_method"]').forEach((radio) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         radio.addEventListener('change', function() {
             document.querySelectorAll('.payment-option').forEach((option) => {
                 option.classList.remove('payment-option--selected');
@@ -189,7 +188,6 @@ function initBuyNow() {
     });
 
     document.querySelectorAll('input[name="address_id"]').forEach((radio) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         radio.addEventListener('change', function() {
             document.querySelectorAll('.address-card').forEach((card) => {
                 card.classList.remove('address-card--selected');
@@ -220,12 +218,10 @@ function initBuyNow() {
         });
 
         document.querySelectorAll('[data-checkout-action="apply-voucher"]').forEach((button) => {
-            // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
             button.addEventListener('click', applyVoucher);
         });
 
         document.querySelectorAll('[data-checkout-action="clear-voucher"]').forEach((button) => {
-            // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
             button.addEventListener('click', () => {
                 clearBuyNowVoucher({ message: 'Đã bỏ voucher khỏi đơn hàng.', type: 'success' });
             });
@@ -244,7 +240,6 @@ function initBuyNow() {
         });
 
         document.querySelectorAll('.voucher-card').forEach((card) => {
-            // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
             card.addEventListener('click', () => selectBuyNowVoucher(card));
         });
 
@@ -256,6 +251,4 @@ function initBuyNow() {
         discountRow.style.display = 'none';
     }
 }
-
-// Gan su kien nguoi dung cho thanh phan giao dien lien quan.
 document.addEventListener('DOMContentLoaded', initBuyNow);

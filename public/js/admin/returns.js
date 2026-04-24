@@ -1,7 +1,6 @@
-// File public/js/admin/returns.js: xử lý tương tác giao diện admin cho module returns.
+// Điều phối tương tác trình duyệt cho màn quản trị đổi trả trong khu vực admin.
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.return-status-form').forEach((form) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
 

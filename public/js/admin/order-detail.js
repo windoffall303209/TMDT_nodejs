@@ -1,4 +1,4 @@
-// File public/js/admin/order-detail.js: xử lý tương tác giao diện admin cho module order detail.
+// Điều phối tương tác trình duyệt cho màn quản trị đơn hàng chi tiết trong khu vực admin.
 function updateStatusSelectClass(select) {
     if (!select) {
         return;
@@ -39,11 +39,9 @@ function initAdminOrderDetailPage() {
     }
 
     updateStatusSelectClass(statusSelect);
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     statusSelect.addEventListener('change', () => updateStatusSelectClass(statusSelect));
 
     document.querySelectorAll('[data-order-detail-action="update-status"]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', async () => {
             try {
                 const response = await fetch(`/admin/orders/${orderId}/status`, {
@@ -72,6 +70,4 @@ function initAdminOrderDetailPage() {
         });
     });
 }
-
-// Gan su kien nguoi dung cho thanh phan giao dien lien quan.
 document.addEventListener('DOMContentLoaded', initAdminOrderDetailPage);

@@ -1,4 +1,4 @@
-// File services/productSuggestService.js: gom logic service cho module productSuggestService.
+// Service gom logic productsuggestservice để controller không phải lặp xử lý nghiệp vụ.
 const pool = require('../config/database');
 
 // Bỏ dấu tiếng Việt để tìm kiếm gợi ý chịu được sai dấu.

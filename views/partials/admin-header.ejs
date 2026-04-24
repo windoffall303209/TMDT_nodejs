@@ -1,4 +1,4 @@
-<%# File views/partials/admin-header.ejs: hien thi giao dien va du lieu cho trang tuong ung. %>
+<%# Partial EJS dùng lại cho quản trị header để các view giữ cấu trúc thống nhất. %>
 <!DOCTYPE html>
 <html lang="vi">
 <%
@@ -203,8 +203,7 @@
                     </svg>
                     <span>Xem storefront</span>
                 </a>
-                <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
-                <form action="/auth/logout" method="POST" class="admin-sidebar__logout-form">
+                <form action="/admin/logout" method="POST" class="admin-sidebar__logout-form">
                     <button type="submit" class="admin-sidebar__link admin-sidebar__link--danger">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -241,8 +240,7 @@
                     <polyline points="9 22 9 12 15 12 15 22" />
                 </svg>
             </a>
-            <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
-            <form action="/auth/logout" method="POST" class="admin-topbar__logout-form">
+            <form action="/admin/logout" method="POST" class="admin-topbar__logout-form">
                 <button type="submit" title="Đăng xuất">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />

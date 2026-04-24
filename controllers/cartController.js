@@ -50,7 +50,7 @@ function resolvePostLoginRedirect(req) {
                 return `${url.pathname}${url.search}`;
             }
         } catch (error) {
-            // Ignore malformed referers and fall back to products.
+            // Referer lỗi định dạng thì quay về danh sách sản phẩm mặc định.
         }
     }
 

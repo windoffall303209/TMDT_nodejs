@@ -1,4 +1,4 @@
-// File public/js/chat-rich-message.js: xử lý tương tác giao diện phía trình duyệt cho module chat rich message.
+// Điều phối tương tác trình duyệt cho chat định dạng nâng cao tin nhắn, tách khỏi template EJS.
 (function initChatRichMessage(global) {
     const CHAT_LINK_PATTERN = /((?:https?:\/\/|www\.)[^\s<]+|\/(?:products|cart|checkout|chat|auth|admin|orders)[^\s<]*)/gi;
 

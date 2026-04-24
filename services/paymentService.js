@@ -1,4 +1,4 @@
-// File services/paymentService.js: gom logic service cho module paymentService.
+// Service gom logic paymentservice để controller không phải lặp xử lý nghiệp vụ.
 const crypto = require('crypto');
 const axios = require('axios');
 const QRCode = require('qrcode');

@@ -1,4 +1,4 @@
-// File public/js/admin/categories.js: xử lý tương tác giao diện admin cho module categories.
+// Điều phối tương tác trình duyệt cho màn quản trị danh mục trong khu vực admin.
 let adminCategoriesBootstrap = null;
 
 // Xử lý show danh mục toast.
@@ -90,8 +90,6 @@ function syncSlugField(nameInput, slugInput) {
     if (!slugInput.value.trim()) {
         slugInput.value = lastAutoSlug;
     }
-
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     nameInput.addEventListener('input', () => {
         const currentSlug = slugInput.value.trim();
         if (!currentSlug || currentSlug === lastAutoSlug) {
@@ -99,8 +97,6 @@ function syncSlugField(nameInput, slugInput) {
             slugInput.value = lastAutoSlug;
         }
     });
-
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     slugInput.addEventListener('input', () => {
         slugInput.value = slugifyCategoryValue(slugInput.value);
         lastAutoSlug = slugifyCategoryValue(nameInput.value);
@@ -315,7 +311,6 @@ function initAdminCategoriesPage() {
     showToastFromQuery();
 
     document.querySelectorAll('[data-admin-toggle="section"]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => toggleCategorySection(button));
     });
 
@@ -329,22 +324,18 @@ function initAdminCategoriesPage() {
     );
 
     document.querySelectorAll('[data-category-action="open-edit-modal"]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => populateEditCategoryForm(button.dataset.categoryId));
     });
 
     document.querySelectorAll('[data-category-action="delete-category"]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => deleteCategory(button.dataset.categoryId));
     });
 
     document.querySelectorAll('[data-category-action="delete-all-categories"]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => deleteAllCategories());
     });
 
     document.querySelectorAll('[data-category-modal-close]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => closeCategoryModal(button.dataset.categoryModalClose));
     });
 
@@ -353,8 +344,6 @@ function initAdminCategoriesPage() {
             closeCategoryModal('editCategoryModal');
         }
     });
-
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
             closeCategoryModal('editCategoryModal');
@@ -363,6 +352,4 @@ function initAdminCategoriesPage() {
 
     document.getElementById('editCategoryForm')?.addEventListener('submit', submitEditCategoryForm);
 }
-
-// Gan su kien nguoi dung cho thanh phan giao dien lien quan.
 document.addEventListener('DOMContentLoaded', initAdminCategoriesPage);

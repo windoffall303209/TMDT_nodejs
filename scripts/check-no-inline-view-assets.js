@@ -1,4 +1,4 @@
-// File scripts/check-no-inline-view-assets.js: script hỗ trợ thao tác check no inline view assets.
+// Script bảo trì check no inline view assets, dùng khi cần kiểm tra hoặc đồng bộ dữ liệu dự án.
 const fs = require('fs');
 const path = require('path');
 

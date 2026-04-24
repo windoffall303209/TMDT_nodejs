@@ -1,4 +1,4 @@
-// File public/js/admin/orders.js: xử lý tương tác giao diện admin cho module orders.
+// Điều phối tương tác trình duyệt cho màn quản trị đơn hàng trong khu vực admin.
 function showOrdersToast(message, type = 'success') {
     if (typeof showGlobalToast === 'function') {
         showGlobalToast(message, type);
@@ -40,7 +40,6 @@ function printOrder(orderId) {
 // Khởi tạo đơn hàng tabs.
 function initOrderTabs() {
     document.querySelectorAll('.order-tab').forEach((tab) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         tab.addEventListener('click', function() {
             document.querySelectorAll('.order-tab').forEach((item) => item.classList.remove('active'));
             this.classList.add('active');
@@ -56,7 +55,6 @@ function initOrderTabs() {
 // Khởi tạo đơn hàng actions.
 function initOrderActions() {
     document.querySelectorAll('.order-status-select[data-order-id]').forEach((select) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         select.addEventListener('change', () => {
             select.className = `order-status-select order-status-select--${select.value}`;
             updateOrderStatus(select.dataset.orderId, select.value);
@@ -64,14 +62,12 @@ function initOrderActions() {
     });
 
     document.querySelectorAll('[data-order-action="print"]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => {
             printOrder(button.dataset.orderId);
         });
     });
 
     document.querySelectorAll('[data-order-modal-close]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', closeOrderModal);
     });
 
@@ -87,6 +83,4 @@ function initAdminOrdersPage() {
     initOrderTabs();
     initOrderActions();
 }
-
-// Gan su kien nguoi dung cho thanh phan giao dien lien quan.
 document.addEventListener('DOMContentLoaded', initAdminOrdersPage);

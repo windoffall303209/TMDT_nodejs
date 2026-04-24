@@ -24,7 +24,7 @@ class User {
         return bcrypt.hash(randomPassword, 10);
     }
     // =============================================================================
-    // ĐĂNG KÝ NGƯỜI DÙNG - CREATE USER
+    // Tạo người dùng mới khi đăng ký tài khoản.
     // =============================================================================
 
     /**
@@ -136,7 +136,7 @@ class User {
         return this.findById(userId);
     }
 
-    // Tìm or create google người dùng.
+    // TìT?m ho?c t?o google người dùng.
     static async findOrCreateGoogleUser(profile = {}) {
         const email = String(profile.email || '').trim().toLowerCase();
         const fullName = String(profile.name || profile.full_name || '').trim() || email.split('@')[0] || 'Google User';
@@ -205,7 +205,7 @@ class User {
     }
 
     // =============================================================================
-    // CẬP NHẬT PROFILE CƠ BẢN - UPDATE PROFILE
+    // Cập nhật hồ sơ cơ bản của người dùng.
     // =============================================================================
 
     /**
@@ -228,7 +228,7 @@ class User {
     }
 
     // =============================================================================
-    // CẬP NHẬT PROFILE ĐẦY ĐỦ - UPDATE FULL PROFILE
+    // Cập nhật hồ sơ đầy đủ, gồm các trường mở rộng.
     // =============================================================================
 
     /**
@@ -252,7 +252,7 @@ class User {
     }
 
     // =============================================================================
-    // CẬP NHẬT AVATAR - UPDATE AVATAR
+    // Cập nhật ảnh đại diện của người dùng.
     // =============================================================================
 
     /**
@@ -312,7 +312,7 @@ class User {
     }
 
     // =============================================================================
-    // CẬP NHẬT ĐỒNG Ý MARKETING - UPDATE MARKETING CONSENT
+    // Cập nhật trạng thái đồng ý nhận marketing.
     // =============================================================================
 
     /**
@@ -433,7 +433,7 @@ class User {
     }
 
     // =============================================================================
-    // CẬP NHẬT TRẠNG THÁI (ADMIN) - UPDATE STATUS
+    // Admin cập nhật trạng thái hoạt động của tài khoản.
     // =============================================================================
 
     /**
@@ -452,7 +452,7 @@ class User {
     }
 
     // =============================================================================
-    // CẬP NHẬT QUYỀN (ADMIN) - UPDATE ROLE
+    // Admin cập nhật quyền của tài khoản.
     // =============================================================================
 
     /**

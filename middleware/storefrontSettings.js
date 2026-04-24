@@ -1,4 +1,4 @@
-// File middleware/storefrontSettings.js: middleware xử lý request cho module storefrontSettings.
+// Nạp cấu hình storefront toàn cục để view có layout, theme và nội dung động.
 const StorefrontSetting = require('../models/StorefrontSetting');
 
 const SETTINGS_CACHE_TTL_MS = 30 * 1000;

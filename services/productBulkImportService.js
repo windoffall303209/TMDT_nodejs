@@ -1,4 +1,4 @@
-// File services/productBulkImportService.js: gom logic service cho module productBulkImportService.
+// Service gom logic productbulkimportservice để controller không phải lặp xử lý nghiệp vụ.
 const fs = require('fs');
 const os = require('os');
 const path = require('path');

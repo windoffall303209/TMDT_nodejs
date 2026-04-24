@@ -1,4 +1,4 @@
-// File models/ReturnRequest.js: thao tác dữ liệu database cho model ReturnRequest.
+// Model truy vấn và chuẩn hóa dữ liệu returnrequest trong MySQL.
 const pool = require('../config/database');
 
 const RETURN_STATUSES = ['pending', 'approved', 'rejected', 'resolved'];

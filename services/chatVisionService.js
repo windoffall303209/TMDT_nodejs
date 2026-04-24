@@ -1,4 +1,4 @@
-// File services/chatVisionService.js: gom logic service cho module chatVisionService.
+// Service gom logic chatvisionservice để controller không phải lặp xử lý nghiệp vụ.
 function extractJsonObject(rawValue) {
     const value = typeof rawValue === 'string' ? rawValue.trim() : '';
     if (!value) {

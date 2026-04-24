@@ -1,4 +1,4 @@
-/* Page Header */
+/* Tiêu đề và thanh thao tác của màn chương trình khuyến mãi. */
 .admin-page-header {
     display: flex;
     justify-content: space-between;
@@ -61,7 +61,7 @@
     color: var(--admin-text-muted);
 }
 
-/* Admin Form Row */
+/* Hàng form cấu hình điều kiện khuyến mãi. */
 .admin-form__row {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));

@@ -1,4 +1,4 @@
-// File middleware/reviewUpload.js: middleware xử lý request cho module reviewUpload.
+// Middleware xử lý reviewupload trước khi request đi vào controller.
 const fs = require('fs');
 const multer = require('multer');
 const os = require('os');
@@ -73,7 +73,7 @@ function detectReviewMediaType(file) {
     return null;
 }
 
-// Xử lý map upload error vào feedback code.
+// Xử lý map l?i upload vào feedback code.
 function mapUploadErrorToFeedbackCode(error) {
     if (!error) {
         return 'invalid-media';
@@ -182,7 +182,7 @@ async function uploadReviewMediaFiles(files = []) {
     }
 }
 
-// Xử lý đánh giá media upload.
+// Xử lý đánh giá media t?i l?n.
 function handleReviewMediaUpload(req, res, next) {
     reviewUpload.array('reviewMedia', MAX_REVIEW_FILES)(req, res, async (error) => {
         if (error) {
@@ -196,7 +196,7 @@ function handleReviewMediaUpload(req, res, next) {
                 : [];
             return next();
         } catch (uploadError) {
-            console.error('Review media upload error:', uploadError);
+            console.error('Review media l?i upload:', uploadError);
             return res.redirect(buildReviewRedirect(req.params.slug, 'upload-failed'));
         }
     });

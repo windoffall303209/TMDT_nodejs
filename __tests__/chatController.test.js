@@ -1,4 +1,4 @@
-// File __tests__/chatController.test.js: kiểm thử tự động cho module chatController.test.
+// Kiểm thử tự động cho tests chatcontroller.test để giữ ổn định hành vi quan trọng.
 process.env.NODE_ENV = 'test';
 
 jest.mock('../models/Chat', () => ({

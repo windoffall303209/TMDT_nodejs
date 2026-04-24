@@ -1,4 +1,4 @@
-<%# File views/admin/categories.ejs: hien thi giao dien va du lieu cho trang tuong ung. %>
+<%# Template admin render màn quản trị danh mục với dữ liệu từ controller quản trị. %>
 <%- include('../partials/admin-header', { currentPage: 'categories', pageStyles: ['/css/admin/categories.css'] }) %>
 
 <div class="admin-page">
@@ -56,7 +56,6 @@
                     <% } %>
                 </p>
             </div>
-            <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
             <form action="/admin/categories" method="GET" class="admin-search-form">
                 <input
                     type="search"
@@ -76,7 +75,6 @@
 
         <div class="admin-section">
             <h3 class="admin-section__title">Import danh mục nhanh</h3>
-            <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
             <form action="/admin/categories/import" method="POST" enctype="multipart/form-data" class="admin-form">
                 <div class="admin-form__row admin-form__row--categories">
                     <div class="admin-form__group">
@@ -102,7 +100,6 @@
                     <polyline points="6 9 12 15 18 9"/>
                 </svg>
             </h3>
-            <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
             <form id="createCategoryForm" action="/admin/categories" method="POST" enctype="multipart/form-data" class="admin-form admin-section__content">
                 <div class="admin-form__row admin-form__row--categories">
                     <div class="admin-form__group">
@@ -256,7 +253,6 @@
                 </svg>
             </button>
         </div>
-        <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
         <form id="editCategoryForm" class="admin-form" enctype="multipart/form-data">
             <input type="hidden" id="editCategoryId">
             <div class="admin-form__row admin-form__row--categories">

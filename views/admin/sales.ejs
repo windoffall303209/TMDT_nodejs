@@ -1,4 +1,4 @@
-<%# File views/admin/sales.ejs: hien thi giao dien va du lieu cho trang tuong ung. %>
+<%# Template admin render màn quản trị khuyến mãi với dữ liệu từ controller quản trị. %>
 <%- include('../partials/admin-header', { currentPage: 'sales', pageStyles: ['/css/admin/sales.css'] }) %>
 
 <% const canNotifySubscribers = Number(subscriberCount || 0) > 0; %>
@@ -63,7 +63,6 @@
                     <% } %>
                 </p>
             </div>
-            <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
             <form action="/admin/sales" method="GET" class="admin-search-form">
                 <input
                     type="search"
@@ -93,7 +92,6 @@
                     <polyline points="6 9 12 15 18 9"/>
                 </svg>
             </h3>
-            <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
             <form action="/admin/sales" method="POST" class="admin-form admin-section__content">
                 <div class="admin-form__row">
                     <div class="admin-form__group">
@@ -303,7 +301,6 @@
                 </svg>
             </button>
         </div>
-        <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
         <form id="editSaleForm" class="admin-form" >
             <div class="admin-form__row">
                 <div class="admin-form__group">
@@ -379,7 +376,6 @@
                 </svg>
             </button>
         </div>
-        <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
         <form id="saleEmailForm" class="admin-form">
             <p class="admin-form__hint">
                 Email sẽ được gửi tới <strong><%= subscriberCount || 0 %></strong> người dùng đã đăng ký nhận bản tin.

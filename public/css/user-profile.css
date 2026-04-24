@@ -1,4 +1,4 @@
-/* File public/css/user-profile.css: dinh nghia style cho khu vuc giao dien tuong ung. */
+/* Định nghĩa giao diện storefront cho người dùng hồ sơ người dùng. */
 .profile-grid {
     display: grid;
     grid-template-columns: 320px minmax(0, 1fr);

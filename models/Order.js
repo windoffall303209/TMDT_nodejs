@@ -1,4 +1,4 @@
-// File models/Order.js: thao tác dữ liệu database cho model Order.
+// Model truy vấn và chuẩn hóa dữ liệu đơn hàng trong MySQL.
 const crypto = require('crypto');
 const pool = require('../config/database');
 

@@ -1,4 +1,4 @@
-// File scripts/sync-product-image-embeddings.js: script hỗ trợ thao tác sync product image embeddings.
+// Script bảo trì sync sản phẩm ảnh embedding, dùng khi cần kiểm tra hoặc đồng bộ dữ liệu dự án.
 require('dotenv').config();
 
 console.log('[visual-sync] Loading service (DB pool may log "Database connected successfully" next)…');

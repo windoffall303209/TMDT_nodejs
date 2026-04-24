@@ -1,4 +1,4 @@
-// File public/js/return-request.js: xử lý tương tác giao diện phía trình duyệt cho module return request.
+// Điều phối tương tác trình duyệt cho đổi trả yêu cầu, tách khỏi template EJS.
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.querySelector('[data-return-form]');
     const input = document.querySelector('[data-return-media-input]');
@@ -32,7 +32,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     if (typeof DataTransfer === 'undefined') {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         form.addEventListener('submit', (event) => {
             const reason = (reasonInput?.value || '').trim();
             if (reason.length < 10) {
@@ -132,7 +131,6 @@ document.addEventListener('DOMContentLoaded', () => {
             removeButton.className = 'return-media-preview__remove';
             removeButton.setAttribute('aria-label', `Xóa ${file.name}`);
             removeButton.textContent = '×';
-            // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
             removeButton.addEventListener('click', () => {
                 selectedFiles.splice(index, 1);
                 syncInputFiles();
@@ -182,13 +180,9 @@ document.addEventListener('DOMContentLoaded', () => {
         renderPreview();
         showNotice(message);
     };
-
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     input.addEventListener('change', () => {
         addFiles(Array.from(input.files || []));
     });
-
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     form.addEventListener('submit', (event) => {
         const reason = (reasonInput?.value || '').trim();
         if (reason.length < 10) {

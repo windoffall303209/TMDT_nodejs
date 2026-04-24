@@ -1,4 +1,4 @@
-// File controllers/admin/userController.js: điều phối handler admin cho module userController.
+// Controller admin xử lý nghiệp vụ quản trị usercontroller và chuẩn bị dữ liệu cho view/API quản trị.
 const legacy = require('./legacy');
 
 // Xử lý danh sách, chi tiết và khóa/mở khóa tài khoản người dùng.

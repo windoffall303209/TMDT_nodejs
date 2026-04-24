@@ -1,4 +1,4 @@
-// File public/js/admin/admin-shell.js: xử lý tương tác giao diện admin cho module admin shell.
+// Điều phối tương tác trình duyệt cho màn quản trị khung giao diện trong khu vực admin.
 let adminSavedScrollY = 0;
 
 // Khởi tạo quản trị mobile menu.
@@ -32,8 +32,6 @@ function initAdminMobileMenu() {
         document.body.style.top = '';
         window.scrollTo(0, adminSavedScrollY);
     }
-
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     button.addEventListener('click', () => {
         if (sidebar.classList.contains('active')) {
             closeMenu();
@@ -43,15 +41,11 @@ function initAdminMobileMenu() {
     });
 
     overlay?.addEventListener('click', closeMenu);
-
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
             closeMenu();
         }
     });
-
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     window.addEventListener('resize', () => {
         if (window.innerWidth > 1100) {
             closeMenu();
@@ -77,8 +71,6 @@ function initAdminNoticeToast() {
     const nextUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}${window.location.hash || ''}`;
     window.history.replaceState({}, '', nextUrl);
 }
-
-// Gan su kien nguoi dung cho thanh phan giao dien lien quan.
 document.addEventListener('DOMContentLoaded', () => {
     initAdminMobileMenu();
     initAdminNoticeToast();

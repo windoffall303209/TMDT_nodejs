@@ -1,4 +1,4 @@
-<%# File views/products/list.ejs: hien thi giao dien va du lieu cho trang tuong ung. %>
+<%# Template EJS render sản phẩm danh sách cho storefront hoặc tài khoản người dùng. %>
 <%- include('../partials/header') %>
 
 <link rel="stylesheet" href="/css/product-list.css">
@@ -20,18 +20,15 @@
         : ((typeof isSalePage !== 'undefined' && isSalePage) ? 'Ưu đãi' : 'Sản phẩm');
 %>
 
-<style>
-    :root {
-        --storefront-catalog-columns: <%= productGridColumns %>;
-        --storefront-catalog-columns-lg: <%= productGridColumnsLg %>;
-        --storefront-catalog-columns-md: <%= productGridColumnsMd %>;
-    }
-</style>
-
 <!-- ===== Trang danh sách sản phẩm tổng quát / sale / search context ===== -->
 <div class="catalog-page page-shell">
-    <div class="container" data-catalog-container>
-        <%# Section gom nhom noi dung chinh cua trang. %>
+    <div
+        class="container"
+        data-catalog-container
+        data-catalog-columns="<%= productGridColumns %>"
+        data-catalog-columns-lg="<%= productGridColumnsLg %>"
+        data-catalog-columns-md="<%= productGridColumnsMd %>"
+    >
         <section class="page-intro page-intro--compact catalog-intro catalog-intro--compact">
             <div class="catalog-intro__content">
                 <h1 class="page-intro__title page-intro__title-inline">

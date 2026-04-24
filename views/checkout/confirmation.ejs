@@ -1,4 +1,4 @@
-<%# File views/checkout/confirmation.ejs: hien thi giao dien va du lieu cho trang tuong ung. %>
+<%# Template EJS render thanh toán xác nhận đơn hàng cho storefront hoặc tài khoản người dùng. %>
 <%- include('../partials/header') %>
 
 <link rel="stylesheet" href="/css/orders.css">
@@ -13,7 +13,6 @@
 <!-- ===== Trang xác nhận đặt hàng thành công ===== -->
 <div class="confirmation-page page-shell">
     <div class="container confirmation-page__container">
-        <%# Section gom nhom noi dung chinh cua trang. %>
         <section class="confirmation-hero">
             <div class="confirmation-hero__icon">OK</div>
             <h1 class="confirmation-hero__title page-intro__title-inline page-intro__title-inline--center">
@@ -28,7 +27,6 @@
         </section>
 
         <div class="confirmation-layout">
-            <%# Section gom nhom noi dung chinh cua trang. %>
             <section class="confirmation-card">
                 <h3>Chi tiết đơn hàng</h3>
                 <div class="confirmation-items">
@@ -65,7 +63,6 @@
             </section>
 
             <aside class="confirmation-side">
-                <%# Section gom nhom noi dung chinh cua trang. %>
                 <section class="confirmation-card">
                     <h3>Tổng tiền</h3>
                     <div class="confirmation-summary">
@@ -83,8 +80,6 @@
                         </div>
                     </div>
                 </section>
-
-                <%# Section gom nhom noi dung chinh cua trang. %>
                 <section class="confirmation-card">
                     <h3>Giao đến</h3>
                     <div class="confirmation-block">
@@ -92,8 +87,6 @@
                         <p><%= order.address_line %><%= order.ward ? ', ' + order.ward : '' %><%= order.district ? ', ' + order.district : '' %>, <%= order.city %></p>
                     </div>
                 </section>
-
-                <%# Section gom nhom noi dung chinh cua trang. %>
                 <section class="confirmation-card">
                     <h3>Thanh toán</h3>
                     <div class="confirmation-block">

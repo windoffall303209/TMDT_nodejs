@@ -1,4 +1,4 @@
-// File middleware/returnUpload.js: middleware xử lý request cho module returnUpload.
+// Middleware xử lý returnupload trước khi request đi vào controller.
 const fs = require('fs');
 const multer = require('multer');
 const os = require('os');
@@ -63,7 +63,7 @@ function detectReturnMediaType(file) {
     return null;
 }
 
-// Xử lý map upload error vào feedback code.
+// Xử lý map l?i upload vào feedback code.
 function mapUploadErrorToFeedbackCode(error) {
     if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
         return 'file-too-large';
@@ -173,7 +173,7 @@ async function uploadReturnMediaFiles(files = []) {
     }
 }
 
-// Xử lý hoàn hàng media upload.
+// Xử lý hoàn hàng media t?i l?n.
 function handleReturnMediaUpload(req, res, next) {
     returnUpload.array('returnMedia', MAX_RETURN_FILES)(req, res, async (error) => {
         if (error) {
@@ -187,7 +187,7 @@ function handleReturnMediaUpload(req, res, next) {
                 : [];
             return next();
         } catch (uploadError) {
-            console.error('Return media upload error:', uploadError);
+            console.error('Return media l?i upload:', uploadError);
             return res.redirect(buildReturnRedirect(req.params.orderCode, 'upload-failed'));
         }
     });

@@ -1,4 +1,4 @@
-// File __tests__/orderController.test.js: kiểm thử tự động cho module orderController.test.
+// Kiểm thử tự động cho tests ordercontroller.test để giữ ổn định hành vi quan trọng.
 process.env.NODE_ENV = 'test';
 
 jest.mock('../models/Order', () => ({

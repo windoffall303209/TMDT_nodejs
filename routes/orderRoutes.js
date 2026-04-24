@@ -1,4 +1,4 @@
-// File routes/orderRoutes.js: khai báo endpoint và middleware cho module orderRoutes.
+// Khai báo route orderroutes và nối middleware/controller tương ứng.
 const express = require('express');
 const router = express.Router();
 const orderController = require('../controllers/orderController');

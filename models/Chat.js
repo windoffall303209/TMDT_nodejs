@@ -1,4 +1,4 @@
-// File models/Chat.js: thao tác dữ liệu database cho model Chat.
+// Model truy vấn và chuẩn hóa dữ liệu chat trong MySQL.
 const pool = require('../config/database');
 
 class Chat {
@@ -120,7 +120,7 @@ class Chat {
         return rows[0] || null;
     }
 
-    // Tìm or create conversation.
+    // TìT?m ho?c t?o conversation.
     static async findOrCreateConversation(userId, sessionId, guestName = 'Khach') {
         const existingConversation = await this.getActiveConversationForCustomer(userId, sessionId);
         if (existingConversation) {

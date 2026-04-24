@@ -1,4 +1,4 @@
-// File routes/index.js: khai báo endpoint và middleware cho module index.
+// Router trang chủ và các endpoint storefront cấp cao.
 const express = require('express');
 const router = express.Router();
 const productController = require('../controllers/productController');

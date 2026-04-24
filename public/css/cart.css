@@ -1,4 +1,4 @@
-/* File public/css/cart.css: dinh nghia style cho khu vuc giao dien tuong ung. */
+/* Định nghĩa giao diện storefront cho giỏ hàng. */
 .cart-grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 380px;

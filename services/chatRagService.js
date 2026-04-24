@@ -1,4 +1,4 @@
-// File services/chatRagService.js: gom logic service cho module chatRagService.
+// Service gom logic chatragservice để controller không phải lặp xử lý nghiệp vụ.
 const crypto = require('crypto');
 const pool = require('../config/database');
 const Product = require('../models/Product');

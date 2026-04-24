@@ -1,4 +1,4 @@
-// File services/categoryBulkImportService.js: gom logic service cho module categoryBulkImportService.
+// Service gom logic categorybulkimportservice để controller không phải lặp xử lý nghiệp vụ.
 const XLSX = require('xlsx');
 
 const Category = require('../models/Category');

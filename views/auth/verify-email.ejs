@@ -1,4 +1,4 @@
-<%# File views/auth/verify-email.ejs: hien thi giao dien va du lieu cho trang tuong ung. %>
+<%# Template EJS render xác thực email cho storefront hoặc tài khoản người dùng. %>
 <%- include('../partials/header', { pageStyles: ['/css/auth/verify-email.css'] }) %>
 
 <!-- ===== Trang xác thực email bằng mã OTP ===== -->
@@ -37,8 +37,6 @@
                     <h2>Nhập Mã Xác Nhận</h2>
                     <p>Nhập đủ 6 số đã gửi đến email của bạn. Mã có hiệu lực trong 10 phút.</p>
                 </div>
-
-                <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
                 <form id="verify-form" class="verify-code-form">
                     <div class="code-inputs" aria-label="Nhập mã xác nhận 6 số">
                         <input type="text" maxlength="1" class="code-input" data-index="0" inputmode="numeric" pattern="[0-9]*" aria-label="Số 1" autofocus>

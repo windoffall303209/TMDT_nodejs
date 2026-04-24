@@ -1,4 +1,4 @@
-// File __tests__/productController.test.js: kiểm thử tự động cho module productController.test.
+// Kiểm thử tự động cho tests productcontroller.test để giữ ổn định hành vi quan trọng.
 process.env.NODE_ENV = 'test';
 
 jest.mock('../models/Product', () => ({

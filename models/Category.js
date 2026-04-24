@@ -1,4 +1,4 @@
-// File models/Category.js: thao tác dữ liệu database cho model Category.
+// Model truy vấn và chuẩn hóa dữ liệu danh mục trong MySQL.
 const pool = require('../config/database');
 
 class Category {

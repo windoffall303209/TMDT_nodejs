@@ -1,4 +1,4 @@
-<%# File views/user/orders.ejs: hien thi giao dien va du lieu cho trang tuong ung. %>
+<%# Template EJS render người dùng đơn hàng cho storefront hoặc tài khoản người dùng. %>
 <%- include('../partials/header') %>
 
 <link rel="stylesheet" href="/css/orders.css">
@@ -10,7 +10,6 @@
 <!-- ===== Trang danh sách đơn hàng của người dùng ===== -->
 <div class="orders-page page-shell">
     <div class="container">
-        <%# Section gom nhom noi dung chinh cua trang. %>
         <section class="page-intro page-intro--compact">
             <h1 class="page-intro__title page-intro__title-inline">
                 <span>Đơn hàng</span>
@@ -147,13 +146,11 @@
                                 <a href="/orders/<%= order.order_code %>/pay" class="btn btn-primary">Thanh toán ngay</a>
                             <% } %>
                             <% if (canCancelOrder) { %>
-                                <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
-                                <form action="/orders/<%= order.order_code %>/cancel" method="POST" class="order-card__action-form" onsubmit="return confirm('Bạn chắc chắn muốn hủy đơn hàng này?');">
+                                <form action="/orders/<%= order.order_code %>/cancel" method="POST" class="order-card__action-form" data-confirm-submit data-confirm-message="Ban chac chan muon huy don hang nay?">
                                     <button type="submit" class="btn btn-danger">Hủy đơn hàng</button>
                                 </form>
                             <% } %>
                             <% if (order.status === 'delivered' && !hasActiveReturnRequest) { %>
-                                <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
                                 <form action="/orders/<%= order.order_code %>/confirm-received" method="POST" class="order-card__action-form">
                                     <button type="submit" class="btn btn-primary">Xác nhận nhận hàng</button>
                                 </form>
@@ -176,5 +173,7 @@
         <% } %>
     </div>
 </div>
+
+<script src="/js/order-actions.js"></script>
 
 <%- include('../partials/footer') %>

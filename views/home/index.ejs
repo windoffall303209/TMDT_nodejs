@@ -1,4 +1,4 @@
-<%# File views/home/index.ejs: hien thi giao dien va du lieu cho trang tuong ung. %>
+<%# Template EJS render trang chủ index cho storefront hoặc tài khoản người dùng. %>
 <%- include('../partials/header') %>
 
 <link rel="stylesheet" href="/css/home.css">
@@ -15,15 +15,6 @@
         (newProducts && newProducts[0] && newProducts[0].primary_image) ||
         'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1400&q=80';
 %>
-
-<style>
-    :root {
-        --storefront-home-product-columns: <%= productGridColumns %>;
-        --storefront-home-product-columns-tablet: <%= productColumnsTablet %>;
-        --storefront-home-category-columns: <%= categoryColumnsDesktop %>;
-        --storefront-home-category-columns-tablet: <%= categoryColumnsTablet %>;
-    }
-</style>
 
 <% if (banners && banners.length > 0) { %>
 <div
@@ -58,9 +49,14 @@
     </div>
 </div>
 <% } %>
-
-<%# Section gom nhom noi dung chinh cua trang. %>
-<section class="home-hero">
+<section
+    class="home-hero"
+    data-home-layout
+    data-product-columns="<%= productGridColumns %>"
+    data-product-columns-tablet="<%= productColumnsTablet %>"
+    data-category-columns="<%= categoryColumnsDesktop %>"
+    data-category-columns-tablet="<%= categoryColumnsTablet %>"
+>
     <div class="container home-hero__inner">
         <div class="home-hero__content">
             <p class="home-hero__eyebrow">Bộ sưu tập mới / mặc đẹp mỗi ngày</p>
@@ -126,8 +122,6 @@
         </div>
     </div>
 </section>
-
-<%# Section gom nhom noi dung chinh cua trang. %>
 <section class="home-strip">
     <div class="container home-strip__grid">
         <div class="home-strip__item">
@@ -144,8 +138,6 @@
         </div>
     </div>
 </section>
-
-<%# Section gom nhom noi dung chinh cua trang. %>
 <section class="home-categories section-block">
     <div class="container">
         <div class="home-section__header">
@@ -177,8 +169,6 @@
         <% } %>
     </div>
 </section>
-
-<%# Section gom nhom noi dung chinh cua trang. %>
 <section class="section-block">
     <div class="container">
         <div class="home-section__header">
@@ -203,8 +193,6 @@
         <% } %>
     </div>
 </section>
-
-<%# Section gom nhom noi dung chinh cua trang. %>
 <section class="home-editorial section-block">
     <div class="container home-editorial__grid">
         <div class="home-editorial__copy">
@@ -245,7 +233,6 @@
 </section>
 
 <% if (bestSellers && bestSellers.length > 0) { %>
-<%# Section gom nhom noi dung chinh cua trang. %>
 <section class="section-block section-block--alt">
     <div class="container">
         <div class="home-section__header">
@@ -264,8 +251,6 @@
     </div>
 </section>
 <% } %>
-
-<%# Section gom nhom noi dung chinh cua trang. %>
 <section class="home-services section-block">
     <div class="container home-services__grid">
         <div class="home-service-card">

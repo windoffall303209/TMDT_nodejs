@@ -1,4 +1,4 @@
-// File controllers/admin/storefrontController.js: điều phối handler admin cho module storefrontController.
+// Controller admin xử lý nghiệp vụ quản trị storefrontcontroller và chuẩn bị dữ liệu cho view/API quản trị.
 const legacy = require('./legacy');
 
 // Xử lý cấu hình giao diện storefront trong admin.

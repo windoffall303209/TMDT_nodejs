@@ -1,4 +1,4 @@
-// File controllers/admin/orderController.js: điều phối handler admin cho module orderController.
+// Controller admin xử lý nghiệp vụ quản trị ordercontroller và chuẩn bị dữ liệu cho view/API quản trị.
 const legacy = require('./legacy');
 
 // Xử lý danh sách, chi tiết và cập nhật trạng thái đơn hàng.

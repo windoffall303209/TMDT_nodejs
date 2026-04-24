@@ -1,4 +1,4 @@
-// File controllers/admin/index.js: điều phối handler admin cho module index.
+// Controller admin xử lý nghiệp vụ quản trị index và chuẩn bị dữ liệu cho view/API quản trị.
 module.exports = {
     ...require('./dashboardController'),
     ...require('./categoryController'),

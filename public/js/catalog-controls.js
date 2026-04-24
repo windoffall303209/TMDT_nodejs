@@ -1,11 +1,36 @@
-// File public/js/catalog-controls.js: xử lý tương tác giao diện phía trình duyệt cho module catalog controls.
+// Điều phối tương tác trình duyệt cho catalog controls, tách khỏi template EJS.
 const catalogState = window.__catalogControlsState || (window.__catalogControlsState = {
     initialized: false,
     abortController: null,
     sidebarUpdateTimer: null
 });
 
-// Lấy catalog trang elements.
+/**
+ * Ghi biến CSS số cột catalog khi giá trị từ storefront setting hợp lệ.
+ */
+function setCatalogLayoutVariable(name, value) {
+    const parsedValue = Number.parseInt(value, 10);
+    if (Number.isFinite(parsedValue) && parsedValue > 0) {
+        document.documentElement.style.setProperty(name, String(parsedValue));
+    }
+}
+
+/**
+ * Đưa cấu hình grid từ data attribute của EJS sang CSS variables.
+ */
+function applyCatalogLayoutVariables(container) {
+    if (!container) {
+        return;
+    }
+
+    setCatalogLayoutVariable('--storefront-catalog-columns', container.dataset.catalogColumns);
+    setCatalogLayoutVariable('--storefront-catalog-columns-lg', container.dataset.catalogColumnsLg);
+    setCatalogLayoutVariable('--storefront-catalog-columns-md', container.dataset.catalogColumnsMd);
+}
+
+/**
+ * Lấy các node gốc của catalog để các hàm bind có thể chạy lại sau khi thay HTML bằng AJAX.
+ */
 function getCatalogPageElements(root = document) {
     const container = root.querySelector('[data-catalog-container]');
     const page = root.querySelector('.catalog-page');
@@ -16,12 +41,16 @@ function getCatalogPageElements(root = document) {
     };
 }
 
-// Kiểm tra modified click.
+/**
+ * Nhận diện click có modifier để giữ nguyên hành vi mở tab mới/copy link mặc định của trình duyệt.
+ */
 function isModifiedClick(event) {
     return event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0;
 }
 
-// Tạo dữ liệu catalog form url.
+/**
+ * Chuyển state form lọc/sắp xếp thành URL query dùng cho AJAX và history.
+ */
 function buildCatalogFormUrl(form) {
     const action = form.getAttribute('action') || window.location.pathname;
     const url = new URL(action, window.location.origin);
@@ -38,7 +67,9 @@ function buildCatalogFormUrl(form) {
     return url.toString();
 }
 
-// Xử lý clear pending sidebar update.
+/**
+ * Hủy lần cập nhật sidebar đang chờ để nhiều thay đổi filter liên tiếp chỉ gửi request cuối.
+ */
 function clearPendingSidebarUpdate() {
     if (!catalogState.sidebarUpdateTimer) {
         return;
@@ -48,7 +79,9 @@ function clearPendingSidebarUpdate() {
     catalogState.sidebarUpdateTimer = null;
 }
 
-// Lên lịch sidebar catalog update.
+/**
+ * Debounce request lọc catalog từ sidebar để tránh fetch quá dày khi người dùng tick nhiều filter.
+ */
 function scheduleSidebarCatalogUpdate(url, options = {}) {
     clearPendingSidebarUpdate();
     catalogState.sidebarUpdateTimer = window.setTimeout(() => {
@@ -57,7 +90,9 @@ function scheduleSidebarCatalogUpdate(url, options = {}) {
     }, 120);
 }
 
-// Xử lý set catalog loading state.
+/**
+ * Bật/tắt trạng thái loading trên vùng catalog để CSS hiển thị phản hồi khi đang fetch.
+ */
 function setCatalogLoadingState(isLoading) {
     const { page } = getCatalogPageElements(document);
     if (!page) {
@@ -67,14 +102,18 @@ function setCatalogLoadingState(isLoading) {
     page.classList.toggle('is-updating', Boolean(isLoading));
 }
 
-// Lấy open catalog tree ids.
+/**
+ * Ghi lại các nhánh danh mục đang mở trước khi thay HTML.
+ */
 function getOpenCatalogTreeIds(root = document) {
     return [...root.querySelectorAll('[data-catalog-tree-toggle].is-open')]
         .map((button) => button.getAttribute('aria-controls'))
         .filter(Boolean);
 }
 
-// Xử lý restore catalog tree state.
+/**
+ * Khôi phục trạng thái mở/đóng cây danh mục sau khi nội dung catalog được render lại.
+ */
 function restoreCatalogTreeState(openTreeIds = [], root = document) {
     const openTreeIdSet = new Set(
         (Array.isArray(openTreeIds) ? openTreeIds : []).map((item) => String(item))
@@ -95,7 +134,9 @@ function restoreCatalogTreeState(openTreeIds = [], root = document) {
     });
 }
 
-// Xử lý replace catalog content.
+/**
+ * Thay nội dung catalog theo phạm vi phù hợp: toàn bộ container hoặc chỉ intro/results khi lọc sidebar.
+ */
 function replaceCatalogContent(container, nextContainer, replaceMode = 'container') {
     if (replaceMode !== 'results') {
         container.innerHTML = nextContainer.innerHTML;
@@ -118,7 +159,9 @@ function replaceCatalogContent(container, nextContainer, replaceMode = 'containe
     return 'results';
 }
 
-// Nạp catalog content.
+/**
+ * Fetch HTML catalog mới, giữ lại scroll/sidebar/tree state và fallback về điều hướng thường khi lỗi.
+ */
 async function loadCatalogContent(url, options = {}) {
     const {
         updateHistory = true,
@@ -215,7 +258,9 @@ async function loadCatalogContent(url, options = {}) {
     }
 }
 
-// Xử lý bind catalog toolbar forms.
+/**
+ * Gắn submit/change cho toolbar sắp xếp và số lượng hiển thị.
+ */
 function bindCatalogToolbarForms(root = document) {
     const toolbarForms = root.querySelectorAll('.catalog-toolbar__form');
 
@@ -228,15 +273,12 @@ function bindCatalogToolbarForms(root = document) {
 
         const pageInput = form.querySelector('input[name="page"]');
         const controls = form.querySelectorAll('select[data-catalog-control]');
-
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         form.addEventListener('submit', (event) => {
             event.preventDefault();
             loadCatalogContent(buildCatalogFormUrl(form));
         });
 
         controls.forEach((control) => {
-            // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
             control.addEventListener('change', () => {
                 if (pageInput) {
                     pageInput.value = '1';
@@ -248,7 +290,9 @@ function bindCatalogToolbarForms(root = document) {
     });
 }
 
-// Xử lý bind catalog sidebar.
+/**
+ * Gắn toggle sidebar, cây danh mục và filter auto-submit trong bộ lọc catalog.
+ */
 function bindCatalogSidebar(root = document) {
     const sidebar = root.querySelector('#catalogSidebar');
     const sidebarToggle = root.querySelector('[data-catalog-filter-toggle]');
@@ -258,7 +302,6 @@ function bindCatalogSidebar(root = document) {
 
     if (sidebar && sidebarToggle && sidebarToggle.dataset.catalogControlsBound !== 'true') {
         sidebarToggle.dataset.catalogControlsBound = 'true';
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         sidebarToggle.addEventListener('click', () => {
             const isOpen = !sidebar.classList.contains('is-open');
             sidebar.classList.toggle('is-open', isOpen);
@@ -272,7 +315,6 @@ function bindCatalogSidebar(root = document) {
         }
 
         button.dataset.catalogControlsBound = 'true';
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => {
             const targetId = button.getAttribute('aria-controls');
             const target = targetId ? document.getElementById(targetId) : null;
@@ -286,8 +328,6 @@ function bindCatalogSidebar(root = document) {
 
     if (sidebarForm && sidebarForm.dataset.catalogControlsBound !== 'true') {
         sidebarForm.dataset.catalogControlsBound = 'true';
-
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         sidebarForm.addEventListener('submit', (event) => {
             event.preventDefault();
             loadCatalogContent(buildCatalogFormUrl(sidebarForm), {
@@ -303,7 +343,6 @@ function bindCatalogSidebar(root = document) {
             }
 
             input.dataset.catalogControlsBound = 'true';
-            // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
             input.addEventListener('change', () => {
                 if (pageInput) {
                     pageInput.value = '1';
@@ -317,7 +356,9 @@ function bindCatalogSidebar(root = document) {
     }
 }
 
-// Xử lý bind catalog links.
+/**
+ * Chuyển pagination/reset sidebar sang AJAX khi click thường, vẫn giữ hành vi mặc định cho modified click.
+ */
 function bindCatalogLinks(root = document) {
     const ajaxLinks = root.querySelectorAll('.catalog-pagination a, .catalog-sidebar__reset, .catalog-sidebar__all-link');
 
@@ -327,7 +368,6 @@ function bindCatalogLinks(root = document) {
         }
 
         link.dataset.catalogControlsBound = 'true';
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         link.addEventListener('click', (event) => {
             if (isModifiedClick(event)) {
                 return;
@@ -344,26 +384,25 @@ function bindCatalogLinks(root = document) {
     });
 }
 
-// Xử lý initialize catalog controls.
+/**
+ * Khởi tạo lại toàn bộ control sau mỗi lần catalog được thay HTML.
+ */
 function initializeCatalogControls(root = document) {
     const { container } = getCatalogPageElements(root);
     if (!container) {
         return;
     }
 
+    applyCatalogLayoutVariables(container);
     bindCatalogToolbarForms(root);
     bindCatalogSidebar(root);
     bindCatalogLinks(root);
 }
-
-// Gan su kien nguoi dung cho thanh phan giao dien lien quan.
 document.addEventListener('DOMContentLoaded', () => {
     initializeCatalogControls(document);
 
     if (!catalogState.initialized) {
         catalogState.initialized = true;
-
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         window.addEventListener('popstate', () => {
             if (document.querySelector('[data-catalog-container]')) {
                 loadCatalogContent(window.location.href, {

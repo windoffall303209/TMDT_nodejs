@@ -1,4 +1,4 @@
-<%# File views/user/order-tracking.ejs: hien thi giao dien va du lieu cho trang tuong ung. %>
+<%# Template EJS render người dùng đơn hàng theo dõi đơn hàng cho storefront hoặc tài khoản người dùng. %>
 <%- include('../partials/header') %>
 
 <link rel="stylesheet" href="/css/orders.css">
@@ -53,7 +53,6 @@
 <!-- ===== Trang theo dõi vận chuyển đơn hàng ===== -->
 <div class="tracking-page page-shell">
     <div class="container tracking-page__container">
-        <%# Section gom nhom noi dung chinh cua trang. %>
         <section class="tracking-hero">
             <div class="tracking-hero__content">
                 <p class="tracking-hero__eyebrow">Theo dõi đơn hàng</p>
@@ -67,8 +66,6 @@
                 <strong><%= new Date(order.created_at).toLocaleString('vi-VN') %></strong>
             </div>
         </section>
-
-        <%# Section gom nhom noi dung chinh cua trang. %>
         <section class="tracking-card">
             <div class="tracking-progress <%= order.status === 'cancelled' ? 'is-cancelled' : '' %>">
                 <% steps.forEach((step, index) => { %>
@@ -85,7 +82,6 @@
         </section>
 
         <div class="tracking-layout">
-            <%# Section gom nhom noi dung chinh cua trang. %>
             <section class="tracking-card">
                 <div class="tracking-card__header">
                     <h2>Thông tin vận chuyển</h2>
@@ -128,7 +124,6 @@
             </section>
 
             <aside class="tracking-side">
-                <%# Section gom nhom noi dung chinh cua trang. %>
                 <section class="tracking-card">
                     <div class="tracking-card__header">
                         <h2>Địa chỉ nhận hàng</h2>
@@ -138,8 +133,6 @@
                         <p><%= order.address_line %><%= order.ward ? ', ' + order.ward : '' %><%= order.district ? ', ' + order.district : '' %>, <%= order.city %></p>
                     </div>
                 </section>
-
-                <%# Section gom nhom noi dung chinh cua trang. %>
                 <section class="tracking-card">
                     <div class="tracking-card__header">
                         <h2>Thanh toán</h2>
@@ -167,8 +160,7 @@
                     <% if (canCancelOrder) { %>
                         <div class="tracking-map-preview">
                             <p>Bạn có thể hủy đơn trước khi đơn chuyển sang xử lý giao hàng.</p>
-                            <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
-                            <form action="/orders/<%= order.order_code %>/cancel" method="POST" onsubmit="return confirm('Bạn chắc chắn muốn hủy đơn hàng này?');">
+                            <form action="/orders/<%= order.order_code %>/cancel" method="POST" data-confirm-submit data-confirm-message="Ban chac chan muon huy don hang nay?">
                                 <button type="submit" class="btn btn-danger">Hủy đơn hàng</button>
                             </form>
                         </div>
@@ -178,31 +170,26 @@
         </div>
 
         <% if (currentCancelFeedback === 'success') { %>
-            <%# Section gom nhom noi dung chinh cua trang. %>
             <section class="tracking-card tracking-action-card tracking-action-card--success">
                 <p>Đã hủy đơn hàng. Tồn kho và lượt sử dụng voucher đã được hoàn lại.</p>
             </section>
         <% } else if (currentCancelFeedback === 'invalid-status') { %>
-            <%# Section gom nhom noi dung chinh cua trang. %>
             <section class="tracking-card tracking-action-card tracking-action-card--warning">
                 <p>Chỉ có thể hủy đơn ở trạng thái Chờ xác nhận hoặc Đã xác nhận.</p>
             </section>
         <% } %>
 
         <% if (currentReceivedFeedback === 'confirmed') { %>
-            <%# Section gom nhom noi dung chinh cua trang. %>
             <section class="tracking-card tracking-action-card tracking-action-card--success">
                 <p>Đã xác nhận nhận hàng. Đơn hàng đã chuyển sang trạng thái hoàn thành.</p>
             </section>
         <% } %>
 
         <% if (currentReturnFeedback === 'requested') { %>
-            <%# Section gom nhom noi dung chinh cua trang. %>
             <section class="tracking-card tracking-action-card tracking-action-card--success">
                 <p>Đã gửi yêu cầu hoàn hàng. Bộ phận quản trị sẽ kiểm tra minh chứng và phản hồi.</p>
             </section>
         <% } else if (currentReturnFeedback) { %>
-            <%# Section gom nhom noi dung chinh cua trang. %>
             <section class="tracking-card tracking-action-card tracking-action-card--warning">
                 <p>
                     <% if (currentReturnFeedback === 'missing-reason') { %>
@@ -221,7 +208,6 @@
         <% } %>
 
         <% if (order.status === 'delivered') { %>
-            <%# Section gom nhom noi dung chinh cua trang. %>
             <section class="tracking-card tracking-action-card" id="return-request">
                 <div class="tracking-card__header">
                     <h2>Xác nhận sau giao hàng</h2>
@@ -233,7 +219,6 @@
                     </div>
                 <% } else { %>
                     <div class="tracking-post-delivery-actions tracking-post-delivery-actions--inline">
-                        <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
                         <form action="/orders/<%= order.order_code %>/confirm-received" method="POST">
                             <button type="submit" class="btn btn-primary">Xác nhận nhận hàng</button>
                         </form>
@@ -242,8 +227,6 @@
                 <% } %>
             </section>
         <% } %>
-
-        <%# Section gom nhom noi dung chinh cua trang. %>
         <section class="tracking-card">
             <div class="tracking-card__header">
                 <h2>Tiến trình vận chuyển</h2>
@@ -281,13 +264,14 @@
             <a href="/orders/history" class="btn btn-secondary">Quay lại lịch sử đơn</a>
             <a href="/orders/<%= order.order_code %>/confirmation" class="btn btn-primary">Xem chi tiết đơn</a>
             <% if (canCancelOrder) { %>
-                <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
-                <form action="/orders/<%= order.order_code %>/cancel" method="POST" onsubmit="return confirm('Bạn chắc chắn muốn hủy đơn hàng này?');">
+                <form action="/orders/<%= order.order_code %>/cancel" method="POST" data-confirm-submit data-confirm-message="Ban chac chan muon huy don hang nay?">
                     <button type="submit" class="btn btn-danger">Hủy đơn hàng</button>
                 </form>
             <% } %>
         </div>
     </div>
 </div>
+
+<script src="/js/order-actions.js"></script>
 
 <%- include('../partials/footer') %>

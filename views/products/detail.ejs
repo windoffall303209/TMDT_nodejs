@@ -1,4 +1,4 @@
-<%# File views/products/detail.ejs: hien thi giao dien va du lieu cho trang tuong ung. %>
+<%# Template EJS render sản phẩm chi tiết cho storefront hoặc tài khoản người dùng. %>
 <%- include('../partials/header') %>
 
 <link rel="stylesheet" href="/css/product-detail.css">
@@ -179,7 +179,6 @@
         </div>
 
         <% if (product.description) { %>
-            <%# Section gom nhom noi dung chinh cua trang. %>
             <section class="product-description-section">
                 <button type="button" class="product-description__toggle" id="descToggle" aria-expanded="false">
                     <h3>Mô tả sản phẩm</h3>
@@ -194,7 +193,6 @@
         <% } %>
 
         <!-- Khu vực đánh giá: thông báo, form tạo/sửa, danh sách review -->
-        <%# Section gom nhom noi dung chinh cua trang. %>
         <section class="product-reviews" id="productReviewsSection">
             <button
                 type="button"
@@ -238,7 +236,6 @@
                             </div>
 
                             <div class="product-review-state__panel <%= createReviewPanelOpen ? 'is-open' : '' %>" id="createReviewPanel" data-toggle-mode="display">
-                                <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
                                 <form action="<%= reviewFormAction %>" method="POST" enctype="multipart/form-data" class="product-review-form product-review-form--edit">
                                     <div class="product-review-form__header">
                                         <div>
@@ -368,7 +365,6 @@
                                     </div>
 
                                     <div class="product-review-state__edit <%= editOwnReviewOpen ? 'is-open' : '' %>" id="reviewEditPanel" data-toggle-mode="display">
-                                        <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
                                         <form action="<%= reviewFormAction %>" method="POST" enctype="multipart/form-data" class="product-review-form product-review-form--edit">
                                             <div class="product-review-form__header">
                                                 <div>
@@ -528,7 +524,6 @@
 
         <!-- Sản phẩm liên quan cùng danh mục -->
         <% if (relatedProducts && relatedProducts.length > 0) { %>
-            <%# Section gom nhom noi dung chinh cua trang. %>
             <section class="related-products">
                 <div class="home-section__header">
                     <div>

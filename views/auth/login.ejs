@@ -1,4 +1,4 @@
-<%# File views/auth/login.ejs: hien thi giao dien va du lieu cho trang tuong ung. %>
+<%# Template EJS render xác thực đăng nhập cho storefront hoặc tài khoản người dùng. %>
 <%- include('../partials/header') %>
 
 <div class="auth-page">
@@ -22,8 +22,6 @@
                 <% if (error) { %>
                     <div class="alert alert-error"><%= error %></div>
                 <% } %>
-
-                <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
                 <form action="/auth/login" method="POST" class="auth-form">
                     <% const loginRedirect = typeof redirect !== 'undefined' ? redirect : ''; %>
                     <% if (loginRedirect) { %>

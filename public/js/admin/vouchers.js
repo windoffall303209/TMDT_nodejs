@@ -1,4 +1,4 @@
-// File public/js/admin/vouchers.js: xử lý tương tác giao diện admin cho module vouchers.
+// Điều phối tương tác trình duyệt cho màn quản trị mã giảm giá trong khu vực admin.
 const adminVouchersBootstrap = JSON.parse(document.getElementById('adminVouchersBootstrap').textContent);
 const adminVoucherProducts = adminVouchersBootstrap.products || [];
 const adminSubscriberCount = Number(adminVouchersBootstrap.subscriberCount || 0);
@@ -426,8 +426,6 @@ function toggleSection(titleElement) {
     const section = titleElement.closest('.admin-section--collapsible');
     section.classList.toggle('is-open');
 }
-
-// Gan su kien nguoi dung cho thanh phan giao dien lien quan.
 document.addEventListener('DOMContentLoaded', function() {
     renderProductChecklist('createVoucherProducts', [], {
         prefix: 'create-voucher'
@@ -437,56 +435,46 @@ document.addEventListener('DOMContentLoaded', function() {
     toggleVoucherValueConstraints('editVoucherType', 'editVoucherValue', 'editVoucherValueWarning');
 
     document.querySelectorAll('[data-admin-toggle="section"]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => toggleSection(button));
     });
 
     document.querySelectorAll('[data-voucher-action="scroll-to-form"]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', openAddVoucherModal);
     });
 
     document.querySelectorAll('[data-voucher-action="open-email-modal"]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => openVoucherEmailModal());
     });
 
     document.querySelectorAll('[data-checklist-search]').forEach((input) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         input.addEventListener('input', () => filterProductChecklist(input, input.dataset.checklistSearch));
     });
 
     document.querySelectorAll('[data-checklist-toggle]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => {
             setChecklistState(button.dataset.checklistTarget, button.dataset.checklistToggle === 'all');
         });
     });
 
     document.querySelectorAll('[data-voucher-action="edit"]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => editVoucher(button.dataset.voucherId));
     });
 
     document.querySelectorAll('[data-voucher-action="toggle-status"]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => {
             toggleVoucherStatus(button.dataset.voucherId, button.dataset.voucherNextState === 'true');
         });
     });
 
     document.querySelectorAll('[data-voucher-action="delete"]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => deleteVoucher(button.dataset.voucherId));
     });
 
     document.querySelectorAll('[data-voucher-action="email"]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => confirmAndSendVoucherEmail(button.dataset.voucherId));
     });
 
     document.querySelectorAll('[data-voucher-modal-close]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => closeModal(button.dataset.voucherModalClose));
     });
 
@@ -508,8 +496,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!modal) {
             return;
         }
-
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         modal.addEventListener('click', function(event) {
             if (event.target === modal) {
                 modal.style.display = 'none';

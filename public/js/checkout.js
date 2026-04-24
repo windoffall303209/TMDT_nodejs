@@ -1,4 +1,4 @@
-// File public/js/checkout.js: xử lý tương tác giao diện phía trình duyệt cho module checkout.
+// Điều phối tương tác trình duyệt cho thanh toán, tách khỏi template EJS.
 let addressMap = null;
 let addressMarker = null;
 let locateButtonElement = null;
@@ -442,7 +442,6 @@ function enableScrollChaining(element) {
     }
 
     element.dataset.scrollChainReady = 'true';
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     element.addEventListener('wheel', (event) => {
         const deltaY = event.deltaY;
         const canScroll = element.scrollHeight > element.clientHeight + 1;
@@ -1517,19 +1516,16 @@ function initCheckout() {
     loadProvinces();
 
     document.querySelectorAll('[data-checkout-action="toggle-address-form"]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', async () => {
             await toggleAddressForm();
         });
     });
 
     document.querySelectorAll('[data-checkout-action="save-address"]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', saveNewAddress);
     });
 
     document.querySelectorAll('[data-checkout-action="edit-address"]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', async function(event) {
             event.preventDefault();
             event.stopPropagation();
@@ -1538,7 +1534,6 @@ function initCheckout() {
     });
 
     document.querySelectorAll('[data-checkout-action="delete-address-inline"]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', async function(event) {
             event.preventDefault();
             await deleteEditingAddress();
@@ -1546,7 +1541,6 @@ function initCheckout() {
     });
 
     document.querySelectorAll('[data-checkout-action="close-address-form"]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', function(event) {
             event.preventDefault();
             closeAddressForm();
@@ -1555,12 +1549,10 @@ function initCheckout() {
 
     if (bootstrap.mode !== 'buy-now') {
         document.querySelectorAll('[data-checkout-action="apply-voucher"]').forEach((button) => {
-            // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
             button.addEventListener('click', applyVoucher);
         });
 
         document.querySelectorAll('[data-checkout-action="clear-voucher"]').forEach((button) => {
-            // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
             button.addEventListener('click', () => {
                 clearAppliedVoucher({ message: 'Đã bỏ voucher khỏi đơn hàng.', type: 'success' });
             });
@@ -1586,7 +1578,6 @@ function initCheckout() {
         });
 
         document.querySelectorAll('.voucher-card').forEach((card) => {
-            // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
             card.addEventListener('click', () => selectVoucher(card));
         });
 
@@ -1611,7 +1602,6 @@ function initCheckout() {
     });
 
     document.querySelectorAll('input[name="payment_method"]').forEach((radio) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         radio.addEventListener('change', function() {
             document.querySelectorAll('.payment-option').forEach((option) => {
                 option.classList.remove('payment-option--selected');
@@ -1621,7 +1611,6 @@ function initCheckout() {
     });
 
     document.querySelectorAll('input[name="address_id"]').forEach((radio) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         radio.addEventListener('change', function() {
             document.querySelectorAll('.address-card').forEach((card) => {
                 card.classList.remove('address-card--selected');
@@ -1665,16 +1654,12 @@ function initCheckout() {
         document.body.classList.remove('address-form-open');
         setAddressFormEditingState(null);
     }
-
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape' && !getAddressFormElement()?.hidden) {
             closeAddressForm();
         }
     });
 }
-
-// Gan su kien nguoi dung cho thanh phan giao dien lien quan.
 document.addEventListener('DOMContentLoaded', initCheckout);
 
 

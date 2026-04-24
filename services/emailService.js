@@ -1,4 +1,4 @@
-// File services/emailService.js: gom logic service cho module emailService.
+// Service gom logic emailservice để controller không phải lặp xử lý nghiệp vụ.
 const { Resend } = require('resend');
 require('dotenv').config();
 

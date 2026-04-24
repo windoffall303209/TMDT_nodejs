@@ -1,4 +1,4 @@
-<%# File views/admin/return-detail.ejs: hien thi giao dien va du lieu cho trang tuong ung. %>
+<%# Template admin render màn quản trị đổi trả chi tiết với dữ liệu từ controller quản trị. %>
 <%- include('../partials/admin-header', { currentPage: 'returns', pageStyles: ['/css/admin/orders.css'] }) %>
 
 <%
@@ -32,7 +32,6 @@
         </div>
 
         <div class="return-detail-grid">
-            <%# Section gom nhom noi dung chinh cua trang. %>
             <section class="admin-section return-detail-panel return-detail-panel--request">
                 <div class="return-detail-head">
                     <div>
@@ -62,8 +61,6 @@
                         </div>
                     <% } %>
                 </dl>
-
-                <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
                 <form class="return-status-form return-detail-form" data-return-id="<%= returnRequest.id %>">
                     <label class="admin-form__label">Trạng thái xử lý</label>
                     <select name="status" class="admin-form__select">
@@ -77,8 +74,6 @@
                     <button type="submit" class="admin-btn admin-btn--primary">Cập nhật trạng thái</button>
                 </form>
             </section>
-
-            <%# Section gom nhom noi dung chinh cua trang. %>
             <section class="admin-section return-detail-panel return-detail-panel--media">
                 <h3 class="admin-section__title">Minh chứng khách gửi</h3>
                 <% if (returnRequest.media && returnRequest.media.length > 0) { %>
@@ -99,8 +94,6 @@
                 <% } %>
             </section>
         </div>
-
-        <%# Section gom nhom noi dung chinh cua trang. %>
         <section class="admin-section">
             <h3 class="admin-section__title">Thông tin đơn hàng</h3>
             <% if (order) { %>

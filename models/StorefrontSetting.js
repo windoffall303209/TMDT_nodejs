@@ -1,4 +1,4 @@
-// File models/StorefrontSetting.js: thao tác dữ liệu database cho model StorefrontSetting.
+// Model truy vấn và chuẩn hóa dữ liệu storefrontsetting trong MySQL.
 const pool = require('../config/database');
 
 const SETTING_DEFINITIONS = {

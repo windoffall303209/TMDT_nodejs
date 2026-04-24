@@ -1,4 +1,4 @@
-/* File public/css/orders.css: dinh nghia style cho khu vuc giao dien tuong ung. */
+/* Định nghĩa giao diện storefront cho đơn hàng. */
 .orders-list {
     display: grid;
     gap: 18px;

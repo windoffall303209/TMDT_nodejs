@@ -1,4 +1,4 @@
-// File controllers/admin/dashboardController.js: điều phối handler admin cho module dashboardController.
+// Controller admin xử lý nghiệp vụ quản trị dashboardcontroller và chuẩn bị dữ liệu cho view/API quản trị.
 const legacy = require('./legacy');
 
 // Xử lý trang tổng quan quản trị và số liệu dashboard.

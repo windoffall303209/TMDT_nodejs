@@ -88,7 +88,7 @@
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* Header */
+/* Header widget giữ trạng thái phòng chat và nút thu gọn. */
 .chat-widget__header {
     background: linear-gradient(135deg, #0f172a, #1e293b);
     color: white;
@@ -421,7 +421,7 @@
     font-weight: 600;
 }
 
-/* Mobile responsive */
+/* Widget chat chiếm chiều rộng phù hợp trên mobile. */
 @media (max-width: 480px) {
     .chat-widget {
         bottom: 16px;

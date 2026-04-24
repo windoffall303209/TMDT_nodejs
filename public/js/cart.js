@@ -1,4 +1,4 @@
-// File public/js/cart.js: xử lý tương tác giao diện phía trình duyệt cho module cart.
+// Điều phối tương tác trình duyệt cho giỏ hàng, tách khỏi template EJS.
 const quantityRequestState = new Map();
 
 // Bật/tắt select tất cả.
@@ -332,17 +332,12 @@ function checkEmptyCart() {
         }
     }
 }
-
-// Gan su kien nguoi dung cho thanh phan giao dien lien quan.
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('selectAll')?.addEventListener('change', toggleSelectAll);
 
     document.querySelectorAll('.item-checkbox').forEach((checkbox) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         checkbox.addEventListener('change', updateSelectedTotal);
     });
-
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     document.addEventListener('click', (event) => {
         const quantityButton = event.target.closest('[data-cart-action="update-quantity"]');
         if (quantityButton) {
@@ -368,8 +363,6 @@ document.addEventListener('DOMContentLoaded', () => {
             checkoutSelected();
         }
     });
-
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     document.addEventListener('focusin', (event) => {
         const quantityInput = event.target.closest('.cart-item__qty-input');
         if (!quantityInput) {
@@ -378,8 +371,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         requestAnimationFrame(() => quantityInput.select());
     });
-
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     document.addEventListener('input', (event) => {
         const quantityInput = event.target.closest('.cart-item__qty-input');
         if (!quantityInput) {
@@ -389,8 +380,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const normalizedValue = normalizeQuantityInputValue(quantityInput.value);
         quantityInput.value = normalizedValue === '0' ? '' : normalizedValue;
     });
-
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     document.addEventListener('keydown', (event) => {
         const quantityInput = event.target.closest('.cart-item__qty-input');
         if (!quantityInput || event.key !== 'Enter') {
@@ -401,8 +390,6 @@ document.addEventListener('DOMContentLoaded', () => {
         commitQuantityInput(quantityInput);
         quantityInput.blur();
     });
-
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     document.addEventListener('blur', (event) => {
         const quantityInput = event.target.closest('.cart-item__qty-input');
         if (!quantityInput) {

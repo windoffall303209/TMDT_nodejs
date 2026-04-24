@@ -1,4 +1,4 @@
-// File middleware/chatUpload.js: middleware xử lý request cho module chatUpload.
+// Middleware xử lý chatupload trước khi request đi vào controller.
 const fs = require('fs');
 const multer = require('multer');
 const os = require('os');
@@ -68,7 +68,7 @@ function detectChatMediaType(file) {
     return null;
 }
 
-// Xử lý map upload error tin nhắn.
+// Xử lý map l?i upload tin nhắn.
 function mapUploadErrorMessage(error) {
     if (!error) {
         return 'Không thể tải media lên lúc này.';
@@ -170,7 +170,7 @@ async function uploadChatMediaFiles(files = []) {
     }
 }
 
-// Xử lý chat media upload.
+// Xử lý chat media t?i l?n.
 function handleChatMediaUpload(req, res, next) {
     chatUpload.array('messageMedia', MAX_CHAT_FILES)(req, res, async (error) => {
         if (error) {
@@ -187,7 +187,7 @@ function handleChatMediaUpload(req, res, next) {
                 : [];
             return next();
         } catch (uploadError) {
-            console.error('Chat media upload error:', uploadError);
+            console.error('Chat media l?i upload:', uploadError);
             return res.status(500).json({
                 success: false,
                 message: 'Không thể tải media lên lúc này. Vui lòng thử lại.'

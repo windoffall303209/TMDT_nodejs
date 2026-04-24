@@ -1,4 +1,4 @@
-// File models/Payment.js: thao tác dữ liệu database cho model Payment.
+// Model truy vấn và chuẩn hóa dữ liệu thanh toán trong MySQL.
 const pool = require('../config/database');
 
 class Payment {

@@ -1,4 +1,4 @@
-// File public/js/user-profile.js: xử lý tương tác giao diện phía trình duyệt cho module user profile.
+// Điều phối tương tác trình duyệt cho người dùng hồ sơ người dùng, tách khỏi template EJS.
 function togglePassword(button) {
     const wrapper = button.parentElement;
     const input = wrapper.querySelector('input');
@@ -52,8 +52,6 @@ function initAvatarUpload() {
     const avatarPlaceholder = document.getElementById('avatarPlaceholder');
 
     if (!avatarInput) return;
-
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     avatarInput.addEventListener('change', async function(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -91,7 +89,7 @@ function initAvatarUpload() {
                 showProfileAlert(result.message || 'Lỗi upload ảnh', 'error');
             }
         } catch (error) {
-            console.error('Avatar upload error:', error);
+            console.error('Avatar l?i upload:', error);
             showProfileAlert('Lỗi kết nối server', 'error');
         }
     });
@@ -101,8 +99,6 @@ function initAvatarUpload() {
 function initProfileForm() {
     const profileForm = document.getElementById('profileForm');
     if (!profileForm) return;
-
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     profileForm.addEventListener('submit', async function(event) {
         event.preventDefault();
 
@@ -148,8 +144,6 @@ function initProfileForm() {
 function initPasswordForm() {
     const passwordForm = document.getElementById('passwordForm');
     if (!passwordForm) return;
-
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     passwordForm.addEventListener('submit', async function(event) {
         event.preventDefault();
 
@@ -199,20 +193,16 @@ function initPasswordForm() {
         }
     });
 }
-
-// Gan su kien nguoi dung cho thanh phan giao dien lien quan.
 document.addEventListener('DOMContentLoaded', function() {
     initAvatarUpload();
     initProfileForm();
     initPasswordForm();
 
     document.querySelectorAll('.password-toggle').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => togglePassword(button));
     });
 
     document.querySelectorAll('[data-profile-action="show-developing"]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', showDevelopingAlert);
     });
 });

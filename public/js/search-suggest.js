@@ -73,8 +73,6 @@
             dropdown.classList.remove('is-open');
         }
     }
-
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     input.addEventListener('input', () => {
         const q = input.value.trim();
         currentQuery = q;
@@ -89,15 +87,11 @@
 
         debounceTimer = setTimeout(() => fetchSuggestions(q), 300);
     });
-
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     input.addEventListener('focus', () => {
         if (input.value.trim().length >= 2 && dropdown.innerHTML) {
             dropdown.classList.add('is-open');
         }
     });
-
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     document.addEventListener('click', (e) => {
         if (!e.target.closest('.header-search')) {
             dropdown.classList.remove('is-open');

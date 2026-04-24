@@ -1,4 +1,4 @@
-// File public/js/admin/dashboard.js: xử lý tương tác giao diện admin cho module dashboard.
+// Điều phối tương tác trình duyệt cho màn quản trị dashboard quản trị trong khu vực admin.
 function getDashboardBootstrap() {
     const element = document.getElementById('adminDashboardBootstrap');
     if (!element) {
@@ -301,7 +301,6 @@ function renderRecentOrders(orders, limit) {
 // Khởi tạo quản trị tổng quan trang.
 function initAdminDashboardPage() {
     document.querySelectorAll('[data-dashboard-action="refresh"]').forEach((button) => {
-        // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
         button.addEventListener('click', () => {
             window.location.reload();
         });
@@ -323,7 +322,6 @@ function initAdminDashboardPage() {
     };
 
     renderCharts();
-    // Gan su kien nguoi dung cho thanh phan giao dien lien quan.
     window.addEventListener('resize', createResizeHandler(renderCharts));
 
     renderRecentOrders(bootstrap.recentOrders || [], Number(bootstrap.recentLimit || 10));
@@ -332,6 +330,4 @@ function initAdminDashboardPage() {
         renderRecentOrders(bootstrap.recentOrders || [], Number(recentLimitSelect.value || 10));
     });
 }
-
-// Gan su kien nguoi dung cho thanh phan giao dien lien quan.
 document.addEventListener('DOMContentLoaded', initAdminDashboardPage);

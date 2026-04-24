@@ -1,4 +1,4 @@
-<%# File views/partials/header.ejs: hien thi giao dien va du lieu cho trang tuong ung. %>
+<%# Partial EJS dùng lại cho header để các view giữ cấu trúc thống nhất. %>
 <!DOCTYPE html>
 <html lang="vi">
 <% const extraPageStyles = Array.isArray(typeof pageStyles !== 'undefined' ? pageStyles : null) ? pageStyles : []; %>
@@ -54,7 +54,6 @@
             </a>
 
             <div class="header-search">
-                <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
                 <form action="/products/search" method="GET" autocomplete="off">
                     <input type="text" name="q" id="searchInput" placeholder="Tìm áo polo, váy midi, quần jean..." required>
                     <button type="submit" aria-label="Tìm kiếm">
@@ -92,7 +91,6 @@
                         <span class="icon-label">Giỏ hàng</span>
                         <span class="cart-count" id="cart-count">0</span>
                     </a>
-                    <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
                     <form action="/auth/logout" method="POST" class="logout-form">
                         <button type="submit" class="icon-btn logout-btn" title="Đăng xuất">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -156,7 +154,6 @@
     </div>
 
     <div class="container mobile-header-search">
-        <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
         <form action="/products/search" method="GET">
             <input type="text" name="q" placeholder="Tìm sản phẩm yêu thích..." required>
             <button type="submit" aria-label="Tìm kiếm">
@@ -180,7 +177,6 @@
     </div>
 
     <div class="mobile-nav__search">
-        <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
         <form action="/products/search" method="GET">
             <input type="text" name="q" placeholder="Tìm áo, váy, quần..." required>
             <button type="submit" aria-label="Tìm kiếm">
@@ -218,7 +214,6 @@
             <a href="/auth/profile">Tài khoản của tôi</a>
             <a href="/orders/history">Đơn hàng của tôi</a>
             <a href="/cart">Giỏ hàng</a>
-            <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
             <form action="/auth/logout" method="POST" class="mobile-nav__logout-form">
                 <button type="submit" class="mobile-nav__logout-btn">Đăng xuất</button>
             </form>

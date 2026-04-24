@@ -1,4 +1,4 @@
-// File routes/cartRoutes.js: khai báo endpoint và middleware cho module cartRoutes.
+// Khai báo route cartroutes và nối middleware/controller tương ứng.
 const express = require('express');
 const router = express.Router();
 const cartController = require('../controllers/cartController');

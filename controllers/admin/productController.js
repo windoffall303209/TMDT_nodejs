@@ -1,4 +1,4 @@
-// File controllers/admin/productController.js: điều phối handler admin cho module productController.
+// Controller admin xử lý nghiệp vụ quản trị productcontroller và chuẩn bị dữ liệu cho view/API quản trị.
 const legacy = require('./legacy');
 
 // Xử lý sản phẩm, ảnh sản phẩm và biến thể trong trang quản trị.

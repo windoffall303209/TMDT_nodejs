@@ -1,4 +1,4 @@
-// File routes/productRoutes.js: khai báo endpoint và middleware cho module productRoutes.
+// Khai báo route productroutes và nối middleware/controller tương ứng.
 const express = require('express');
 const router = express.Router();
 const productController = require('../controllers/productController');

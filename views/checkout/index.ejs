@@ -1,4 +1,4 @@
-<%# File views/checkout/index.ejs: hien thi giao dien va du lieu cho trang tuong ung. %>
+<%# Template EJS render thanh toán index cho storefront hoặc tài khoản người dùng. %>
 <%- include('../partials/header') %>
 
 <link rel="stylesheet" href="/css/checkout.css">
@@ -7,7 +7,6 @@
 <!-- ===== Trang checkout từ giỏ hàng ===== -->
 <div class="checkout-page page-shell">
     <div class="container">
-        <%# Section gom nhom noi dung chinh cua trang. %>
         <section class="page-intro page-intro--compact checkout-intro">
             <div>
                 <h1 class="page-intro__title page-intro__title-inline">
@@ -30,7 +29,6 @@
                 <a href="/products" class="btn btn-primary checkout-empty__btn">Tiếp tục mua sắm</a>
             </div>
         <% } else { %>
-            <%# Form xu ly du lieu nguoi dung cho khu vuc nay. %>
             <form action="/orders/create" method="POST" id="checkoutForm">
                 <input type="hidden" name="selected_cart_item_ids" value="<%= Array.isArray(selectedCartItemIds) ? selectedCartItemIds.join(',') : '' %>">
 
