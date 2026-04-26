@@ -24,6 +24,7 @@ router.get('/', (req, res) => res.redirect('/admin/dashboard'));
 // Nhóm route cấu hình storefront.
 router.get('/storefront', adminController.getStorefrontSettings);
 router.post('/storefront', adminController.updateStorefrontSettings);
+router.post('/bulk-actions/verification-code', adminController.requestBulkDeleteVerification);
 
 // Nhóm route quản lý danh mục và import/export danh mục.
 router.get('/categories', adminController.getCategories);

@@ -7,7 +7,22 @@
         <div class="admin-page-header">
             <div class="admin-page-header__left">
                 <h1>Quản Lý Sản Phẩm</h1>
-                <p><%= pagination ? pagination.totalItems : (products ? products.length : 0) %> sản phẩm</p>
+            </div>
+            <div class="admin-page-header__actions admin-page-header__actions--compact">
+                <a
+                    href="/admin/products/export<%= searchQuery ? ('?search=' + encodeURIComponent(searchQuery)) : '' %>"
+                    class="admin-btn admin-btn--ghost"
+                    data-product-action="export-products"
+                >Xuất sản phẩm</a>
+                <a href="/admin/products/import-template" class="admin-btn admin-btn--ghost">Tải mẫu</a>
+                <button
+                    type="button"
+                    class="admin-btn admin-btn--danger admin-btn--compact-danger"
+                    data-product-action="delete-all-products"
+                    data-total-product-count="<%= totalProductCount || 0 %>"
+                >
+                    Xóa tất cả
+                </button>
             </div>
         </div>
 
@@ -15,19 +30,19 @@
         <div class="stats-grid">
             <div class="stat-card stat-card--blue">
                 <h3 class="stat-card__label">Tổng sản phẩm</h3>
-                <p class="stat-card__value"><%= products ? products.length : 0 %></p>
+                <p class="stat-card__value"><%= productStats ? productStats.total : 0 %></p>
             </div>
             <div class="stat-card stat-card--green">
                 <h3 class="stat-card__label">Còn hàng</h3>
-                <p class="stat-card__value"><%= products ? products.filter(p => p.stock_quantity > 0).length : 0 %></p>
+                <p class="stat-card__value"><%= productStats ? productStats.inStock : 0 %></p>
             </div>
             <div class="stat-card stat-card--pink">
                 <h3 class="stat-card__label">Hết hàng</h3>
-                <p class="stat-card__value"><%= products ? products.filter(p => p.stock_quantity <= 0).length : 0 %></p>
+                <p class="stat-card__value"><%= productStats ? productStats.outOfStock : 0 %></p>
             </div>
             <div class="stat-card stat-card--purple">
                 <h3 class="stat-card__label">Danh mục</h3>
-                <p class="stat-card__value"><%= categories ? categories.length : 0 %></p>
+                <p class="stat-card__value"><%= productStats ? productStats.categories : 0 %></p>
             </div>
         </div>
 
@@ -81,7 +96,6 @@
                         </p>
                     </div>
                     <div class="admin-search-form__actions">
-                        <a href="/admin/products/export<%= searchQuery ? ('?search=' + encodeURIComponent(searchQuery)) : '' %>" class="admin-btn admin-btn--ghost">Xu&#7845;t d&#7919; li&#7879;u</a>
                         <a href="/admin/products/import-template" class="admin-btn admin-btn--ghost">T&#7843;i file m&#7851;u</a>
                     </div>
                 </div>
@@ -187,16 +201,6 @@
                         <% } %>
                     </div>
                 <% } %>
-            </div>
-            <div class="admin-page-header__right">
-                <button
-                    type="button"
-                    class="admin-btn admin-btn--danger"
-                    data-product-action="delete-all-products"
-                    data-total-product-count="<%= totalProductCount || 0 %>"
-                >
-                    Xóa vĩnh viễn tất cả sản phẩm
-                </button>
             </div>
         </div>
 
@@ -567,6 +571,6 @@
 
 
 
-<script src="/js/admin/products.js"></script>
+<script src="/js/admin/products.js?v=otp-20260426"></script>
 
 <%- include('../partials/admin-footer') %>

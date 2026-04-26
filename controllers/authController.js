@@ -320,7 +320,7 @@ exports.register = async (req, res) => {
         });
 
         // Tạo JWT token cho user
-        const token = generateToken(user);
+        const token = await generateToken(user);
 
         // Lưu token vào cookie (httpOnly để bảo mật)
         res.cookie('token', token, getAuthCookieOptions());
@@ -413,7 +413,7 @@ exports.login = async (req, res) => {
         }
 
         // Tạo JWT token
-        const token = generateToken(user);
+        const token = await generateToken(user);
 
         // Lưu token vào cookie
         res.cookie('token', token, getAuthCookieOptions());
@@ -662,7 +662,7 @@ exports.handleGoogleCallback = async (req, res) => {
 
         const profile = await exchangeGoogleCodeForProfile(req, code);
         const user = await User.findOrCreateGoogleUser(profile);
-        const token = generateToken(user);
+        const token = await generateToken(user);
 
         res.cookie('token', token, getAuthCookieOptions());
 
@@ -1107,7 +1107,7 @@ exports.verifyEmailCode = async (req, res) => {
 
         const verifiedUser = await User.findById(req.user.id);
         if (verifiedUser) {
-            const token = generateToken(verifiedUser);
+            const token = await generateToken(verifiedUser);
             res.cookie('token', token, getAuthCookieOptions());
             emailService.sendWelcomeEmail(verifiedUser).catch(err => console.error('Welcome email error:', err));
         }

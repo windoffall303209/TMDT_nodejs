@@ -122,8 +122,10 @@ function buildVisionPrompt(userMessage = '') {
         '{"description":"mô tả ngắn bằng tiếng Việt","searchQuery":"cụm từ tìm kiếm tiếng Việt ngắn 4-10 từ","matchSummary":"1 câu ngắn để chatbot phản hồi với khách"}',
         'Quy tắc:',
         '- Tập trung vào loại trang phục, màu sắc, form dáng, phong cách, đối tượng nếu đủ rõ.',
+        '- Đối tượng nam/nữ là đối tượng của món đồ trong ảnh, không phải giới tính của người đang mua.',
         '- Không suy diễn quá mức về thương hiệu hay chất liệu nếu ảnh không chắc chắn.',
         '- searchQuery phải đủ ngắn để dùng làm từ khóa tìm kiếm sản phẩm.',
+        '- matchSummary chỉ mô tả nhận định từ ảnh, không nói rằng đã lọc/tìm được sản phẩm trong catalog.',
         '- matchSummary phải là 1 câu ngắn, ví dụ: "Dựa trên ảnh bạn gửi, mình thấy đây khá giống một mẫu áo thun basic sáng màu."'
     ].join('\n');
 }

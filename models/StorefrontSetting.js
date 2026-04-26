@@ -3,14 +3,33 @@ const pool = require('../config/database');
 
 const SETTING_DEFINITIONS = {
     product_grid_columns: {
+        type: 'int',
         defaultValue: 5,
         min: 2,
         max: 6
     },
     home_category_showcase_count: {
+        type: 'int',
         defaultValue: 3,
         min: 1,
         max: 8
+    },
+    jwt_expire_minutes: {
+        type: 'int',
+        defaultValue: 60,
+        min: 5,
+        max: 43200
+    },
+    payment_window_hours: {
+        type: 'int',
+        defaultValue: 24,
+        min: 1,
+        max: 168
+    },
+    default_web_email: {
+        type: 'string',
+        defaultValue: 'nvuthanh4@gmail.com',
+        maxLength: 160
     }
 };
 
@@ -43,6 +62,11 @@ class StorefrontSetting {
         const definition = SETTING_DEFINITIONS[key];
         if (!definition) {
             return null;
+        }
+
+        if (definition.type === 'string') {
+            const value = String(rawValue ?? '').trim() || definition.defaultValue;
+            return value.slice(0, definition.maxLength || 255);
         }
 
         return clampInteger(rawValue, definition);
@@ -110,11 +134,11 @@ class StorefrontSetting {
                 const normalizedValue = this.normalizeValue(key, nextValues[key]);
                 await connection.execute(
                     `INSERT INTO storefront_settings (setting_key, setting_value, value_type)
-                     VALUES (?, ?, 'int')
+                     VALUES (?, ?, ?)
                      ON DUPLICATE KEY UPDATE
                         setting_value = VALUES(setting_value),
                         value_type = VALUES(value_type)`,
-                    [key, String(normalizedValue)]
+                    [key, String(normalizedValue), SETTING_DEFINITIONS[key].type || 'int']
                 );
             }
 

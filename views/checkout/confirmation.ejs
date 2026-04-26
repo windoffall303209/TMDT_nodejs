@@ -8,6 +8,7 @@
     const paymentStatusMessage = isPaymentSettled
         ? 'Đơn hàng đã được thanh toán.'
         : (order.payment_method === 'cod' ? 'Đơn hàng sẽ được thanh toán khi nhận hàng.' : 'Đơn hàng đang chờ thanh toán.');
+    const showPaymentCountdown = order.status === 'pending_payment' && order.payment_status !== 'paid' && (order.payment_method === 'vnpay' || order.payment_method === 'momo') && order.payment_expires_at;
 %>
 
 <!-- ===== Trang xác nhận đặt hàng thành công ===== -->
@@ -102,6 +103,9 @@
                             <% } %>
                         </strong>
                         <p><%= paymentStatusMessage %></p>
+                        <% if (showPaymentCountdown) { %>
+                            <p class="order-payment-countdown" data-payment-countdown data-expires-at="<%= new Date(order.payment_expires_at).toISOString() %>"></p>
+                        <% } %>
                         <% if (order.status === 'pending_payment' && order.payment_status !== 'paid' && (order.payment_method === 'vnpay' || order.payment_method === 'momo')) { %>
                             <a href="/orders/<%= order.order_code %>/pay" class="btn btn-primary confirmation-pay-now">Thanh toán ngay</a>
                         <% } %>
@@ -120,5 +124,7 @@
         </div>
     </div>
 </div>
+
+<script src="/js/order-actions.js"></script>
 
 <%- include('../partials/footer') %>

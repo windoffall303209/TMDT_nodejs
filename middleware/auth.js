@@ -1,6 +1,7 @@
 // Xác thực JWT, kiểm tra quyền admin và điều hướng đăng nhập theo từng khu vực.
 const jwt = require('jsonwebtoken');
 const pool = require('../config/database');
+const StorefrontSetting = require('../models/StorefrontSetting');
 require('dotenv').config();
 
 function getRequestPath(req) {
@@ -207,7 +208,22 @@ const optionalAuth = async (req, res, next) => {
 /**
  * Sinh JWT thống nhất cho cả storefront và admin.
  */
-const generateToken = (user) => {
+async function getJwtExpiresIn() {
+    try {
+        const settings = await StorefrontSetting.getAll();
+        const minutes = Number.parseInt(settings.jwt_expire_minutes, 10);
+        if (Number.isInteger(minutes) && minutes > 0) {
+            return `${minutes}m`;
+        }
+    } catch (error) {
+        console.error('Unable to load JWT expiry setting:', error.message || error);
+    }
+
+    return process.env.JWT_EXPIRE || '1h';
+}
+
+const generateToken = async (user) => {
+    const expiresIn = await getJwtExpiresIn();
     return jwt.sign(
         {
             id: user.id,
@@ -217,7 +233,7 @@ const generateToken = (user) => {
         },
         process.env.JWT_SECRET,
         {
-            expiresIn: process.env.JWT_EXPIRE || '1h'
+            expiresIn
         }
     );
 };

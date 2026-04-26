@@ -32,8 +32,8 @@ const CHAT_IMAGE_SEARCH_ACTIONS = [
 
 const CHAT_GENDER_RULES = [
     { id: 'kids', label: 'tr\u1ebb em', searchPhrase: 'tre em', keywords: ['tre em', 'em be', 'be trai', 'be gai', 'kids'] },
-    { id: 'male', label: 'nam', searchPhrase: 'nam', keywords: ['do nam', 'thoi trang nam', 'nam', 'men', 'male'] },
-    { id: 'female', label: 'n\u1eef', searchPhrase: 'nu', keywords: ['do nu', 'thoi trang nu', 'nu', 'women', 'female'] }
+    { id: 'male', label: 'nam', searchPhrase: 'nam', keywords: ['do nam', 'thoi trang nam', 'nam', 'men', 'male', 'chong', 'ban trai', 'nguoi yeu nam', 'anh trai', 'em trai'] },
+    { id: 'female', label: 'n\u1eef', searchPhrase: 'nu', keywords: ['do nu', 'thoi trang nu', 'nu', 'women', 'female', 'vo', 'ban gai', 'nguoi yeu nu', 'chi gai', 'em gai'] }
 ];
 
 const CHAT_OCCASION_RULES = [
@@ -355,6 +355,72 @@ function isChatImageSearchIntent(normalizedMessage) {
 
     return CHAT_IMAGE_SEARCH_ACTIONS.some((phrase) => includesChatPhrase(normalizedMessage, phrase))
         || CHAT_PRODUCT_KEYWORDS.some((phrase) => includesChatPhrase(normalizedMessage, phrase));
+}
+
+function hasExplicitImageProductSearchAction(normalizedMessage) {
+    if (!normalizedMessage) {
+        return false;
+    }
+
+    return [
+        'tim',
+        'tim kiem',
+        'tim san pham',
+        'goi y',
+        'de xuat',
+        'tuong tu',
+        'giong nay',
+        'giong anh',
+        'giong hinh',
+        'giong mau nay',
+        'mau tuong tu',
+        'xem mau',
+        'shop co',
+        'con mau',
+        'link',
+        'mua',
+        'dat hang'
+    ].some((phrase) => includesChatPhrase(normalizedMessage, phrase))
+        || /\bco\b.*\b(?:mau|san pham|ao|quan|dam|vay|hang|mon|cai)\b.*\b(?:khong|ko|k)\b/.test(normalizedMessage);
+}
+
+function isImageInformationOnlyRequest(normalizedMessage) {
+    if (!normalizedMessage) {
+        return false;
+    }
+
+    return [
+        'biet gi',
+        'san pham nay la gi',
+        'day la gi',
+        'la mau gi',
+        'loai gi',
+        'kieu gi',
+        'form gi',
+        'chat lieu gi',
+        'mo ta',
+        'thong tin',
+        'nhan xet',
+        'danh gia',
+        'tu van ve san pham nay'
+    ].some((phrase) => includesChatPhrase(normalizedMessage, phrase));
+}
+
+function shouldSuggestProductsForImageRequest(normalizedMessage, hasImageAttachment) {
+    if (!hasImageAttachment) {
+        return false;
+    }
+
+    if (!normalizedMessage) {
+        return true;
+    }
+
+    const hasExplicitSearchAction = hasExplicitImageProductSearchAction(normalizedMessage);
+    if (isImageInformationOnlyRequest(normalizedMessage) && !hasExplicitSearchAction) {
+        return false;
+    }
+
+    return hasExplicitSearchAction;
 }
 
 function buildChatImageSearchQuickReply(normalizedMessage, uploadedMedia = []) {
@@ -687,6 +753,7 @@ function mergeChatFocusTerms(primaryTerms = [], fallbackTerms = []) {
 
 function buildChatIntentFromContext(messages = [], userMessage = '', options = {}) {
     const currentIntent = buildChatIntent(userMessage, options);
+    const shouldCarryPriorGender = !options.forceImageGuided;
     const priorCustomerIntents = Array.isArray(messages)
         ? messages
             .filter((message) => message && message.sender_type === 'customer' && typeof message.message === 'string')
@@ -696,7 +763,9 @@ function buildChatIntentFromContext(messages = [], userMessage = '', options = {
 
     const mergedIntent = {
         normalizedMessage: currentIntent.normalizedMessage,
-        gender: currentIntent.gender || getLastChatIntentValue(priorCustomerIntents, (intent) => intent.gender),
+        gender: currentIntent.gender || (shouldCarryPriorGender
+            ? getLastChatIntentValue(priorCustomerIntents, (intent) => intent.gender)
+            : null),
         occasion: currentIntent.occasion || getLastChatIntentValue(priorCustomerIntents, (intent) => intent.occasion),
         categories: currentIntent.categories.length
             ? currentIntent.categories
@@ -735,8 +804,24 @@ function hasChatContextualSuggestionSignals(intent) {
     return signalCount >= 2;
 }
 
+function hasSpecificChatCategory(intent) {
+    return Array.isArray(intent?.categories) && intent.categories.some((category) => !category.generic);
+}
+
+function hasGenericChatCategoryWithContext(intent) {
+    if (!Array.isArray(intent?.categories) || !intent.categories.some((category) => category.generic)) {
+        return false;
+    }
+
+    return Boolean(intent.gender)
+        || Boolean(intent.occasion)
+        || Boolean(intent.budget)
+        || (Array.isArray(intent.colors) && intent.colors.length > 0);
+}
+
 function canChatDirectlySuggestProducts(intent) {
-    return (Array.isArray(intent?.categories) && intent.categories.length > 0)
+    return hasSpecificChatCategory(intent)
+        || hasGenericChatCategoryWithContext(intent)
         || hasChatContextualSuggestionSignals(intent);
 }
 
@@ -813,21 +898,12 @@ function shouldUseFastImageProductFlow(normalizedMessage, hasImageAttachment) {
         return false;
     }
 
-    if (!normalizedMessage) {
-        return true;
-    }
-
     const hasSupportIntent = CHAT_SUPPORT_KEYWORDS.some((keyword) => includesChatPhrase(normalizedMessage, keyword));
     if (hasSupportIntent) {
         return false;
     }
 
-    return includesChatPhrase(normalizedMessage, 'giong nay')
-        || includesChatPhrase(normalizedMessage, 'giong anh')
-        || includesChatPhrase(normalizedMessage, 'giong hinh')
-        || includesChatPhrase(normalizedMessage, 'tuong tu')
-        || includesChatPhrase(normalizedMessage, 'san pham')
-        || CHAT_PRODUCT_KEYWORDS.some((keyword) => includesChatPhrase(normalizedMessage, keyword));
+    return shouldSuggestProductsForImageRequest(normalizedMessage, hasImageAttachment);
 }
 
 function describeImageSearchNeed(intent, imageAnalysis) {
@@ -1323,6 +1399,9 @@ async function getChatSuggestedProducts(userMessage, messages = [], options = {}
 async function buildEnhancedChatSystemPrompt(messages, userMessage, flowOptions = {}) {
     let featuredContext = '';
     const forceImageGuided = Boolean(flowOptions.visualImageUrl);
+    const allowImageProductSuggestions = forceImageGuided
+        ? Boolean(flowOptions.allowImageProductSuggestions)
+        : true;
     const intent = buildChatIntentFromContext(messages, userMessage, { forceImageGuided });
     const desiredProductLimit = getChatRequestedProductLimit(userMessage, 6);
     const hasSupportIntent = CHAT_SUPPORT_KEYWORDS.some((keyword) => includesChatPhrase(intent.normalizedMessage, keyword));
@@ -1333,10 +1412,13 @@ async function buildEnhancedChatSystemPrompt(messages, userMessage, flowOptions 
         || includesChatPhrase(intent.normalizedMessage, 'giong mau nay')
         || includesChatPhrase(intent.normalizedMessage, 'san pham')
         || CHAT_PRODUCT_KEYWORDS.some((keyword) => includesChatPhrase(intent.normalizedMessage, keyword));
-    const hasProductIntent = shouldChatSuggestProducts(intent)
-        || (forceImageGuided && looksLikeImageProductSearch && !hasSupportIntent);
+    const hasProductIntent = forceImageGuided && !allowImageProductSuggestions
+        ? false
+        : shouldChatSuggestProducts(intent)
+            || (forceImageGuided && looksLikeImageProductSearch && !hasSupportIntent);
     const canDirectlySuggest = hasProductIntent
-        && (canChatDirectlySuggestProducts(intent) || (intent.imageGuided && Boolean(flowOptions.visualImageUrl)));
+        && (canChatDirectlySuggestProducts(intent)
+            || (intent.imageGuided && Boolean(flowOptions.visualImageUrl) && allowImageProductSuggestions));
     const visualImageUrl = flowOptions.visualImageUrl || null;
     let imageReferenceProducts = [];
 
@@ -1429,7 +1511,7 @@ async function buildEnhancedChatSystemPrompt(messages, userMessage, flowOptions 
     }
     const shouldAskClarifyingQuestion = hasProductIntent && !canDirectlySuggest;
 
-    if (!hasProductIntent && !shouldAskClarifyingQuestion) {
+    if (!forceImageGuided && !hasProductIntent && !shouldAskClarifyingQuestion) {
         try {
             const bestSellers = await Product.getBestSellers(4);
             featuredContext = buildChatProductContext(
@@ -1462,8 +1544,10 @@ Quy tac:
 - Khi da co muc "San pham nen goi y cho nhu cau hien tai", chi duoc phep nhac ten cac san pham trong danh sach do
 - Neu khach hoi co ho tro tim san pham bang hinh anh hay khong, khang dinh la co va moi khach gui anh truc tiep trong khung chat
 - Neu trong noi dung co cum "Mo ta tu anh" hoac "Tu khoa tim kiem", nghia la he thong da phan tich anh xong; khong duoc yeu cau khach gui anh lai
+- Khi khach chi hoi thong tin, mo ta, nhan xet ve anh san pham, chi tu van bang text dua tren mo ta anh; khong noi da loc duoc san pham va khong tu goi y mau tuong tu
 - Voi tim kiem bang anh, chi nen goi y cac san pham cung loai hoac rat gan; neu catalog khong co mau gan, noi ro la shop chua co mau phu hop thay vi dua ra san pham khong lien quan
-- Neu khach moi noi chung chung ma chua noi ro loai san pham, khong goi y san pham hay link ngay; hay hoi 1 cau lam ro ngan gon ve kieu do, phong cach hoac ngan sach
+- Khong mac dinh gioi tinh cua khach la nguoi se mac; neu khach chua noi ro mua cho ai, tu van trung lap hoac hoi lai 1 cau ngan
+- Neu khach moi noi chung chung ma chua noi ro loai san pham hoac nhu cau, khong goi y san pham hay link ngay; hay hoi 1 cau lam ro ngan gon ve kieu do, phong cach, doi tuong mac hoac ngan sach
 - Neu khach can ho tro sau hon, noi ro admin se ho tro them
 
 Thong tin cua hang:
@@ -1650,16 +1734,17 @@ function finalizeChatReply(reply, suggestedProducts = [], options = {}) {
     const baseReply = normalizeMessage(reply);
     const fallbackReply = options.fallbackReply
         || 'Xin lỗi, tôi chưa thể xử lý yêu cầu này lúc này. Admin sẽ hỗ trợ bạn thêm.';
+    const allowImageProductSuggestions = options.allowImageProductSuggestions !== false;
 
     const normalizedReply = normalizeChatText(baseReply);
-    const shouldOverrideImageReply = options.imageAnalysis && (
+    const shouldOverrideImageReply = allowImageProductSuggestions && options.imageAnalysis && (
         !baseReply ||
         !suggestedProducts.length ||
         includesChatPhrase(normalizedReply, 'ho tro tim san pham bang hinh anh') ||
         includesChatPhrase(normalizedReply, 'gui hinh anh') ||
         includesChatPhrase(normalizedReply, 'gui anh truc tiep')
     );
-    const imageReplyClaimsNoMatch = options.imageAnalysis && suggestedProducts.length && (
+    const imageReplyClaimsNoMatch = allowImageProductSuggestions && options.imageAnalysis && suggestedProducts.length && (
         includesChatPhrase(normalizedReply, 'chua co mau') ||
         includesChatPhrase(normalizedReply, 'khong co mau') ||
         includesChatPhrase(normalizedReply, 'chua co san pham') ||
@@ -1718,7 +1803,10 @@ async function callEnhancedAI(messages, userMessage, options = {}) {
     } = await buildEnhancedChatSystemPrompt(
         messages,
         userMessage,
-        { visualImageUrl }
+        {
+            visualImageUrl,
+            allowImageProductSuggestions: options.allowImageProductSuggestions
+        }
     );
     const fallbackReply = options.fallbackReply
         || (options.attachments?.length ? buildMediaOnlyFallbackReply(options.attachments) : null)
@@ -1728,6 +1816,7 @@ async function callEnhancedAI(messages, userMessage, options = {}) {
         const text = finalizeChatReply(reply, suggestedProducts, {
             imageAnalysis: options.imageAnalysis,
             imageReferenceProducts,
+            allowImageProductSuggestions: options.allowImageProductSuggestions,
             fallbackReply
         });
 
@@ -1739,7 +1828,7 @@ async function callEnhancedAI(messages, userMessage, options = {}) {
         };
     };
 
-    if (visualImageUrl && hasProductIntent) {
+    if (visualImageUrl && hasProductIntent && options.allowImageProductSuggestions) {
         return buildLocalImageCatalogReply(intent, options.imageAnalysis, suggestedProducts);
     }
 
@@ -1985,8 +2074,10 @@ function resolveGuestName(req) {
 
 async function buildCustomerAiContext(message, uploadedMedia = []) {
     const normalizedMessage = normalizeMessage(message);
+    const normalizedChatMessage = normalizeChatText(normalizedMessage);
     const firstImage = getFirstChatImageAttachment(uploadedMedia);
-    const shouldSkipVisionAnalysis = shouldUseFastImageProductFlow(normalizeChatText(normalizedMessage), Boolean(firstImage));
+    const allowImageProductSuggestions = shouldSuggestProductsForImageRequest(normalizedChatMessage, Boolean(firstImage));
+    const shouldSkipVisionAnalysis = shouldUseFastImageProductFlow(normalizedChatMessage, Boolean(firstImage));
     const imageAnalysis = (firstImage && !shouldSkipVisionAnalysis)
         ? await describeProductFromImage(firstImage, normalizedMessage)
         : null;
@@ -1995,6 +2086,7 @@ async function buildCustomerAiContext(message, uploadedMedia = []) {
 
     return {
         imageAnalysis,
+        allowImageProductSuggestions,
         effectiveMessage,
         fallbackReply: uploadedMedia.length > 0
             ? buildMediaOnlyFallbackReply(uploadedMedia)
@@ -2107,6 +2199,7 @@ exports.sendMessage = async (req, res) => {
             ? await callEnhancedAI(previousMessages, aiContext.effectiveMessage, {
                 attachments: uploadedMedia,
                 imageAnalysis: aiContext.imageAnalysis,
+                allowImageProductSuggestions: aiContext.allowImageProductSuggestions,
                 fallbackReply: aiContext.fallbackReply
             })
             : {

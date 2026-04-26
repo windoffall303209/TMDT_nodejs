@@ -1435,3 +1435,85 @@ body.admin-body .admin-modal__content--product-edit {
     border: 1px solid rgba(204, 191, 167, 0.9);
     box-shadow: var(--admin-shadow-lg);
 }
+
+/* Header trang admin gọn hơn: chỉ giữ tiêu đề chính. */
+body.admin-body .admin-page-header {
+    align-items: center;
+    margin-bottom: 18px;
+    padding: 18px 20px;
+    border-radius: 21px;
+}
+
+body.admin-body .admin-page-header__left h1,
+body.admin-body .order-detail-header h1 {
+    font-size: clamp(20px, 1.9vw, 27px);
+}
+
+body.admin-body .admin-page-header__left p {
+    display: none;
+}
+
+body.admin-body .admin-page-header__actions--compact {
+    gap: 8px;
+}
+
+body.admin-body .admin-btn--compact-danger {
+    padding-inline: 14px;
+}
+
+/* Các thống kê phụ dùng một hàng gọn; doanh thu dashboard chính giữ kiểu hiện tại. */
+body.admin-body:not(.admin-body--dashboard) .stats-grid,
+body.admin-body--dashboard .stats-grid--spaced {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+body.admin-body:not(.admin-body--dashboard) .stats-grid .stat-card,
+body.admin-body--dashboard .stats-grid--spaced .stat-card {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    min-height: 0;
+    padding: 12px 14px;
+}
+
+body.admin-body:not(.admin-body--dashboard) .stats-grid .stat-card__label,
+body.admin-body--dashboard .stats-grid--spaced .stat-card__label {
+    margin: 0;
+    min-height: 0;
+    font-size: 12px;
+}
+
+body.admin-body:not(.admin-body--dashboard) .stats-grid .stat-card__value,
+body.admin-body--dashboard .stats-grid--spaced .stat-card__value {
+    margin: 0;
+    font-size: clamp(18px, 1.55vw, 24px);
+}
+
+body.admin-body--dashboard .stats-grid--spaced .stat-card {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr);
+    justify-content: initial;
+    align-items: center;
+    column-gap: 14px;
+    min-height: 82px;
+    padding: 14px 18px;
+}
+
+body.admin-body--dashboard .stats-grid--spaced .stat-card__content {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    text-align: left;
+}
+
+body.admin-body--dashboard .stats-grid--spaced .stat-card__label {
+    line-height: 1.25;
+    white-space: nowrap;
+}
+
+body.admin-body--dashboard .stats-grid--spaced .stat-card__value {
+    line-height: 1;
+}

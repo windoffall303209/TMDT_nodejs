@@ -12,22 +12,29 @@
         </div>
 
         <!-- Các thẻ thống kê người dùng -->
+        <% const currentUserStats = typeof userStats !== 'undefined' ? userStats : {
+            total: users ? users.length : 0,
+            admin: users ? users.filter(u => u.role === 'admin').length : 0,
+            active: users ? users.filter(u => u.is_active).length : 0,
+            inactive: users ? users.filter(u => !u.is_active).length : 0
+        }; %>
+
         <div class="stats-grid">
             <div class="stat-card stat-card--blue">
                 <h3 class="stat-card__label">Tổng người dùng</h3>
-                <p class="stat-card__value"><%= users ? users.length : 0 %></p>
+                <p class="stat-card__value"><%= currentUserStats.total || 0 %></p>
             </div>
             <div class="stat-card stat-card--purple">
                 <h3 class="stat-card__label">Admin</h3>
-                <p class="stat-card__value"><%= users ? users.filter(u => u.role === 'admin').length : 0 %></p>
+                <p class="stat-card__value"><%= currentUserStats.admin || 0 %></p>
             </div>
             <div class="stat-card stat-card--green">
                 <h3 class="stat-card__label">Đang hoạt động</h3>
-                <p class="stat-card__value"><%= users ? users.filter(u => u.is_active).length : 0 %></p>
+                <p class="stat-card__value"><%= currentUserStats.active || 0 %></p>
             </div>
             <div class="stat-card stat-card--pink">
                 <h3 class="stat-card__label">Bị khóa</h3>
-                <p class="stat-card__value"><%= users ? users.filter(u => !u.is_active).length : 0 %></p>
+                <p class="stat-card__value"><%= currentUserStats.inactive || 0 %></p>
             </div>
         </div>
 

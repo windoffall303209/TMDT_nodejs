@@ -32,6 +32,50 @@
     font-size: 14px;
 }
 
+.website-management-menu {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+}
+
+.website-management-card {
+    display: grid;
+    gap: 8px;
+    padding: 18px;
+    border: 1px solid var(--admin-border);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--admin-text-primary);
+    text-align: left;
+    cursor: pointer;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.website-management-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(226, 184, 75, 0.75);
+    box-shadow: var(--admin-shadow-sm);
+}
+
+.website-management-card span {
+    font-size: 15px;
+    font-weight: 800;
+}
+
+.website-management-card small {
+    color: var(--admin-text-secondary);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.website-management-panel {
+    margin-top: 0;
+}
+
+.website-management-back {
+    margin-bottom: 14px;
+}
+
 .storefront-settings-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));

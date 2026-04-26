@@ -9,15 +9,19 @@
                 <p><%= categories ? categories.length : 0 %> danh mục hiển thị</p>
             </div>
             <div class="admin-page-header__actions">
-                <a href="/admin/categories/export<%= searchQuery ? '?search=' + encodeURIComponent(searchQuery) : '' %>" class="admin-btn admin-btn--ghost">Xuất Excel</a>
+                <a
+                    href="/admin/categories/export<%= searchQuery ? '?search=' + encodeURIComponent(searchQuery) : '' %>"
+                    class="admin-btn admin-btn--ghost"
+                    data-category-action="export-categories"
+                >Xuất Excel</a>
                 <a href="/admin/categories/import-template" class="admin-btn admin-btn--ghost">Tải mẫu Excel</a>
-                <% if (categories && categories.length > 0) { %>
+                <% if (categoryStats && categoryStats.total > 0) { %>
                     <button
                         type="button"
                         class="admin-btn admin-btn--danger"
                         data-category-action="delete-all-categories"
                     >
-                        Xóa vĩnh viễn tất cả
+                        Xóa tất cả
                     </button>
                 <% } %>
             </div>
@@ -330,6 +334,6 @@
         child_count: category.child_count || 0
     }))
 }).replace(/</g, '\\u003c') %></script>
-<script src="/js/admin/categories.js"></script>
+<script src="/js/admin/categories.js?v=otp-20260426"></script>
 
 <%- include('../partials/admin-footer') %>

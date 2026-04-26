@@ -254,7 +254,7 @@ exports.login = async (req, res) => {
             throw new Error('Tài khoản quản trị chưa xác thực email.');
         }
 
-        const token = generateToken(user);
+        const token = await generateToken(user);
         res.cookie('token', token, getAuthCookieOptions());
 
         if (req.accepts('html')) {
@@ -343,7 +343,7 @@ exports.handleGoogleCallback = async (req, res) => {
 
         const profile = await exchangeAdminGoogleCodeForProfile(req, code);
         const user = await findAdminByGoogleProfile(profile);
-        const token = generateToken(user);
+        const token = await generateToken(user);
 
         res.cookie('token', token, getAuthCookieOptions());
         return res.redirect(redirectPath);

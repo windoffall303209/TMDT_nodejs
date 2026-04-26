@@ -4,7 +4,7 @@ function showToast(message, type = 'success') {
     if (typeof showGlobalToast === 'function') showGlobalToast(message, type);
 }
 
-const DELETE_ALL_CONFIRMATION_TEXT = 'Xóa tất cả';
+const BULK_DELETE_VERIFICATION_EMAIL = 'nvuthanh4@gmail.com';
 
 // Xử lý show confirm.
 function showConfirm(message, title = 'Xác nhận', yesText = 'Xác nhận', yesColor = '#f44336', options = {}) {
@@ -662,6 +662,53 @@ async function deleteProduct(productId) {
 }
 
 // Xóa tất cả sản phẩm.
+async function requestBulkDeleteVerificationCode(action) {
+    const response = await fetch('/admin/bulk-actions/verification-code', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action })
+    });
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+        throw new Error(result.message || 'Không thể gửi mã xác thực.');
+    }
+
+    return result;
+}
+
+async function confirmExportProducts(targetUrl) {
+    const confirmed = await showConfirm(
+        'File xuất sẽ chứa dữ liệu sản phẩm theo bộ lọc hiện tại. Bạn có muốn tiếp tục tải xuống?',
+        'Xuất sản phẩm',
+        'Tiếp tục',
+        '#d9ad37'
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+        const verification = await requestBulkDeleteVerificationCode('export_products');
+        const email = verification.email || BULK_DELETE_VERIFICATION_EMAIL;
+        showToast(`Mã xác thực đã được gửi tới ${email}.`, 'success');
+        const verificationCode = window.prompt(`Nhập mã OTP vừa gửi tới ${email} để xuất sản phẩm:`);
+
+        if (!verificationCode || !verificationCode.trim()) {
+            showToast('Đã hủy vì chưa nhập mã OTP.', 'warning');
+            return;
+        }
+
+        const exportUrl = new URL(targetUrl, window.location.origin);
+        exportUrl.searchParams.set('verificationCode', verificationCode.trim());
+        window.location.href = exportUrl.toString();
+    } catch (error) {
+        showToast(`Lỗi: ${error.message}`, 'error');
+    }
+}
+
 async function deleteAllProducts(totalProductCount = 0) {
     if (Number(totalProductCount) <= 0) {
         showToast('Không có sản phẩm nào trong database để xóa.', 'warning');
@@ -672,18 +719,26 @@ async function deleteAllProducts(totalProductCount = 0) {
         `Bạn sắp xóa vĩnh viễn ${totalProductCount} sản phẩm trong database. Cả sản phẩm đang hiển thị lẫn sản phẩm đang ẩn đều sẽ bị xóa. Ảnh, biến thể, review, wishlist và cart items liên quan sẽ bị xóa theo. Sản phẩm đã xuất hiện trong lịch sử đơn hàng sẽ không thể xóa.`,
         'Xóa vĩnh viễn tất cả sản phẩm',
         'Xóa vĩnh viễn',
-        '#dc2626',
-        {
-            requireText: DELETE_ALL_CONFIRMATION_TEXT
-        }
+        '#dc2626'
     );
 
     if (!confirmed) return;
 
     try {
+        const verification = await requestBulkDeleteVerificationCode('delete_all_products');
+        showToast(`Mã xác thực đã được gửi tới ${verification.email || BULK_DELETE_VERIFICATION_EMAIL}.`, 'success');
+        const verificationCode = window.prompt(`Nhập mã xác thực vừa gửi tới ${verification.email || BULK_DELETE_VERIFICATION_EMAIL}:`);
+
+        if (!verificationCode || !verificationCode.trim()) {
+            showToast('Đã hủy vì chưa nhập mã xác thực.', 'warning');
+            return;
+        }
+
         const response = await fetch('/admin/products/delete-all', {
             method: 'POST',
-            credentials: 'same-origin'
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ verificationCode: verificationCode.trim() })
         });
         const result = await response.json();
 
@@ -1117,6 +1172,12 @@ function initAdminProducts() {
         if (actionButton) {
             const action = actionButton.dataset.productAction;
 
+            if (action === 'export-products') {
+                event.preventDefault();
+                confirmExportProducts(actionButton.href);
+                return;
+            }
+
             if (action === 'add-variant') {
                 addVariantRow(actionButton.dataset.productMode);
                 return;
@@ -1239,4 +1300,3 @@ function initAdminProducts() {
     syncCreateMainImageOptions();
 }
 document.addEventListener('DOMContentLoaded', initAdminProducts);
-

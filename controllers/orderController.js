@@ -709,20 +709,77 @@ exports.getOrderHistory = async (req, res) => {
             return res.redirect('/auth/login');
         }
 
-        // Lấy 20 đơn hàng gần nhất của user
-        const orders = await Order.findByUser(req.user.id, 20, 0);
-        await Promise.all(orders.map(async (order) => {
-            if (order.status !== 'delivered') {
-                return;
-            }
+        const orderGroups = [
+            { key: 'all', label: 'Tất cả', href: '/orders/history' },
+            { key: 'awaiting_confirmation', label: 'Chờ xác nhận', href: '/orders/history?group=awaiting_confirmation' },
+            { key: 'awaiting_pickup', label: 'Chờ lấy hàng', href: '/orders/history?group=awaiting_pickup' },
+            { key: 'awaiting_delivery', label: 'Chờ giao hàng', href: '/orders/history?group=awaiting_delivery' },
+            { key: 'delivered', label: 'Đã giao', href: '/orders/history?group=delivered' },
+            { key: 'completed', label: 'Đã hoàn thành', href: '/orders/history?group=completed' },
+            { key: 'returns', label: 'Trả hàng', href: '/orders/history?group=returns' },
+            { key: 'cancelled', label: 'Đã hủy', href: '/orders/history?group=cancelled' },
+            { key: 'reviews', label: 'Đánh giá', href: '/orders/history?group=reviews' }
+        ];
+        const allowedGroups = new Set(orderGroups.map((group) => group.key));
+        const requestedGroup = typeof req.query.group === 'string' ? req.query.group.trim() : 'all';
+        const activeGroup = allowedGroups.has(requestedGroup) ? requestedGroup : 'all';
 
+        const orders = await Order.findByUser(req.user.id, 100, 0);
+        await Promise.all(orders.map(async (order) => {
             const returnRequest = await ReturnRequest.findByOrderId(order.id);
             order.return_request_status = returnRequest?.status || null;
         }));
+        const reviews = await Order.findReviews({
+            user_id: req.user.id,
+            limit: 100,
+            offset: 0
+        });
+
+        const hasStatus = (order, statuses) => statuses.includes(String(order.status || '').toLowerCase());
+        const orderGroupCounts = {
+            all: orders.length,
+            awaiting_confirmation: orders.filter((order) => hasStatus(order, ['pending_payment', 'pending'])).length,
+            awaiting_pickup: orders.filter((order) => hasStatus(order, ['confirmed', 'processing'])).length,
+            awaiting_delivery: orders.filter((order) => hasStatus(order, ['shipping'])).length,
+            delivered: orders.filter((order) => hasStatus(order, ['delivered'])).length,
+            completed: orders.filter((order) => hasStatus(order, ['completed'])).length,
+            returns: orders.filter((order) => Boolean(order.return_request_status)).length,
+            cancelled: orders.filter((order) => hasStatus(order, ['cancelled'])).length,
+            reviews: reviews.length
+        };
+
+        const filteredOrders = (() => {
+            if (activeGroup === 'awaiting_confirmation') {
+                return orders.filter((order) => hasStatus(order, ['pending_payment', 'pending']));
+            }
+            if (activeGroup === 'awaiting_pickup') {
+                return orders.filter((order) => hasStatus(order, ['confirmed', 'processing']));
+            }
+            if (activeGroup === 'awaiting_delivery') {
+                return orders.filter((order) => hasStatus(order, ['shipping']));
+            }
+            if (activeGroup === 'delivered') {
+                return orders.filter((order) => hasStatus(order, ['delivered']));
+            }
+            if (activeGroup === 'completed') {
+                return orders.filter((order) => hasStatus(order, ['completed']));
+            }
+            if (activeGroup === 'returns') {
+                return orders.filter((order) => Boolean(order.return_request_status));
+            }
+            if (activeGroup === 'cancelled') {
+                return orders.filter((order) => hasStatus(order, ['cancelled']));
+            }
+            return orders;
+        })();
 
         // Render trang lịch sử
         res.render('user/orders', {
-            orders,
+            orders: activeGroup === 'reviews' ? [] : filteredOrders,
+            reviews,
+            activeGroup,
+            orderGroups,
+            orderGroupCounts,
             cancelFeedback: req.query.cancel || null,
             user: req.user
         });
@@ -1434,4 +1491,3 @@ exports.validateVoucher = async (req, res) => {
         });
     }
 };
-

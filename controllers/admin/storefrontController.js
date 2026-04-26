@@ -4,5 +4,6 @@ const legacy = require('./legacy');
 // Xử lý cấu hình giao diện storefront trong admin.
 module.exports = {
     getStorefrontSettings: legacy.getStorefrontSettings,
-    updateStorefrontSettings: legacy.updateStorefrontSettings
+    updateStorefrontSettings: legacy.updateStorefrontSettings,
+    requestBulkDeleteVerification: legacy.requestBulkDeleteVerification
 };

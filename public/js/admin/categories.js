@@ -54,11 +54,12 @@ function escapeHtml(value) {
 }
 
 // Xử lý show danh mục confirm.
-function showCategoryConfirm(message, title = 'Xác nhận') {
+function showCategoryConfirm(message, title = 'Xác nhận', yesText = 'Xác nhận') {
     return new Promise((resolve) => {
         const modal = document.getElementById('confirmModal');
         document.getElementById('confirmTitle').textContent = title;
         document.getElementById('confirmMessage').textContent = message;
+        document.getElementById('confirmYes').textContent = yesText;
         modal.style.display = 'flex';
 
         document.getElementById('confirmYes').onclick = () => {
@@ -71,6 +72,52 @@ function showCategoryConfirm(message, title = 'Xác nhận') {
             resolve(false);
         };
     });
+}
+
+async function requestCategoryBulkDeleteVerificationCode(action) {
+    const response = await fetch('/admin/bulk-actions/verification-code', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action })
+    });
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+        throw new Error(result.message || 'Không thể gửi mã xác thực.');
+    }
+
+    return result;
+}
+
+async function confirmExportCategories(targetUrl) {
+    const confirmed = await showCategoryConfirm(
+        'File xuất sẽ chứa dữ liệu danh mục theo bộ lọc hiện tại. Bạn có muốn tiếp tục tải xuống?',
+        'Xuất danh mục',
+        'Tải xuống'
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+        const verification = await requestCategoryBulkDeleteVerificationCode('export_categories');
+        const email = verification.email || 'nvuthanh4@gmail.com';
+        showCategoryToast(`Mã xác thực đã được gửi tới ${email}.`, 'success');
+        const verificationCode = window.prompt(`Nhập mã OTP vừa gửi tới ${email} để xuất danh mục:`);
+
+        if (!verificationCode || !verificationCode.trim()) {
+            showCategoryToast('Đã hủy vì chưa nhập mã OTP.', 'warning');
+            return;
+        }
+
+        const exportUrl = new URL(targetUrl, window.location.origin);
+        exportUrl.searchParams.set('verificationCode', verificationCode.trim());
+        window.location.href = exportUrl.toString();
+    } catch (error) {
+        showCategoryToast(`Lỗi: ${error.message}`, 'error');
+    }
 }
 
 // Bật/tắt danh mục section.
@@ -189,7 +236,8 @@ function populateEditCategoryForm(categoryId) {
 async function deleteCategory(categoryId) {
     const confirmed = await showCategoryConfirm(
         'Danh mục sẽ bị ẩn khỏi hệ thống. Chỉ có thể xóa khi không còn sản phẩm hoặc danh mục con.',
-        'Xóa danh mục'
+        'Xóa danh mục',
+        'Xóa'
     );
 
     if (!confirmed) {
@@ -218,7 +266,8 @@ async function deleteCategory(categoryId) {
 async function deleteAllCategories() {
     const confirmed = await showCategoryConfirm(
         'Thao tác này sẽ xóa vĩnh viễn toàn bộ danh mục có thể xóa trong database, đồng thời xóa luôn sản phẩm, ảnh và biến thể thuộc các danh mục đó. Danh mục gắn với sản phẩm đã nằm trong lịch sử đơn hàng sẽ không thể xóa. Bạn có chắc muốn tiếp tục?',
-        'Xóa vĩnh viễn tất cả danh mục'
+        'Xóa vĩnh viễn tất cả danh mục',
+        'Xóa vĩnh viễn'
     );
 
     if (!confirmed) {
@@ -226,9 +275,20 @@ async function deleteAllCategories() {
     }
 
     try {
+        const verification = await requestCategoryBulkDeleteVerificationCode('delete_all_categories');
+        showCategoryToast(`Mã xác thực đã được gửi tới ${verification.email || 'nvuthanh4@gmail.com'}.`, 'success');
+        const verificationCode = window.prompt(`Nhập mã xác thực vừa gửi tới ${verification.email || 'nvuthanh4@gmail.com'}:`);
+
+        if (!verificationCode || !verificationCode.trim()) {
+            showCategoryToast('Đã hủy vì chưa nhập mã xác thực.', 'warning');
+            return;
+        }
+
         const response = await fetch('/admin/categories/delete-all', {
             method: 'POST',
-            credentials: 'same-origin'
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ verificationCode: verificationCode.trim() })
         });
         const result = await response.json();
 
@@ -333,6 +393,13 @@ function initAdminCategoriesPage() {
 
     document.querySelectorAll('[data-category-action="delete-all-categories"]').forEach((button) => {
         button.addEventListener('click', () => deleteAllCategories());
+    });
+
+    document.querySelectorAll('[data-category-action="export-categories"]').forEach((link) => {
+        link.addEventListener('click', (event) => {
+            event.preventDefault();
+            confirmExportCategories(link.href);
+        });
     });
 
     document.querySelectorAll('[data-category-modal-close]').forEach((button) => {

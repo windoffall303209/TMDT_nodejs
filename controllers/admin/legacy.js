@@ -1,5 +1,5 @@
 
-
+const crypto = require('crypto');
 const Order = require('../../models/Order');
 const ReturnRequest = require('../../models/ReturnRequest');
 const Product = require('../../models/Product');
@@ -29,6 +29,59 @@ const { scheduleProductVisualEmbeddingSync } = require('../../services/productVi
 const ProductImageEmbedding = require('../../models/ProductImageEmbedding');
 
 const ADMIN_PRODUCT_SELECTION_LIMIT = 20000;
+const BULK_DELETE_VERIFICATION_TTL_MS = 10 * 60 * 1000;
+const BULK_DELETE_ACTIONS = {
+    export_products: {
+        label: 'xuất danh sách sản phẩm',
+        sessionKey: 'adminBulkDeleteVerification'
+    },
+    export_categories: {
+        label: 'xuất danh sách danh mục',
+        sessionKey: 'adminBulkDeleteVerification'
+    },
+    delete_all_products: {
+        label: 'xóa tất cả sản phẩm',
+        sessionKey: 'adminBulkDeleteVerification'
+    },
+    delete_all_categories: {
+        label: 'xóa tất cả danh mục',
+        sessionKey: 'adminBulkDeleteVerification'
+    }
+};
+
+function normalizeBulkDeleteAction(action) {
+    const normalized = String(action || '').trim().toLowerCase();
+    return BULK_DELETE_ACTIONS[normalized] ? normalized : '';
+}
+
+async function getDefaultWebEmail() {
+    try {
+        const settings = await StorefrontSetting.getAll();
+        return settings.default_web_email || emailService.getAdminEmail();
+    } catch (error) {
+        return emailService.getAdminEmail();
+    }
+}
+
+function validateBulkDeleteVerification(req, action, code) {
+    const verification = req.session?.adminBulkDeleteVerification;
+    const submittedCode = String(code || '').trim();
+
+    if (!verification || verification.action !== action) {
+        throw new Error('Vui lòng yêu cầu mã xác thực trước khi tiếp tục.');
+    }
+
+    if (Date.now() > Number(verification.expiresAt || 0)) {
+        delete req.session.adminBulkDeleteVerification;
+        throw new Error('Mã xác thực đã hết hạn. Vui lòng yêu cầu mã mới.');
+    }
+
+    if (!submittedCode || submittedCode !== verification.code) {
+        throw new Error('Mã xác thực không đúng.');
+    }
+
+    delete req.session.adminBulkDeleteVerification;
+}
 
 // Phân tích selected sản phẩm ids.
 function parseSelectedProductIds(body) {
@@ -165,10 +218,11 @@ function formatDateTimeVi(value) {
 
 // Tạo dữ liệu quản trị notice điều hướng.
 function buildAdminNoticeRedirect(path, message, type = 'success') {
+    const separator = path.includes('?') ? '&' : '?';
     const params = new URLSearchParams();
     params.set('notice', message);
     params.set('notice_type', type);
-    return `${path}?${params.toString()}`;
+    return `${path}${separator}${params.toString()}`;
 }
 
 // Dọn dẹp file import đã upload tạm.
@@ -560,21 +614,67 @@ exports.getDashboard = async (req, res) => {
     }
 };
 
+exports.requestBulkDeleteVerification = async (req, res) => {
+    try {
+        const action = normalizeBulkDeleteAction(req.body?.action);
+        if (!action) {
+            return res.status(400).json({ success: false, message: 'Thao tác xác thực không hợp lệ.' });
+        }
+
+        const meta = BULK_DELETE_ACTIONS[action];
+        const code = String(crypto.randomInt(100000, 1000000));
+        const email = await getDefaultWebEmail();
+
+        req.session = req.session || {};
+        req.session.adminBulkDeleteVerification = {
+            action,
+            code,
+            expiresAt: Date.now() + BULK_DELETE_VERIFICATION_TTL_MS
+        };
+
+        const sent = await emailService.sendEmail(
+            email,
+            `Mã xác thực ${meta.label} - WIND OF FALL`,
+            `
+                <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 20px;">
+                    <h2>Mã xác thực thao tác quản trị</h2>
+                    <p>Bạn đang yêu cầu <strong>${meta.label}</strong>.</p>
+                    <p>Mã xác thực có hiệu lực trong 10 phút:</p>
+                    <div style="font-size: 32px; font-weight: 700; letter-spacing: 8px; padding: 16px 20px; background: #f7f2e8; border-radius: 12px; text-align: center;">${code}</div>
+                    <p style="color: #b91c1c;">Nếu không phải bạn thực hiện, hãy bỏ qua email này.</p>
+                </div>
+            `
+        );
+
+        if (!sent) {
+            delete req.session.adminBulkDeleteVerification;
+            return res.status(500).json({ success: false, message: 'Không thể gửi mã xác thực qua email. Vui lòng kiểm tra cấu hình email.' });
+        }
+
+        res.json({ success: true, email, expiresInSeconds: BULK_DELETE_VERIFICATION_TTL_MS / 1000 });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 // =============================================================================
 // =============================================================================
 
 exports.getCategories = async (req, res) => {
     try {
         const searchQuery = typeof req.query.search === 'string' ? req.query.search.trim() : '';
-        const categories = await Category.findAllForAdmin(searchQuery ? { search: searchQuery } : {});
-        const parentCategories = await Category.findRootCategories();
+        const [categories, parentCategories, allCategoriesForStats] = await Promise.all([
+            Category.findAllForAdmin(searchQuery ? { search: searchQuery } : {}),
+            Category.findRootCategories(),
+            Category.findAllForAdmin({})
+        ]);
 
-        // Compute stats from loaded categories
-        const totalProducts = categories.reduce((sum, c) => sum + (c.product_count || 0), 0);
-        const rootCount = categories.filter(c => !c.parent_id).length;
-        const childCount = categories.filter(c => !!c.parent_id).length;
+        // Compute stats from the full website, not only the current filtered list.
+        const totalProducts = allCategoriesForStats.reduce((sum, c) => sum + (c.product_count || 0), 0);
+        const rootCount = allCategoriesForStats.filter(c => !c.parent_id).length;
+        const childCount = allCategoriesForStats.filter(c => !!c.parent_id).length;
         const categoryStats = {
-            total: categories.length,
+            total: allCategoriesForStats.length,
             root: rootCount,
             children: childCount,
             assignedProducts: totalProducts
@@ -646,6 +746,7 @@ exports.downloadCategoryImportTemplate = async (req, res) => {
 // Xuất danh mục.
 exports.exportCategories = async (req, res) => {
     try {
+        validateBulkDeleteVerification(req, 'export_categories', req.query?.verificationCode || req.query?.verification_code);
         const buffer = await exportCategoriesToWorkbookBuffer({
             search: typeof req.query.search === 'string' ? req.query.search.trim() : ''
         });
@@ -745,6 +846,7 @@ exports.deleteCategory = async (req, res) => {
 // Xóa tất cả danh mục.
 exports.deleteAllCategories = async (req, res) => {
     try {
+        validateBulkDeleteVerification(req, 'delete_all_categories', req.body?.verificationCode || req.body?.verification_code);
         const result = await Category.deleteAllPermanently();
 
         res.json({
@@ -773,6 +875,7 @@ exports.getProducts = async (req, res) => {
         let categories = [];
         let totalItems = 0;
         let totalProductCount = 0;
+        let productStats = { total: 0, inStock: 0, outOfStock: 0, categories: 0 };
         const bulkImportResult = req.session?.adminProductImportResult || null;
 
         if (req.session?.adminProductImportResult) {
@@ -791,10 +894,16 @@ exports.getProducts = async (req, res) => {
                 ...(searchQuery ? { search: searchQuery } : {})
             };
 
-            products = await Product.findAll(productFilters);
-            categories = await Category.findAll();
-            totalItems = await Product.count(productFilters);
-            totalProductCount = await Product.countAllRecords();
+            [products, categories, totalItems, totalProductCount, productStats.total, productStats.inStock, productStats.outOfStock] = await Promise.all([
+                Product.findAll(productFilters),
+                Category.findAll(),
+                Product.count(productFilters),
+                Product.countAllRecords(),
+                Product.count({}),
+                Product.count({ stock_status: 'in_stock' }),
+                Product.count({ stock_status: 'out_of_stock' })
+            ]);
+            productStats.categories = categories.length;
         } catch (err) {
             console.error('Products data error:', err);
         }
@@ -809,7 +918,8 @@ exports.getProducts = async (req, res) => {
             searchQuery,
             pagination: { totalItems, totalPages, currentPage: page, limit, searchQuery },
             bulkImportResult,
-            totalProductCount
+            totalProductCount,
+            productStats
         });
     } catch (error) {
         res.status(500).render('error', { message: 'L�i t�i s�n ph�m: ' + error.message, user: req.user });
@@ -831,6 +941,7 @@ exports.downloadProductImportTemplate = async (req, res) => {
 // Xuất sản phẩm.
 exports.exportProducts = async (req, res) => {
     try {
+        validateBulkDeleteVerification(req, 'export_products', req.query?.verificationCode || req.query?.verification_code);
         const workbookBuffer = await exportProductsToWorkbookBuffer({
             search: typeof req.query.search === 'string' ? req.query.search.trim() : ''
         });
@@ -999,6 +1110,7 @@ exports.deleteProduct = async (req, res) => {
 // Xóa tất cả sản phẩm.
 exports.deleteAllProducts = async (req, res) => {
     try {
+        validateBulkDeleteVerification(req, 'delete_all_products', req.body?.verificationCode || req.body?.verification_code);
         const result = await Product.deleteAllPermanently();
         res.json({
             success: true,
@@ -1023,10 +1135,28 @@ exports.getOrders = async (req, res) => {
     try {
         let orders = [];
         const searchQuery = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+        const requestedGroup = typeof req.query.group === 'string' ? req.query.group.trim() : 'all';
+        const orderGroups = [
+            { key: 'all', label: 'Tất cả', href: '/admin/orders' },
+            { key: 'awaiting_confirmation', label: 'Chờ xác nhận', href: '/admin/orders?group=awaiting_confirmation' },
+            { key: 'awaiting_pickup', label: 'Chờ lấy hàng', href: '/admin/orders?group=awaiting_pickup' },
+            { key: 'awaiting_delivery', label: 'Chờ giao hàng', href: '/admin/orders?group=awaiting_delivery' },
+            { key: 'delivered', label: 'Đã giao', href: '/admin/orders?group=delivered' },
+            { key: 'completed', label: 'Đã hoàn thành', href: '/admin/orders?group=completed' },
+            { key: 'returns', label: 'Trả hàng', href: '/admin/orders?group=returns' },
+            { key: 'cancelled', label: 'Đã hủy', href: '/admin/orders?group=cancelled' }
+        ];
+        const allowedGroups = new Set(orderGroups.map((group) => group.key));
+        const activeGroup = allowedGroups.has(requestedGroup)
+            ? requestedGroup
+            : 'all';
+        let orderGroupCounts = {};
         try {
+            orderGroupCounts = await Order.getManagementCounts();
             orders = await Order.findAll({
                 limit: 50,
                 offset: 0,
+                ...(activeGroup !== 'all' ? { status_group: activeGroup } : {}),
                 ...(searchQuery ? { search: searchQuery } : {})
             });
         } catch (err) {
@@ -1035,6 +1165,9 @@ exports.getOrders = async (req, res) => {
         res.render('admin/orders', {
             orders,
             searchQuery,
+            activeGroup,
+            orderGroups,
+            orderGroupCounts,
             user: req.user,
             currentPage: 'orders'
         });
@@ -1068,6 +1201,12 @@ exports.getUsers = async (req, res) => {
     try {
         let users = [];
         let totalItems = 0;
+        let userStats = {
+            total: 0,
+            admin: 0,
+            active: 0,
+            inactive: 0
+        };
 
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
@@ -1075,9 +1214,23 @@ exports.getUsers = async (req, res) => {
 
         try {
             users = await User.findAll({ limit, offset });
-            const pool = require('../../config/database');
             const [countResult] = await pool.execute('SELECT COUNT(*) as total FROM users');
             totalItems = countResult[0].total;
+            const [statsResult] = await pool.execute(`
+                SELECT
+                    COUNT(*) AS total,
+                    COALESCE(SUM(role = 'admin'), 0) AS admin,
+                    COALESCE(SUM(is_active = TRUE), 0) AS active,
+                    COALESCE(SUM(is_active = FALSE), 0) AS inactive
+                FROM users
+            `);
+            const statsRow = statsResult[0] || {};
+            userStats = {
+                total: Number(statsRow.total || 0),
+                admin: Number(statsRow.admin || 0),
+                active: Number(statsRow.active || 0),
+                inactive: Number(statsRow.inactive || 0)
+            };
         } catch (err) {
             console.error('Users data error:', err);
         }
@@ -1088,6 +1241,7 @@ exports.getUsers = async (req, res) => {
             users,
             user: req.user,
             currentPage: 'users',
+            userStats,
             pagination: { totalItems, totalPages, currentPage: page, limit }
         });
     } catch (error) {
@@ -1204,14 +1358,23 @@ exports.getSales = async (req, res) => {
         let sales = [];
         let products = [];
         let subscriberCount = 0;
+        let saleStats = { total: 0, active: 0, expired: 0, percentage: 0 };
         const searchQuery = typeof req.query.search === 'string' ? req.query.search.trim() : '';
         try {
-            const [salesData, productsData, totalSubscribers] = await Promise.all([
+            const [salesData, allSalesData, productsData, totalSubscribers] = await Promise.all([
                 Sale.findAll(searchQuery ? { search: searchQuery } : {}),
+                Sale.findAll({}),
                 Product.findAll({ limit: ADMIN_PRODUCT_SELECTION_LIMIT, offset: 0, sort_by: 'name', sort_order: 'ASC' }),
                 Newsletter.countActive()
             ]);
             sales = await attachSaleAssignments(salesData, productsData.length);
+            const allSales = await attachSaleAssignments(allSalesData, productsData.length);
+            saleStats = {
+                total: allSales.length,
+                active: allSales.filter(s => s.status_meta && s.status_meta.key === 'active').length,
+                expired: allSales.filter(s => s.status_meta && s.status_meta.key === 'expired').length,
+                percentage: allSales.filter(s => s.type === 'percentage').length
+            };
             products = productsData;
             subscriberCount = totalSubscribers;
         } catch (err) {
@@ -1220,6 +1383,7 @@ exports.getSales = async (req, res) => {
         res.render('admin/sales', {
             sales,
             products,
+            saleStats,
             subscriberCount,
             searchQuery,
             user: req.user,
@@ -1758,9 +1922,11 @@ exports.deleteProductVariant = async (req, res) => {
 exports.getStorefrontSettings = async (req, res) => {
     try {
         const settings = await StorefrontSetting.getAll();
+        const activeSection = typeof req.query.section === 'string' ? req.query.section : '';
 
         res.render('admin/storefront', {
             settings,
+            activeSection,
             notice: typeof req.query.notice === 'string' ? req.query.notice : '',
             noticeType: typeof req.query.notice_type === 'string' ? req.query.notice_type : 'success',
             user: req.user,
@@ -1779,14 +1945,20 @@ exports.updateStorefrontSettings = async (req, res) => {
     try {
         await StorefrontSetting.updateMany({
             product_grid_columns: req.body.product_grid_columns,
-            home_category_showcase_count: req.body.home_category_showcase_count
+            home_category_showcase_count: req.body.home_category_showcase_count,
+            jwt_expire_minutes: req.body.jwt_expire_minutes,
+            payment_window_hours: req.body.payment_window_hours,
+            default_web_email: req.body.default_web_email
         });
 
         invalidateStorefrontSettingsCache();
+        const section = typeof req.body.active_section === 'string' && req.body.active_section
+            ? `?section=${encodeURIComponent(req.body.active_section)}`
+            : '';
 
         return res.redirect(buildAdminNoticeRedirect(
-            '/admin/storefront',
-            '� l�u c�i �t giao di�n storefront.'
+            `/admin/storefront${section}`,
+            'Đã lưu cài đặt quản lí trang web.'
         ));
     } catch (error) {
         return res.redirect(buildAdminNoticeRedirect(
@@ -1987,5 +2159,3 @@ exports.updateReturnRequestStatus = async (req, res) => {
         return res.status(400).json({ message: error.message });
     }
 };
-
-

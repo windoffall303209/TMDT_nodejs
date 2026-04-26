@@ -33,6 +33,23 @@ document.addEventListener('DOMContentLoaded', function() {
         alertContainer.innerHTML = '';
     }
 
+    function initPasswordToggles() {
+        document.querySelectorAll('[data-password-toggle]').forEach((button) => {
+            const input = document.getElementById(button.dataset.passwordToggle);
+            if (!input) {
+                return;
+            }
+
+            button.addEventListener('click', () => {
+                const shouldShow = input.type === 'password';
+                input.type = shouldShow ? 'text' : 'password';
+                button.textContent = shouldShow ? 'Ẩn' : 'Hiện';
+                button.setAttribute('aria-pressed', shouldShow ? 'true' : 'false');
+                button.setAttribute('aria-label', shouldShow ? 'Ẩn mật khẩu' : 'Hiện mật khẩu');
+            });
+        });
+    }
+
     // Start resend timer
     function startResendTimer() {
         resendTimer = 60;
@@ -262,4 +279,6 @@ document.addEventListener('DOMContentLoaded', function() {
             btnResend.disabled = false;
         }
     });
+
+    initPasswordToggles();
 });

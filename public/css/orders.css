@@ -4,6 +4,93 @@
     gap: 18px;
 }
 
+.user-order-menu {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    margin-bottom: 16px;
+    padding: 5px;
+    border: 1px solid rgba(215, 197, 154, 0.72);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.86);
+}
+
+.user-order-menu__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 38px;
+    padding: 0 12px;
+    border-radius: 10px;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 800;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.user-order-menu__link:hover,
+.user-order-menu__link.active {
+    color: var(--ink);
+    background: rgba(242, 201, 76, 0.18);
+}
+
+.user-order-menu__count {
+    min-width: 22px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: rgba(24, 20, 13, 0.08);
+    color: var(--ink);
+    font-size: 12px;
+    text-align: center;
+}
+
+.order-review-card {
+    display: grid;
+    gap: 10px;
+    padding: 16px 18px;
+    border: 1px solid rgba(215, 197, 154, 0.8);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: var(--shadow-soft);
+}
+
+.order-review-card__header {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    align-items: flex-start;
+}
+
+.order-review-card__product {
+    display: block;
+    color: var(--ink);
+    font-size: 16px;
+    font-weight: 800;
+    text-decoration: none;
+}
+
+.order-review-card__product:hover,
+.order-review-card a:hover {
+    color: var(--accent-strong);
+}
+
+.order-review-card__header p,
+.order-review-card__comment,
+.order-review-card__date {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.order-review-card__stars {
+    flex: 0 0 auto;
+    color: #d99017;
+    font-weight: 900;
+    letter-spacing: 1px;
+}
+
 .order-card,
 .confirmation-card,
 .confirmation-hero {
@@ -81,6 +168,25 @@
 
 .order-status.is-cancelled {
     background: rgba(198, 64, 45, 0.12);
+    color: var(--danger);
+}
+
+.order-status-wrap {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+}
+
+.order-payment-countdown {
+    margin: 0;
+    color: #9a5b00;
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.order-payment-countdown.is-expired {
     color: var(--danger);
 }
 

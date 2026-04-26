@@ -248,6 +248,7 @@ CREATE TABLE orders (
     status ENUM('pending_payment', 'pending', 'confirmed', 'processing', 'shipping', 'delivered', 'completed', 'cancelled') DEFAULT 'pending',
     payment_method ENUM('cod', 'vnpay', 'momo') NOT NULL,
     payment_status ENUM('unpaid', 'paid', 'refunded') DEFAULT 'unpaid',
+    payment_expires_at DATETIME NULL,
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -256,7 +257,8 @@ CREATE TABLE orders (
     FOREIGN KEY (voucher_id) REFERENCES vouchers(id) ON DELETE SET NULL,
     INDEX idx_user (user_id),
     INDEX idx_order_code (order_code),
-    INDEX idx_status (status)
+    INDEX idx_status (status),
+    INDEX idx_payment_expires_at (payment_expires_at)
 ) ENGINE=InnoDB;
 
 -- =============================================================================
@@ -433,7 +435,10 @@ CREATE TABLE storefront_settings (
 INSERT INTO storefront_settings (setting_key, setting_value, value_type)
 VALUES
     ('product_grid_columns', '5', 'int'),
-    ('home_category_showcase_count', '3', 'int');
+    ('home_category_showcase_count', '3', 'int'),
+    ('jwt_expire_minutes', '60', 'int'),
+    ('payment_window_hours', '24', 'int'),
+    ('default_web_email', 'nvuthanh4@gmail.com', 'string');
 
 -- =============================================================================
 -- REVIEWS TABLE
