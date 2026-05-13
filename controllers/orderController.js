@@ -29,6 +29,8 @@ const {
 
 const ALLOWED_PAYMENT_METHODS = new Set(['cod', 'vnpay', 'momo']);
 const ONLINE_PAYMENT_METHODS = new Set(['vnpay', 'momo']);
+const DEFAULT_FREE_SHIPPING_MIN_AMOUNT = 500000;
+const DEFAULT_SHIPPING_FEE = 30000;
 
 // Chuyển giá trị đầu vào về số nguyên.
 function parseInteger(value) {
@@ -57,13 +59,44 @@ function parseMoneyValue(value) {
     return Number.isFinite(parsed) ? parsed : 0;
 }
 
-// Xác định shipping fee.
-function resolveShippingFee(subtotal) {
+// Lay nguong freeship tu cau hinh storefront.
+function getFreeShippingMinAmount(settings = {}) {
+    const amount = Number.parseInt(settings.free_shipping_min_amount, 10);
+    return Number.isInteger(amount) && amount >= 0 ? amount : DEFAULT_FREE_SHIPPING_MIN_AMOUNT;
+}
+
+function getShippingFeeAmount(settings = {}) {
+    const amount = Number.parseInt(settings.shipping_fee_amount, 10);
+    return Number.isInteger(amount) && amount >= 0 ? amount : DEFAULT_SHIPPING_FEE;
+}
+
+// Tinh shipping fee theo nguong freeship hien hanh.
+function resolveShippingFee(subtotal, settings = {}) {
     if (typeof Order.calculateShippingFee === 'function') {
-        return parseMoneyValue(Order.calculateShippingFee(subtotal));
+        return parseMoneyValue(Order.calculateShippingFee(
+            subtotal,
+            getFreeShippingMinAmount(settings),
+            getShippingFeeAmount(settings)
+        ));
     }
 
-    return parseMoneyValue(subtotal) >= 500000 ? 0 : 30000;
+    return parseMoneyValue(subtotal) >= getFreeShippingMinAmount(settings) ? 0 : getShippingFeeAmount(settings);
+}
+
+function getEnabledPaymentMethods(settings = {}) {
+    const methods = [];
+
+    if (settings.payment_cod_enabled !== false) methods.push('cod');
+    if (settings.payment_vnpay_enabled !== false) methods.push('vnpay');
+    if (settings.payment_momo_enabled !== false) methods.push('momo');
+
+    return methods;
+}
+
+function isPaymentMethodEnabled(method, settings = {}) {
+    const normalizedMethod = String(method || '').toLowerCase();
+    return ALLOWED_PAYMENT_METHODS.has(normalizedMethod)
+        && getEnabledPaymentMethods(settings).includes(normalizedMethod);
 }
 
 // Lấy payable amount.
@@ -214,7 +247,7 @@ async function getAvailableVouchersForItems(items) {
 }
 
 // Tạo dữ liệu buy now mã giảm giá items.
-async function buildBuyNowVoucherItems(productId, quantity = 1, variantId = null) {
+async function buildBuyNowVoucherItems(productId, quantity = 1, variantId = null, settings = {}) {
     const product = await Product.findById(parseInt(productId, 10), { incrementView: false });
 
     if (!product) {
@@ -227,15 +260,18 @@ async function buildBuyNowVoucherItems(productId, quantity = 1, variantId = null
     ensureAvailableStock(product, quantityNumber, variant);
     const unitPrice = calculateUnitPrice(product, variant);
 
+    const subtotal = unitPrice * quantityNumber;
+    const shippingFee = resolveShippingFee(subtotal, settings);
+
     return {
         items: [{
             product_id: product.id,
             quantity: quantityNumber,
-            subtotal: unitPrice * quantityNumber
+            subtotal
         }],
-        subtotal: unitPrice * quantityNumber,
-        shippingFee: resolveShippingFee(unitPrice * quantityNumber),
-        orderAmount: getPayableAmount(unitPrice * quantityNumber, resolveShippingFee(unitPrice * quantityNumber))
+        subtotal,
+        shippingFee,
+        orderAmount: getPayableAmount(subtotal, shippingFee)
     };
 }
 
@@ -530,6 +566,10 @@ exports.createOrder = async (req, res) => {
             return res.status(400).json({ message: 'Payment method is invalid' });
         }
 
+        if (!isPaymentMethodEnabled(payment_method, req.storefrontSettings)) {
+            return res.status(400).json({ message: 'Phương thức thanh toán này đang tạm tắt' });
+        }
+
         await assertUserOwnsAddress(req.user.id, addressId);
         const cart = await Cart.getOrCreate(req.user.id);
         const cartData = buildScopedCartData(
@@ -545,7 +585,7 @@ exports.createOrder = async (req, res) => {
         let voucherId = null;
 
         if (voucher_code) {
-            const shippingFee = resolveShippingFee(cartData.subtotal);
+            const shippingFee = resolveShippingFee(cartData.subtotal, req.storefrontSettings);
             const voucherResult = await Voucher.validate(
                 voucher_code,
                 req.user.id,
@@ -1062,14 +1102,14 @@ exports.vnpayReturn = async (req, res) => {
         // Xac minh chu ky va ket qua thanh toan
         const result = await paymentService.verifyVNPayPayment(req.query);
         if (!result.isValidSignature) {
-            return renderPaymentFailure(res, req, 'Chu ky tra ve tu VNPay khong hop le');
+            return renderPaymentFailure(res, req, 'Chữ ký trả về từ VNPay không hợp lệ');
         }
         const order = await Order.findByOrderCode(result.orderId);
         if (!order) {
-            return renderPaymentFailure(res, req, 'Khong tim thay don hang thanh toan', 404);
+            return renderPaymentFailure(res, req, 'Không tìm thấy đơn hàng thanh toán', 404);
         }
         if (Number(result.amount) !== Number(order.final_amount)) {
-            return renderPaymentFailure(res, req, 'So tien VNPay tra ve khong khop voi don hang');
+            return renderPaymentFailure(res, req, 'Số tiền VNPay trả về không khớp với đơn hàng');
         }
         // Return URL la duong hien thi cho khach, nhung van sync fallback o day
         // de ho tro test sandbox khi IPN chua di xuyen mang.
@@ -1133,7 +1173,7 @@ exports.momoReturn = async (req, res) => {
         const result = await paymentService.verifyMoMoPayment(momoPayload);
 
         if (!result.isValidSignature) {
-            return renderPaymentFailure(res, req, 'Chu ky tra ve tu MoMo khong hop le');
+            return renderPaymentFailure(res, req, 'Chữ ký trả về từ MoMo không hợp lệ');
         }
 
         if (!result.success) {
@@ -1143,7 +1183,7 @@ exports.momoReturn = async (req, res) => {
                 return res.redirect(`/orders/${result.orderId}/confirmation?payment=failed`);
             }
 
-            return renderPaymentFailure(res, req, 'Thanh toan MoMo khong thanh cong. Vui long thu lai.');
+            return renderPaymentFailure(res, req, 'Thanh toán MoMo không thành công. Vui lòng thử lại.');
         }
 
         if (result.success) {
@@ -1165,7 +1205,7 @@ exports.momoReturn = async (req, res) => {
             return res.redirect(`/orders/${result.orderId}/confirmation`);
         } else {
             // Thanh toán thất bại
-            return renderPaymentFailure(res, req, 'Thanh toan MoMo khong thanh cong. Vui long thu lai.');
+            return renderPaymentFailure(res, req, 'Thanh toán MoMo không thành công. Vui lòng thử lại.');
         }
     } catch (error) {
         console.error('MoMo callback error:', error);
@@ -1315,6 +1355,10 @@ exports.createBuyNowOrder = async (req, res) => {
             return res.status(400).json({ message: 'Phương thức thanh toán không hợp lệ' });
         }
 
+        if (!isPaymentMethodEnabled(payment_method, req.storefrontSettings)) {
+            return res.status(400).json({ message: 'Phương thức thanh toán này đang tạm tắt' });
+        }
+
         if (variant_id !== undefined && variant_id !== null && variant_id !== '' && variantId === null) {
             return res.status(400).json({ message: 'Biến thể sản phẩm không hợp lệ' });
         }
@@ -1338,7 +1382,7 @@ exports.createBuyNowOrder = async (req, res) => {
 
         if (voucher_code) {
             const subtotal = (product.final_price || product.price) * quantityNumber;
-            const shippingFee = resolveShippingFee(subtotal);
+            const shippingFee = resolveShippingFee(subtotal, req.storefrontSettings);
             const voucherResult = await Voucher.validate(
                 voucher_code,
                 req.user.id,
@@ -1436,7 +1480,7 @@ exports.validateVoucher = async (req, res) => {
         let shippingFee = 0;
 
         if (mode === 'buy-now' || product_id) {
-            const buyNowContext = await buildBuyNowVoucherItems(product_id, quantity, variant_id);
+            const buyNowContext = await buildBuyNowVoucherItems(product_id, quantity, variant_id, req.storefrontSettings);
             orderAmount = buyNowContext.orderAmount;
             voucherItems = buyNowContext.items;
             subtotalAmount = buyNowContext.subtotal;
@@ -1449,7 +1493,7 @@ exports.validateVoucher = async (req, res) => {
                 selectedCartItemIds
             );
             subtotalAmount = cartData.subtotal;
-            shippingFee = resolveShippingFee(cartData.subtotal);
+            shippingFee = resolveShippingFee(cartData.subtotal, req.storefrontSettings);
             orderAmount = getPayableAmount(cartData.subtotal, shippingFee);
             voucherItems = cartData.items;
         }

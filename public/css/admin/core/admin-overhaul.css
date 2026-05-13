@@ -535,14 +535,14 @@ body.admin-body .container {
 }
 
 .admin-section {
-    padding: 24px 24px 22px;
+    padding: 19px 24px 18px;
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(255, 250, 242, 0.92));
     border: 1px solid rgba(204, 191, 167, 0.78);
     box-shadow: var(--admin-shadow-sm);
 }
 
 .admin-section__title {
-    margin-bottom: 18px;
+    margin-bottom: 14px;
     font-size: 20px;
     font-weight: 800;
     letter-spacing: -0.03em;
@@ -559,11 +559,19 @@ body.admin-body .container {
 }
 
 .admin-toolbar {
-    padding: 18px 20px;
+    padding: 14px 20px;
     background: rgba(255, 255, 255, 0.72);
     backdrop-filter: blur(14px);
     border: 1px solid rgba(204, 191, 167, 0.66);
     box-shadow: var(--admin-shadow-sm);
+}
+
+.admin-section--collapsible > .admin-section__title {
+    margin-bottom: 0;
+}
+
+.admin-section--collapsible.is-open > .admin-section__title {
+    margin-bottom: 14px;
 }
 
 .admin-toolbar__title {
@@ -1516,4 +1524,93 @@ body.admin-body--dashboard .stats-grid--spaced .stat-card__label {
 
 body.admin-body--dashboard .stats-grid--spaced .stat-card__value {
     line-height: 1;
+}
+
+/* Compact admin surfaces: ưu tiên mật độ hiển thị thay vì card cao và thưa. */
+body.admin-body .admin-page-header {
+    margin-bottom: 14px;
+    padding: 12px 18px;
+    border-radius: 18px;
+}
+
+body.admin-body .admin-page-header__left h1,
+body.admin-body .order-detail-header h1 {
+    font-size: clamp(19px, 1.75vw, 25px);
+}
+
+body.admin-body .admin-page-header__actions {
+    gap: 8px;
+}
+
+body.admin-body .admin-section,
+body.admin-body .admin-toolbar {
+    border-radius: 18px;
+}
+
+body.admin-body .admin-section {
+    padding: 14px 18px;
+    margin-bottom: 16px;
+}
+
+body.admin-body .admin-toolbar {
+    padding: 10px 16px;
+    margin-bottom: 16px;
+}
+
+body.admin-body .admin-section--collapsible {
+    padding: 9px 18px;
+}
+
+body.admin-body .admin-section--collapsible.is-open {
+    padding: 14px 18px;
+}
+
+body.admin-body .admin-section__title {
+    margin-bottom: 10px;
+    font-size: 18px;
+    line-height: 1.2;
+}
+
+body.admin-body .admin-section--collapsible > .admin-section__title {
+    margin-bottom: 0;
+}
+
+body.admin-body .admin-section--collapsible.is-open > .admin-section__title {
+    margin-bottom: 10px;
+}
+
+body.admin-body .admin-section__title--toggle {
+    min-height: 28px;
+    gap: 8px;
+}
+
+body.admin-body .admin-section__title--toggle svg {
+    width: 18px;
+    height: 18px;
+}
+
+body.admin-body .admin-section--collapsible.is-open .admin-section__content {
+    padding-top: 10px;
+}
+
+body.admin-body .admin-toolbar__title {
+    font-size: 15px;
+    line-height: 1.2;
+}
+
+body.admin-body .admin-toolbar__text {
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+body.admin-body .admin-btn {
+    min-height: 36px;
+    padding: 8px 14px;
+}
+
+body.admin-body .admin-form__input,
+body.admin-body .admin-form__select,
+body.admin-body .admin-form__textarea {
+    padding: 10px 14px;
+    border-radius: 14px;
 }

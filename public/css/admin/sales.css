@@ -325,7 +325,7 @@
 .admin-section--collapsible.is-open .admin-section__content {
     max-height: 2000px;
     opacity: 1;
-    padding-top: 20px;
+    padding-top: 16px;
 }
 
 .admin-section__title--toggle {

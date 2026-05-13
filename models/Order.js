@@ -16,6 +16,8 @@ const ORDER_STATUSES = [
 const TRACKING_SOURCES = new Set(["system", "admin", "carrier", "user"]);
 const ONLINE_PAYMENT_METHODS = new Set(["vnpay", "momo"]);
 const PAYMENT_WINDOW_HOURS = 24;
+const DEFAULT_FREE_SHIPPING_MIN_AMOUNT = 500000;
+const DEFAULT_SHIPPING_FEE = 30000;
 
 const STATUS_EVENT_PRESETS = {
   pending_payment: {
@@ -149,8 +151,55 @@ class Order {
   }
 
   // Tính shipping fee.
-  static calculateShippingFee(subtotal) {
-    return Number(subtotal) >= 500000 ? 0 : 30000;
+  static calculateShippingFee(
+    subtotal,
+    freeShippingMinAmount = DEFAULT_FREE_SHIPPING_MIN_AMOUNT,
+    shippingFeeAmount = DEFAULT_SHIPPING_FEE,
+  ) {
+    const threshold = Number(freeShippingMinAmount);
+    const normalizedThreshold = Number.isFinite(threshold)
+      ? Math.max(0, threshold)
+      : DEFAULT_FREE_SHIPPING_MIN_AMOUNT;
+    const fee = Number(shippingFeeAmount);
+    const normalizedFee = Number.isFinite(fee)
+      ? Math.max(0, fee)
+      : DEFAULT_SHIPPING_FEE;
+
+    return Number(subtotal) >= normalizedThreshold ? 0 : normalizedFee;
+  }
+
+  static async getFreeShippingMinAmount() {
+    try {
+      const settings = await StorefrontSetting.getAll();
+      const amount = Number.parseInt(settings.free_shipping_min_amount, 10);
+      return Number.isInteger(amount) && amount >= 0
+        ? amount
+        : DEFAULT_FREE_SHIPPING_MIN_AMOUNT;
+    } catch (error) {
+      return DEFAULT_FREE_SHIPPING_MIN_AMOUNT;
+    }
+  }
+
+  static async getShippingFeeAmount() {
+    try {
+      const settings = await StorefrontSetting.getAll();
+      const amount = Number.parseInt(settings.shipping_fee_amount, 10);
+      return Number.isInteger(amount) && amount >= 0
+        ? amount
+        : DEFAULT_SHIPPING_FEE;
+    } catch (error) {
+      return DEFAULT_SHIPPING_FEE;
+    }
+  }
+
+  static async resolveShippingFee(subtotal) {
+    const freeShippingMinAmount = await this.getFreeShippingMinAmount();
+    const shippingFeeAmount = await this.getShippingFeeAmount();
+    return this.calculateShippingFee(
+      subtotal,
+      freeShippingMinAmount,
+      shippingFeeAmount,
+    );
   }
 
   // Lấy initial trạng thái for thanh toán.
@@ -728,7 +777,7 @@ class Order {
       }
 
       const orderCode = this.generateOrderCode();
-      const shippingFee = this.calculateShippingFee(cartData.subtotal);
+      const shippingFee = await this.resolveShippingFee(cartData.subtotal);
       const finalAmount = Math.max(
         0,
         cartData.subtotal + shippingFee - discountAmount,
@@ -889,7 +938,7 @@ class Order {
       const orderCode = this.generateOrderCode();
       const price = product.final_price || product.price;
       const subtotal = price * quantityNumber;
-      const shippingFee = this.calculateShippingFee(subtotal);
+      const shippingFee = await this.resolveShippingFee(subtotal);
       const finalAmount = Math.max(0, subtotal + shippingFee - discountAmount);
       const initialStatus = this.getInitialStatusForPayment(
         paymentMethod,

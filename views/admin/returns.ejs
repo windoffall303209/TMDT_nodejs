@@ -8,6 +8,15 @@
         rejected: { label: 'Từ chối', className: 'admin-table__badge--cancelled' },
         resolved: { label: 'Đã xử lý', className: 'admin-table__badge--delivered' }
     };
+    const currentStatusFilter = typeof statusFilter !== 'undefined' ? statusFilter : '';
+    const currentReturnStatusCounts = typeof returnStatusCounts !== 'undefined' && returnStatusCounts ? returnStatusCounts : {};
+    const returnStatusTabs = [
+        { key: 'all', label: 'Tất cả', href: '/admin/returns', active: !currentStatusFilter },
+        { key: 'pending', label: 'Chờ xử lý', href: '/admin/returns?status=pending', active: currentStatusFilter === 'pending' },
+        { key: 'approved', label: 'Đã duyệt', href: '/admin/returns?status=approved', active: currentStatusFilter === 'approved' },
+        { key: 'rejected', label: 'Từ chối', href: '/admin/returns?status=rejected', active: currentStatusFilter === 'rejected' },
+        { key: 'resolved', label: 'Đã xử lý', href: '/admin/returns?status=resolved', active: currentStatusFilter === 'resolved' }
+    ];
 %>
 
 <div class="admin-page">
@@ -20,13 +29,14 @@
         </div>
 
         <div class="admin-section admin-section--tabs">
-            <div class="order-tabs">
-                <a class="order-tab <%= !statusFilter ? 'active' : '' %>" href="/admin/returns">Tất cả</a>
-                <a class="order-tab <%= statusFilter === 'pending' ? 'active' : '' %>" href="/admin/returns?status=pending">Chờ xử lý</a>
-                <a class="order-tab <%= statusFilter === 'approved' ? 'active' : '' %>" href="/admin/returns?status=approved">Đã duyệt</a>
-                <a class="order-tab <%= statusFilter === 'rejected' ? 'active' : '' %>" href="/admin/returns?status=rejected">Từ chối</a>
-                <a class="order-tab <%= statusFilter === 'resolved' ? 'active' : '' %>" href="/admin/returns?status=resolved">Đã xử lý</a>
-            </div>
+            <nav class="order-management-menu" aria-label="Nhóm quản lý hoàn hàng">
+                <% returnStatusTabs.forEach((tab) => { %>
+                    <a class="order-management-menu__link <%= tab.active ? 'active' : '' %>" href="<%= tab.href %>">
+                        <span><%= tab.label %></span>
+                        <span class="order-management-menu__count"><%= currentReturnStatusCounts[tab.key] || 0 %></span>
+                    </a>
+                <% }) %>
+            </nav>
         </div>
 
         <% if (returnRequests && returnRequests.length > 0) { %>

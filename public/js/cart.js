@@ -1,6 +1,29 @@
 // Điều phối tương tác trình duyệt cho giỏ hàng, tách khỏi template EJS.
 const quantityRequestState = new Map();
 
+function readCartPricingConfig() {
+    const fallback = {
+        freeShippingMinAmount: 500000,
+        shippingFeeAmount: 30000
+    };
+    const element = document.getElementById('cartPricingConfig');
+    if (!element) return fallback;
+
+    try {
+        const parsed = JSON.parse(element.textContent || '{}');
+        return {
+            freeShippingMinAmount: Number.isFinite(Number(parsed.freeShippingMinAmount))
+                ? Math.max(0, Number(parsed.freeShippingMinAmount))
+                : fallback.freeShippingMinAmount,
+            shippingFeeAmount: Number.isFinite(Number(parsed.shippingFeeAmount))
+                ? Math.max(0, Number(parsed.shippingFeeAmount))
+                : fallback.shippingFeeAmount
+        };
+    } catch (error) {
+        return fallback;
+    }
+}
+
 // Bật/tắt select tất cả.
 function toggleSelectAll() {
     const selectAll = document.getElementById('selectAll');
@@ -22,12 +45,13 @@ function updateSelectedTotal() {
         count++;
     });
 
-    const shippingFee = total >= 500000 ? 0 : 30000;
+    const pricingConfig = readCartPricingConfig();
+    const shippingFee = total >= pricingConfig.freeShippingMinAmount ? 0 : pricingConfig.shippingFeeAmount;
     const grandTotal = total + shippingFee;
 
     document.getElementById('selectedCount').textContent = count;
     document.getElementById('selectedSubtotal').textContent = total.toLocaleString('vi-VN') + 'đ';
-    document.getElementById('shippingFee').textContent = shippingFee === 0 ? 'Miễn phí' : '30.000đ';
+    document.getElementById('shippingFee').textContent = shippingFee === 0 ? 'Miễn phí' : shippingFee.toLocaleString('vi-VN') + 'đ';
     document.getElementById('selectedTotal').textContent = grandTotal.toLocaleString('vi-VN') + 'đ';
     document.getElementById('checkoutCount').textContent = count;
 

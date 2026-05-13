@@ -5,5 +5,10 @@ const legacy = require('./legacy');
 module.exports = {
     getStorefrontSettings: legacy.getStorefrontSettings,
     updateStorefrontSettings: legacy.updateStorefrontSettings,
+    saveStorefrontSettingsDraft: legacy.saveStorefrontSettingsDraft,
+    publishStorefrontSettings: legacy.publishStorefrontSettings,
+    discardStorefrontSettingsDraft: legacy.discardStorefrontSettingsDraft,
+    resetStorefrontSettingsDraft: legacy.resetStorefrontSettingsDraft,
+    uploadStorefrontAsset: legacy.uploadStorefrontAsset,
     requestBulkDeleteVerification: legacy.requestBulkDeleteVerification
 };

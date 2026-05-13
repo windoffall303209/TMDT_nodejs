@@ -1,12 +1,18 @@
 <%# Trang đăng nhập admin dùng theme storefront nhưng không gắn header, nav hoặc footer mua sắm. %>
 <!DOCTYPE html>
 <html lang="vi">
+<%
+    const loginSettings = typeof storefrontSettings !== 'undefined' && storefrontSettings ? storefrontSettings : {};
+    const loginSiteName = loginSettings.site_name || 'WIND OF FALL';
+    const loginLogoUrl = loginSettings.admin_logo_url || loginSettings.logo_url || '/favicon.png';
+    const loginFaviconUrl = loginSettings.favicon_url || '/favicon.png';
+%>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đăng nhập quản trị | WIND OF FALL</title>
-    <link rel="icon" type="image/png" href="/favicon.png">
-    <link rel="shortcut icon" href="/favicon.png">
+    <title>Đăng nhập quản trị | <%= loginSiteName %></title>
+    <link rel="icon" type="image/png" href="<%= loginFaviconUrl %>">
+    <link rel="shortcut icon" href="<%= loginFaviconUrl %>">
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="/css/admin/login.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18,10 +24,10 @@
 
     <main class="admin-login-page auth-page auth-page--admin">
         <div class="admin-login-topbar" aria-label="Thanh truy cập quản trị">
-            <a href="/" class="admin-login-brand" aria-label="WIND OF FALL">
-                <img src="/favicon.png" alt="WIND OF FALL" class="admin-login-brand__mark">
+            <a href="/" class="admin-login-brand" aria-label="<%= loginSiteName %>">
+                <img src="<%= loginLogoUrl %>" alt="<%= loginSiteName %>" class="admin-login-brand__mark">
                 <span class="admin-login-brand__text">
-                    <strong>WIND OF FALL</strong>
+                    <strong><%= loginSiteName %></strong>
                     <small>Không gian quản trị</small>
                 </span>
             </a>

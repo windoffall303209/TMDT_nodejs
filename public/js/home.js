@@ -1,7 +1,7 @@
 // Điều phối tương tác trang chủ, gồm layout động, popup banner và carousel hero.
 
 const POPUP_BANNER_STORAGE_PREFIX = 'popupBanner:lastSeen:';
-const POPUP_BANNER_COOLDOWN_MS = 6 * 60 * 60 * 1000;
+const DEFAULT_POPUP_BANNER_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Ghi biến CSS số cột từ cấu hình storefront nếu giá trị hợp lệ.
@@ -41,6 +41,15 @@ function getPopupBannerElement() {
 function getPopupBannerStorageKey(popupBanner) {
     const bannerKey = popupBanner?.dataset.popupBannerKey || 'default';
     return `${POPUP_BANNER_STORAGE_PREFIX}${bannerKey}`;
+}
+
+function getPopupBannerCooldownMs(popupBanner) {
+    const hours = Number.parseInt(popupBanner?.dataset.popupCooldownHours, 10);
+    if (!Number.isInteger(hours) || hours <= 0) {
+        return DEFAULT_POPUP_BANNER_COOLDOWN_MS;
+    }
+
+    return hours * 60 * 60 * 1000;
 }
 
 /**
@@ -94,7 +103,7 @@ function shouldHidePopupBanner(popupBanner) {
     }
 
     const age = Date.now() - lastSeenAt;
-    if (age < POPUP_BANNER_COOLDOWN_MS) {
+    if (age < getPopupBannerCooldownMs(popupBanner)) {
         return true;
     }
 

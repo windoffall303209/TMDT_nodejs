@@ -36,17 +36,37 @@ function invalidateStorefrontSettingsCache() {
     pendingLoad = null;
 }
 
+function shouldBypassMaintenance(req) {
+    const path = req.path || req.originalUrl || '';
+    return path.startsWith('/admin')
+        || path.startsWith('/orders/payment/')
+        || path === '/favicon.ico';
+}
+
 // Xử lý storefront settings.
 async function storefrontSettings(req, res, next) {
+    let activeSettings = null;
+
     try {
         const settings = await loadStorefrontSettings();
+        activeSettings = settings;
         req.storefrontSettings = settings;
         res.locals.storefrontSettings = settings;
     } catch (error) {
         console.error('Storefront settings middleware error:', error);
         const fallbackSettings = StorefrontSetting.getDefaultSettings();
+        activeSettings = fallbackSettings;
         req.storefrontSettings = fallbackSettings;
         res.locals.storefrontSettings = fallbackSettings;
+    }
+
+    if (activeSettings?.maintenance_mode === true && !shouldBypassMaintenance(req)) {
+        res.set('Retry-After', '3600');
+        res.set('Cache-Control', 'no-store');
+        return res.status(503).render('maintenance', {
+            settings: activeSettings,
+            user: req.user || null
+        });
     }
 
     next();

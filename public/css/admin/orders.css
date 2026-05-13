@@ -91,19 +91,22 @@
   text-align: center;
 }
 
-body.admin-body--orders .order-management-menu {
+body.admin-body--orders .order-management-menu,
+body.admin-body--returns .order-management-menu {
   gap: 6px;
   padding: 3px;
 }
 
-body.admin-body--orders .order-management-menu__link {
+body.admin-body--orders .order-management-menu__link,
+body.admin-body--returns .order-management-menu__link {
   gap: 6px;
   padding: 8px 11px;
   border-radius: 6px;
   font-size: 13.2px;
 }
 
-body.admin-body--orders .order-management-menu__count {
+body.admin-body--orders .order-management-menu__count,
+body.admin-body--returns .order-management-menu__count {
   min-width: 18px;
   padding: 2px 6px;
   font-size: 12px;

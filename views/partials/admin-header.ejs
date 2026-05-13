@@ -28,12 +28,16 @@
     });
     const isChatPage = currentPage === 'chat';
     const extraAdminPageStyles = Array.isArray(typeof pageStyles !== 'undefined' ? pageStyles : null) ? pageStyles : [];
+    const adminWebsiteSettings = typeof storefrontSettings !== 'undefined' && storefrontSettings ? storefrontSettings : {};
+    const adminSiteName = adminWebsiteSettings.site_name || 'WIND OF FALL';
+    const adminLogoUrl = adminWebsiteSettings.admin_logo_url || adminWebsiteSettings.logo_url || '/favicon.png';
+    const adminFaviconUrl = adminWebsiteSettings.favicon_url || '/favicon.png';
 %>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= pageMeta.label %> | Admin WIND OF FALL</title>
-    <link rel="icon" type="image/png" href="/favicon.png">
+    <title><%= pageMeta.label %> | Admin <%= adminSiteName %></title>
+    <link rel="icon" type="image/png" href="<%= adminFaviconUrl %>">
     <link rel="stylesheet" href="/css/style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -48,6 +52,7 @@
     <% extraAdminPageStyles.forEach((href) => { %>
         <link rel="stylesheet" href="<%= href %>">
     <% }) %>
+    <link rel="stylesheet" href="/css/admin/core/admin-compact-density.css?v=otp-modal-20260513">
 </head>
 
 <!-- ===== Khung Admin: sidebar, topbar, vùng nội dung ===== -->
@@ -56,9 +61,9 @@
     <aside class="admin-sidebar" id="adminSidebar">
         <div class="admin-sidebar__brand">
             <a href="/admin/dashboard" class="admin-sidebar__brand-link">
-                <img src="/favicon.png" alt="WIND OF FALL" class="admin-sidebar__brand-mark">
+                <img src="<%= adminLogoUrl %>" alt="<%= adminSiteName %>" class="admin-sidebar__brand-mark">
                 <span class="admin-sidebar__brand-copy">
-                    <strong>WIND OF FALL</strong>
+                    <strong><%= adminSiteName %></strong>
                     <small>Back office control</small>
                 </span>
             </a>
@@ -226,9 +231,9 @@
         </button>
 
         <a href="/admin/dashboard" class="admin-topbar__brand">
-            <img src="/favicon.png" alt="WIND OF FALL" class="admin-topbar__brand-mark">
+            <img src="<%= adminLogoUrl %>" alt="<%= adminSiteName %>" class="admin-topbar__brand-mark">
             <span class="admin-topbar__brand-copy">
-                <strong>WIND OF FALL</strong>
+                <strong><%= adminSiteName %></strong>
                 <small>Admin</small>
             </span>
         </a>

@@ -40,12 +40,9 @@
         <div class="admin-toolbar">
             <div class="admin-toolbar__info">
                 <p class="admin-toolbar__title">Tìm đơn hàng</p>
-                <p class="admin-toolbar__text">
-                    Tìm theo mã đơn, tên khách, email hoặc số điện thoại.
-                    <% if (searchQuery) { %>
-                        Đang lọc với từ khóa: "<strong><%= searchQuery %></strong>"
-                    <% } %>
-                </p>
+                <% if (searchQuery) { %>
+                    <p class="admin-toolbar__text">Đang lọc với từ khóa: "<strong><%= searchQuery %></strong>"</p>
+                <% } %>
             </div>
             <form action="/admin/orders" method="GET" class="admin-search-form">
                 <% if (currentActiveGroup !== 'all') { %>

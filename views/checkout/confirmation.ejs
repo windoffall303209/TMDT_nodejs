@@ -4,10 +4,11 @@
 <link rel="stylesheet" href="/css/orders.css">
 
 <%
+    const checkoutSettings = typeof storefrontSettings !== 'undefined' && storefrontSettings ? storefrontSettings : {};
     const isPaymentSettled = order.payment_status === 'paid' || ['delivered', 'completed'].includes(order.status);
     const paymentStatusMessage = isPaymentSettled
         ? 'Đơn hàng đã được thanh toán.'
-        : (order.payment_method === 'cod' ? 'Đơn hàng sẽ được thanh toán khi nhận hàng.' : 'Đơn hàng đang chờ thanh toán.');
+        : (order.payment_method === 'cod' ? 'Đơn hàng sẽ được thanh toán khi nhận hàng.' : (checkoutSettings.payment_reminder_text || 'Đơn hàng đang chờ thanh toán.'));
     const showPaymentCountdown = order.status === 'pending_payment' && order.payment_status !== 'paid' && (order.payment_method === 'vnpay' || order.payment_method === 'momo') && order.payment_expires_at;
 %>
 

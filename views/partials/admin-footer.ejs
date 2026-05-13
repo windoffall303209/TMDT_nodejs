@@ -5,11 +5,12 @@
 
 <!-- ===== Footer Admin + scripts theo từng trang ===== -->
 <% const shouldHideAdminFooter = typeof hideAdminFooter !== 'undefined' && hideAdminFooter; %>
+<% const adminFooterSettings = typeof storefrontSettings !== 'undefined' && storefrontSettings ? storefrontSettings : {}; %>
 <% if (!shouldHideAdminFooter) { %>
 <footer class="admin-footer">
     <div class="admin-footer__inner">
         <div>
-            <strong>WIND OF FALL Admin</strong>
+            <strong><%= adminFooterSettings.site_name || 'WIND OF FALL' %> Admin</strong>
             <p>Back office cho sản phẩm, đơn hàng, ưu đãi và chăm sóc khách hàng.</p>
         </div>
     </div>
@@ -17,7 +18,7 @@
 <% } %>
 
 <script src="/js/toast.js"></script>
-<script src="/js/admin/admin-shell.js"></script>
+<script src="/js/admin/admin-shell.js?v=otp-modal-20260513"></script>
 <% extraAdminPageScripts.forEach((src) => { %>
 <script src="<%= src %>"></script>
 <% }) %>

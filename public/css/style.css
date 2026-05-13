@@ -87,7 +87,7 @@ body {
     color: var(--ink);
     background:
         radial-gradient(circle at top right, rgba(242, 201, 76, 0.13), transparent 28%),
-        linear-gradient(180deg, #fffdf8 0%, #fcfaf4 100%);
+        linear-gradient(180deg, #fffdf8 0%, var(--paper) 100%);
 }
 
 a {
@@ -419,7 +419,8 @@ main {
 }
 
 .header-brand__text strong {
-    font-size: 22px;
+    font-family: var(--brand-font-family, var(--font-family));
+    font-size: var(--brand-name-font-size, 22px);
     font-weight: 800;
     line-height: 1;
     letter-spacing: -0.05em;
@@ -911,7 +912,7 @@ main {
 }
 
 .header--scrolled .header-brand__text strong {
-    font-size: 18px;
+    font-size: max(16px, calc(var(--brand-name-font-size, 22px) - 4px));
 }
 
 .header--scrolled .header-brand__text small {
@@ -1997,7 +1998,7 @@ body.mobile-menu-open {
     }
 
     .header-brand__text strong {
-        font-size: 18px;
+        font-size: max(16px, calc(var(--brand-name-font-size, 22px) - 4px));
     }
 
     .header-brand__text small {

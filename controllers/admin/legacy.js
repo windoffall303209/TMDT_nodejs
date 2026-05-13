@@ -29,7 +29,7 @@ const { scheduleProductVisualEmbeddingSync } = require('../../services/productVi
 const ProductImageEmbedding = require('../../models/ProductImageEmbedding');
 
 const ADMIN_PRODUCT_SELECTION_LIMIT = 20000;
-const BULK_DELETE_VERIFICATION_TTL_MS = 10 * 60 * 1000;
+const DEFAULT_BULK_DELETE_VERIFICATION_TTL_MS = 10 * 60 * 1000;
 const BULK_DELETE_ACTIONS = {
     export_products: {
         label: 'xuất danh sách sản phẩm',
@@ -61,6 +61,20 @@ async function getDefaultWebEmail() {
     } catch (error) {
         return emailService.getAdminEmail();
     }
+}
+
+async function getSensitiveOtpTtlMs() {
+    try {
+        const settings = await StorefrontSetting.getAll();
+        const minutes = Number.parseInt(settings.otp_expire_minutes, 10);
+        if (Number.isInteger(minutes) && minutes >= 1 && minutes <= 60) {
+            return minutes * 60 * 1000;
+        }
+    } catch (error) {
+        // Fallback to default TTL if settings are unavailable.
+    }
+
+    return DEFAULT_BULK_DELETE_VERIFICATION_TTL_MS;
 }
 
 function validateBulkDeleteVerification(req, action, code) {
@@ -154,22 +168,22 @@ function parseChecked(value) {
 }
 
 // Chuẩn hóa discount value or throw.
-function normalizeDiscountValueOrThrow(type, value, entityLabel = 'Gi� tr�') {
+function normalizeDiscountValueOrThrow(type, value, entityLabel = 'Giá trị') {
     const parsedValue = Number(value);
 
     if (!Number.isFinite(parsedValue) || parsedValue <= 0) {
-        throw new Error(`${entityLabel} ph�i l�n h�n 0`);
+        throw new Error(`${entityLabel} phải lớn hơn 0`);
     }
 
     if (type === 'percentage' && parsedValue >= 100) {
-        throw new Error(`${entityLabel} ph�n trm ph�i nh� h�n 100%`);
+        throw new Error(`${entityLabel} phđn trm phđi nhđ hđn 100%`);
     }
 
     return parsedValue;
 }
 
 // Xử lý assert ngày range valid.
-function assertDateRangeValid(startDate, endDate, entityLabel = 'Kho�ng th�i gian') {
+function assertDateRangeValid(startDate, endDate, entityLabel = 'Khoảng thời gian') {
     if (!startDate || !endDate) {
         return;
     }
@@ -182,7 +196,7 @@ function assertDateRangeValid(startDate, endDate, entityLabel = 'Kho�ng th�i
     }
 
     if (start > end) {
-        throw new Error(`${entityLabel} kh�ng h�p l�`);
+        throw new Error(`${entityLabel} không hợp lệ`);
     }
 }
 
@@ -205,12 +219,12 @@ function formatCurrencyVnd(value) {
 // Định dạng ngày time vi.
 function formatDateTimeVi(value) {
     if (!value) {
-        return 'Kh�ng gi�i h�n';
+        return 'Không giới hạn';
     }
 
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) {
-        return 'Kh�ng gi�i h�n';
+        return 'Không giới hạn';
     }
 
     return date.toLocaleString('vi-VN');
@@ -309,22 +323,22 @@ async function attachSaleAssignments(sales, totalActiveProducts = 0) {
             const endDate = sale.end_date ? new Date(sale.end_date) : null;
 
             if (assignedProductCount === 0) {
-                return { key: 'unassigned', label: 'Ch�a g�n s�n ph�m', tone: 'pending' };
+                return { key: 'unassigned', label: 'Chưa gán sản phẩm', tone: 'pending' };
             }
 
             if (!sale.is_active) {
-                return { key: 'paused', label: 'T�m d�ng', tone: 'cancelled' };
+                return { key: 'paused', label: 'Tạm dừng', tone: 'cancelled' };
             }
 
             if (startDate && !Number.isNaN(startDate.getTime()) && now < startDate) {
-                return { key: 'upcoming', label: 'S�p di�n ra', tone: 'pending' };
+                return { key: 'upcoming', label: 'Sắp diễn ra', tone: 'pending' };
             }
 
             if (endDate && !Number.isNaN(endDate.getTime()) && now > endDate) {
-                return { key: 'expired', label: 'H�t h�n', tone: 'cancelled' };
+                return { key: 'expired', label: 'Hết hạn', tone: 'cancelled' };
             }
 
-            return { key: 'active', label: 'ang di�n ra', tone: 'delivered' };
+            return { key: 'active', label: 'Đang diễn ra', tone: 'delivered' };
         })()
     }));
 }
@@ -353,11 +367,11 @@ async function getAnnouncementRecipients() {
         }
 
         seenEmails.add(email);
-        const fallbackName = email.split('@')[0] || 'b�n';
+        const fallbackName = email.split('@')[0] || 'bạn';
 
         list.push({
             email,
-            full_name: String(subscriber?.user_name || fallbackName).trim() || 'b�n'
+            full_name: String(subscriber?.user_name || fallbackName).trim() || 'bạn'
         });
 
         return list;
@@ -368,48 +382,48 @@ async function getAnnouncementRecipients() {
 function buildVoucherAnnouncementCampaign(voucher) {
     const baseUrl = String(process.env.BASE_URL || 'http://localhost:3000').replace(/\/$/, '');
     const valueText = voucher.type === 'percentage'
-        ? `Gi�m ${voucher.value}%${voucher.max_discount_amount ? `, t�i a ${formatCurrencyVnd(voucher.max_discount_amount)}` : ''}`
-        : `Gi�m ${formatCurrencyVnd(voucher.value)}`;
+        ? `Giảm ${voucher.value}%${voucher.max_discount_amount ? `, tải a ${formatCurrencyVnd(voucher.max_discount_amount)}` : ''}`
+        : `Giảm ${formatCurrencyVnd(voucher.value)}`;
     const minOrderText = Number(voucher.min_order_amount || 0) > 0
-        ? `�n t�i thi�u ${formatCurrencyVnd(voucher.min_order_amount)}`
-        : 'Kh�ng y�u c�u gi� tr� �n t�i thi�u';
+        ? `đơn tối thiểu ${formatCurrencyVnd(voucher.min_order_amount)}`
+        : 'Không yêu cầu giá trị đơn tối thiểu';
     const scopeText = voucher.applicable_product_count > 0
-        ? `�p d�ng cho ${voucher.applicable_product_count} s�n ph�m ��c ch�n`
-        : '�p d�ng cho to�n b� s�n ph�m � i�u ki�n';
+        ? `Áp dụng cho ${voucher.applicable_product_count} sản phẩm được chọn`
+        : 'Áp dụng cho toàn bộ sản phẩm đ iều kiện';
     const descriptionHtml = voucher.description
         ? `<p style="margin:0 0 18px;color:#65594d;line-height:1.7;">${escapeHtml(voucher.description)}</p>`
         : '';
 
     return {
-        subject: `Voucher m�i t� WIND OF FALL: ${voucher.code}`,
+        subject: `Voucher mới từ WIND OF FALL: ${voucher.code}`,
         content: `
             <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; padding: 24px; color: #211d18;">
                 <div style="text-align:center; margin-bottom: 24px;">
                     <h1 style="margin:0; font-size:28px; letter-spacing:0.04em;">WIND OF FALL</h1>
-                    <p style="margin:8px 0 0; color:#7c6f60;">Th�ng b�o �u �i m�i d�nh cho {{name}}</p>
+                    <p style="margin:8px 0 0; color:#7c6f60;">Thông báo đu đi mới dành cho {{name}}</p>
                 </div>
                 <div style="background: linear-gradient(135deg, #f8e3a2, #f4c95d); border-radius: 24px; padding: 28px; margin-bottom: 20px;">
-                    <p style="margin:0 0 10px; font-size:13px; letter-spacing:0.14em; text-transform:uppercase; color:#7b5d1a;">Voucher m�i</p>
+                    <p style="margin:0 0 10px; font-size:13px; letter-spacing:0.14em; text-transform:uppercase; color:#7b5d1a;">Voucher mới</p>
                     <h2 style="margin:0 0 14px; font-size:30px; color:#1f1a13;">${escapeHtml(voucher.code)}</h2>
                     <p style="margin:0; font-size:18px; font-weight:700; color:#402d05;">${escapeHtml(valueText)}</p>
                 </div>
                 ${descriptionHtml}
                 <table style="width:100%; border-collapse:collapse; margin-bottom: 24px;">
                     <tr>
-                        <td style="padding:10px 12px; border:1px solid #ead9b5; color:#7c6f60;">Ph�m vi</td>
+                        <td style="padding:10px 12px; border:1px solid #ead9b5; color:#7c6f60;">Phạm vi</td>
                         <td style="padding:10px 12px; border:1px solid #ead9b5; font-weight:600;">${escapeHtml(scopeText)}</td>
                     </tr>
                     <tr>
-                        <td style="padding:10px 12px; border:1px solid #ead9b5; color:#7c6f60;">i�u ki�n</td>
+                        <td style="padding:10px 12px; border:1px solid #ead9b5; color:#7c6f60;">iều kiện</td>
                         <td style="padding:10px 12px; border:1px solid #ead9b5; font-weight:600;">${escapeHtml(minOrderText)}</td>
                     </tr>
                     <tr>
-                        <td style="padding:10px 12px; border:1px solid #ead9b5; color:#7c6f60;">Th�i gian �p d�ng</td>
+                        <td style="padding:10px 12px; border:1px solid #ead9b5; color:#7c6f60;">Thời gian áp dụng</td>
                         <td style="padding:10px 12px; border:1px solid #ead9b5; font-weight:600;">${escapeHtml(formatDateTimeVi(voucher.start_date))} - ${escapeHtml(formatDateTimeVi(voucher.end_date))}</td>
                     </tr>
                 </table>
                 <div style="text-align:center;">
-                    <a href="${baseUrl}" style="display:inline-block; padding:14px 28px; border-radius:999px; background:#17120c; color:#fff; text-decoration:none; font-weight:700;">Mua s�m ngay</a>
+                    <a href="${baseUrl}" style="display:inline-block; padding:14px 28px; border-radius:999px; background:#17120c; color:#fff; text-decoration:none; font-weight:700;">Mua sđm ngay</a>
                 </div>
             </div>
         `
@@ -420,41 +434,41 @@ function buildVoucherAnnouncementCampaign(voucher) {
 function buildSaleAnnouncementCampaign(sale) {
     const baseUrl = String(process.env.BASE_URL || 'http://localhost:3000').replace(/\/$/, '');
     const valueText = sale.type === 'percentage'
-        ? `Gi�m ${sale.value}%`
-        : `Gi�m ${formatCurrencyVnd(sale.value)}`;
+        ? `Giảm ${sale.value}%`
+        : `Giảm ${formatCurrencyVnd(sale.value)}`;
     const scopeText = sale.assigned_product_count > 0
-        ? `ang �p d�ng cho ${sale.assigned_product_count} s�n ph�m`
-        : 'Ch�a g�n s�n ph�m c� th�';
+        ? `ang Áp dụng cho ${sale.assigned_product_count} sản phẩm`
+        : 'Chưa gán sản phẩm cụ thể';
     const descriptionHtml = sale.description
         ? `<p style="margin:0 0 18px;color:#65594d;line-height:1.7;">${escapeHtml(sale.description)}</p>`
         : '';
 
     return {
-        subject: `Khuy�n m�i m�i t� WIND OF FALL: ${sale.name}`,
+        subject: `Khuyến mãi mới từ WIND OF FALL: ${sale.name}`,
         content: `
             <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; padding: 24px; color: #211d18;">
                 <div style="text-align:center; margin-bottom: 24px;">
                     <h1 style="margin:0; font-size:28px; letter-spacing:0.04em;">WIND OF FALL</h1>
-                    <p style="margin:8px 0 0; color:#7c6f60;">�u �i m�i d�nh cho {{name}}</p>
+                    <p style="margin:8px 0 0; color:#7c6f60;">đu đi mới dành cho {{name}}</p>
                 </div>
                 <div style="background: linear-gradient(135deg, #fde3b7, #f8b35b); border-radius: 24px; padding: 28px; margin-bottom: 20px;">
-                    <p style="margin:0 0 10px; font-size:13px; letter-spacing:0.14em; text-transform:uppercase; color:#9a5412;">Ch��ng tr�nh khuy�n m�i</p>
+                    <p style="margin:0 0 10px; font-size:13px; letter-spacing:0.14em; text-transform:uppercase; color:#9a5412;">Chđđng trảnh khuyến mãi</p>
                     <h2 style="margin:0 0 14px; font-size:30px; color:#1f1a13;">${escapeHtml(sale.name)}</h2>
                     <p style="margin:0; font-size:18px; font-weight:700; color:#6f2c12;">${escapeHtml(valueText)}</p>
                 </div>
                 ${descriptionHtml}
                 <table style="width:100%; border-collapse:collapse; margin-bottom: 24px;">
                     <tr>
-                        <td style="padding:10px 12px; border:1px solid #ead9b5; color:#7c6f60;">Ph�m vi</td>
+                        <td style="padding:10px 12px; border:1px solid #ead9b5; color:#7c6f60;">Phạm vi</td>
                         <td style="padding:10px 12px; border:1px solid #ead9b5; font-weight:600;">${escapeHtml(scopeText)}</td>
                     </tr>
                     <tr>
-                        <td style="padding:10px 12px; border:1px solid #ead9b5; color:#7c6f60;">Th�i gian �p d�ng</td>
+                        <td style="padding:10px 12px; border:1px solid #ead9b5; color:#7c6f60;">Thời gian áp dụng</td>
                         <td style="padding:10px 12px; border:1px solid #ead9b5; font-weight:600;">${escapeHtml(formatDateTimeVi(sale.start_date))} - ${escapeHtml(formatDateTimeVi(sale.end_date))}</td>
                     </tr>
                 </table>
                 <div style="text-align:center;">
-                    <a href="${baseUrl}" style="display:inline-block; padding:14px 28px; border-radius:999px; background:#17120c; color:#fff; text-decoration:none; font-weight:700;">Kh�m ph� b� s�u t�p</a>
+                    <a href="${baseUrl}" style="display:inline-block; padding:14px 28px; border-radius:999px; background:#17120c; color:#fff; text-decoration:none; font-weight:700;">Khđm phđ bđ sđu tđp</a>
                 </div>
             </div>
         `
@@ -554,17 +568,17 @@ exports.getDashboard = async (req, res) => {
             }
         };
         let stats = {
-            total_orders: 0,        // T�ng s� �n h�ng
+            total_orders: 0,        // Tổng số đơn hàng
             pending_payment_orders: 0,
-            pending_orders: 0,      // �n h�ng ch� x� l�
-            delivered_orders: 0,    // �n h�ng � giao
-            completed_orders: 0,    // �n h�ng � ho�n th�nh
-            cancelled_orders: 0,    // �n h�ng � h�y
-            total_revenue: 0,       // T�ng doanh thu
-            today_revenue: 0,       // Doanh thu h�m nay
-            month_revenue: 0        // Doanh thu th�ng n�y
+            pending_orders: 0,      // Đơn hàng chờ xử lý
+            delivered_orders: 0,    // đơn hàng đã giao
+            completed_orders: 0,    // đơn hàng đã hoàn thành
+            cancelled_orders: 0,    // đơn hàng đã hủy
+            total_revenue: 0,       // Tổng doanh thu
+            today_revenue: 0,       // Doanh thu hôm nay
+            month_revenue: 0        // Doanh thu tháng này
         };
-        let recentOrders = [];      // Danh s�ch �n h�ng g�n �y
+        let recentOrders = [];      // Danh sách đơn hàng gđn đy
         stats.total_users = 0;
         stats.total_products = 0;
         stats.processing_orders = 0;
@@ -609,8 +623,8 @@ exports.getDashboard = async (req, res) => {
             currentPage: 'dashboard'
         });
     } catch (error) {
-        console.error('L�i trang qu�n tr�:', error);
-        res.status(500).render('error', { message: 'L�i t�i dashboard: ' + error.message, user: req.user });
+        console.error('Lỗi trang quản trị:', error);
+        res.status(500).render('error', { message: 'Lỗi tải dashboard: ' + error.message, user: req.user });
     }
 };
 
@@ -624,12 +638,14 @@ exports.requestBulkDeleteVerification = async (req, res) => {
         const meta = BULK_DELETE_ACTIONS[action];
         const code = String(crypto.randomInt(100000, 1000000));
         const email = await getDefaultWebEmail();
+        const ttlMs = await getSensitiveOtpTtlMs();
+        const ttlMinutes = Math.max(1, Math.round(ttlMs / 60000));
 
         req.session = req.session || {};
         req.session.adminBulkDeleteVerification = {
             action,
             code,
-            expiresAt: Date.now() + BULK_DELETE_VERIFICATION_TTL_MS
+            expiresAt: Date.now() + ttlMs
         };
 
         const sent = await emailService.sendEmail(
@@ -639,7 +655,7 @@ exports.requestBulkDeleteVerification = async (req, res) => {
                 <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 20px;">
                     <h2>Mã xác thực thao tác quản trị</h2>
                     <p>Bạn đang yêu cầu <strong>${meta.label}</strong>.</p>
-                    <p>Mã xác thực có hiệu lực trong 10 phút:</p>
+                    <p>Mã xác thực có hiệu lực trong ${ttlMinutes} phút:</p>
                     <div style="font-size: 32px; font-weight: 700; letter-spacing: 8px; padding: 16px 20px; background: #f7f2e8; border-radius: 12px; text-align: center;">${code}</div>
                     <p style="color: #b91c1c;">Nếu không phải bạn thực hiện, hãy bỏ qua email này.</p>
                 </div>
@@ -651,7 +667,7 @@ exports.requestBulkDeleteVerification = async (req, res) => {
             return res.status(500).json({ success: false, message: 'Không thể gửi mã xác thực qua email. Vui lòng kiểm tra cấu hình email.' });
         }
 
-        res.json({ success: true, email, expiresInSeconds: BULK_DELETE_VERIFICATION_TTL_MS / 1000 });
+        res.json({ success: true, email, expiresInSeconds: ttlMs / 1000 });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -691,7 +707,7 @@ exports.getCategories = async (req, res) => {
             currentPage: 'categories'
         });
     } catch (error) {
-        res.status(500).render('error', { message: 'L�i t�i danh m�c: ' + error.message, user: req.user });
+        res.status(500).render('error', { message: 'Lỗi tải danh mục: ' + error.message, user: req.user });
     }
 };
 
@@ -772,15 +788,15 @@ exports.importCategories = async (req, res) => {
         if (!workbookPath) {
             return res.redirect(buildAdminNoticeRedirect(
                 '/admin/categories',
-                'Vui l�ng t�i l�n file Excel danh m�c.',
+                'Vui lòng tải lên file Excel danh mục.',
                 'error'
             ));
         }
 
         const result = await importCategoriesFromWorkbook({ workbookPath });
         const noticeMessage = result.failedCount > 0
-            ? `� import ${result.createdCount} danh m�c m�i, c�p nh�t ${result.updatedCount} danh m�c, l�i ${result.failedCount} d�ng.`
-            : `� import ${result.createdCount} danh m�c m�i v� c�p nh�t ${result.updatedCount} danh m�c.`;
+            ? `Đã import ${result.createdCount} danh mục mới, cập nhật ${result.updatedCount} danh mục, lỗi ${result.failedCount} dòng.`
+            : `Đã import ${result.createdCount} danh mục mới và cập nhật ${result.updatedCount} danh mục.`;
 
         return res.redirect(buildAdminNoticeRedirect(
             '/admin/categories',
@@ -790,7 +806,7 @@ exports.importCategories = async (req, res) => {
     } catch (error) {
         return res.redirect(buildAdminNoticeRedirect(
             '/admin/categories',
-            error.message || 'Kh�ng th� import danh m�c.',
+            error.message || 'Không thể import danh mục.',
             'error'
         ));
     } finally {
@@ -804,12 +820,12 @@ exports.updateCategory = async (req, res) => {
         const { id } = req.params;
         const existing = await Category.findByIdAny(id);
         if (!existing) {
-            return res.status(404).json({ success: false, message: 'Danh m�c kh�ng t�n t�i' });
+            return res.status(404).json({ success: false, message: 'Danh mục không tồn tại' });
         }
         const { name, slug, description, parent_id, image_url, display_order } = req.body;
         const uploadedImageUrl = req.file?.cloudinaryUrl || null;
         if (parent_id && await Category.createsCircularReference(id, parent_id)) {
-            return res.status(400).json({ success: false, message: 'Kh�ng th� t�o v�ng l�p danh m�c cha-con' });
+            return res.status(400).json({ success: false, message: 'Không thể tạo vòng lặp danh mục cha-con' });
         }
         await Category.update(id, {
             name: name || existing.name,
@@ -819,7 +835,7 @@ exports.updateCategory = async (req, res) => {
             image_url: uploadedImageUrl || (image_url !== undefined ? (image_url || null) : existing.image_url),
             display_order: display_order !== undefined ? (parseInt(display_order) || 0) : existing.display_order
         });
-        res.json({ success: true, message: 'C�p nh�t danh m�c th�nh c�ng' });
+        res.json({ success: true, message: 'Cập nhật danh mục thành công' });
     } catch (error) {
         res.status(400).json({ success: false, message: error.message });
     }
@@ -833,11 +849,11 @@ exports.deleteCategory = async (req, res) => {
         if (stats.product_count > 0 || stats.child_count > 0) {
             return res.status(400).json({
                 success: false,
-                message: `Kh�ng th� x�a: danh m�c ang c� ${stats.product_count} s�n ph�m v� ${stats.child_count} danh m�c con`
+                message: `Không thể xóa: danh mục đang có ${stats.product_count} sản phẩm và ${stats.child_count} danh mục con`
             });
         }
         await Category.delete(id);
-        res.json({ success: true, message: '� x�a danh m�c' });
+        res.json({ success: true, message: 'Đã xóa danh mục' });
     } catch (error) {
         res.status(400).json({ success: false, message: error.message });
     }
@@ -855,10 +871,10 @@ exports.deleteAllCategories = async (req, res) => {
             blockedCount: result.blockedCategories,
             deletedProducts: result.deletedProducts,
             message: result.totalCategories === 0
-                ? 'Kh�ng c� danh m�c n�o trong database � x�a.'
+                ? 'Không có danh mục nđo trong database đ xóa.'
                 : result.blockedCategories > 0
-                    ? `� x�a v)nh vi�n ${result.deletedCategories} danh m�c v� ${result.deletedProducts} s�n ph�m li�n quan. C�n ${result.blockedCategories} danh m�c kh�ng th� x�a v� s�n ph�m c�a ch�ng � n�m trong l�ch s� �n h�ng.`
-                    : `� x�a v)nh vi�n ${result.deletedCategories} danh m�c kh�i database.`
+                    ? `Đã xóa vĩnh viễn ${result.deletedCategories} danh mục và ${result.deletedProducts} sản phẩm liên quan. Cđn ${result.blockedCategories} danh mục không thđ xóa vđ sản phẩm cđa chàng đ nđm trong lđch sđ đơn hàng.`
+                    : `Đã xóa vĩnh viễn ${result.deletedCategories} danh mục khỏi database.`
         });
     } catch (error) {
         res.status(400).json({ success: false, message: error.message });
@@ -922,7 +938,7 @@ exports.getProducts = async (req, res) => {
             productStats
         });
     } catch (error) {
-        res.status(500).render('error', { message: 'L�i t�i s�n ph�m: ' + error.message, user: req.user });
+        res.status(500).render('error', { message: 'Lỗi tải sản phẩm: ' + error.message, user: req.user });
     }
 };
 
@@ -967,7 +983,7 @@ exports.importProducts = async (req, res) => {
                 createdCount: 0,
                 failedCount: 0,
                 createdProducts: [],
-                errors: [{ message: 'Vui l�ng t�i l�n file Excel (.xlsx ho�c .xls).' }]
+                errors: [{ message: 'Vui lòng tải lên file Excel (.xlsx hoặc .xls).' }]
             };
             return res.redirect('/admin/products');
         }
@@ -981,8 +997,8 @@ exports.importProducts = async (req, res) => {
         res.redirect(buildAdminNoticeRedirect(
             '/admin/products',
             result.failedCount > 0
-                ? `Da import ${result.createdCount}/${result.totalProducts} san pham. Co ${result.failedCount} dong bi loi.`
-                : `Da import thanh cong ${result.createdCount} san pham.`,
+                ? `Đã import ${result.createdCount}/${result.totalProducts} sản phẩm. Có ${result.failedCount} dòng bị lỗi.`
+                : `Đã import thành công ${result.createdCount} sản phẩm.`,
             result.failedCount > 0 ? 'warning' : 'success'
         ));
     } catch (error) {
@@ -991,9 +1007,9 @@ exports.importProducts = async (req, res) => {
             createdCount: 0,
             failedCount: 0,
             createdProducts: [],
-            errors: [{ message: error.message || 'Khong the import san pham tu file Excel.' }]
+            errors: [{ message: error.message || 'Không thể import sản phẩm từ file Excel.' }]
         };
-        res.redirect(buildAdminNoticeRedirect('/admin/products', 'Import san pham that bai.', 'error'));
+        res.redirect(buildAdminNoticeRedirect('/admin/products', 'Import sản phẩm thất bại.', 'error'));
     } finally {
         cleanupImportUploadFiles(req.files);
     }
@@ -1067,7 +1083,7 @@ exports.updateProduct = async (req, res) => {
 
         const currentProduct = await Product.findById(id);
         if (!currentProduct) {
-            return res.status(404).json({ success: false, message: 'S�n ph�m kh�ng t�n t�i' });
+            return res.status(404).json({ success: false, message: 'Sản phẩm không tồn tại' });
         }
 
         await Product.update(id, {
@@ -1090,7 +1106,7 @@ exports.updateProduct = async (req, res) => {
 
         scheduleProductVisualEmbeddingSync(id);
 
-        res.json({ success: true, message: 'C�p nh�t s�n ph�m th�nh c�ng' });
+        res.json({ success: true, message: 'Cập nhật sản phẩm thành công' });
     } catch (error) {
         res.status(400).json({ success: false, message: error.message });
     }
@@ -1117,10 +1133,10 @@ exports.deleteAllProducts = async (req, res) => {
             deletedCount: result.deletedProducts,
             blockedCount: result.blockedProducts,
             message: result.totalProducts === 0
-                ? 'Kh�ng c� s�n ph�m n�o trong database � x�a.'
+                ? 'Không có sản phẩm nđo trong database đ xóa.'
                 : result.blockedProducts > 0
-                    ? `� x�a v)nh vi�n ${result.deletedProducts} s�n ph�m. C�n ${result.blockedProducts} s�n ph�m kh�ng th� x�a v� � n�m trong l�ch s� �n h�ng.`
-                    : `� x�a v)nh vi�n ${result.deletedProducts} s�n ph�m kh�i database.`
+                    ? `Đã xóa vĩnh viễn ${result.deletedProducts} sản phẩm. Còn ${result.blockedProducts} sản phẩm không thể xóa vđ đ nđm trong lđch sđ đơn hàng.`
+                    : `Đã xóa vĩnh viễn ${result.deletedProducts} sản phẩm khỏi database.`
         });
     } catch (error) {
         res.status(400).json({ success: false, message: error.message });
@@ -1172,7 +1188,7 @@ exports.getOrders = async (req, res) => {
             currentPage: 'orders'
         });
     } catch (error) {
-        res.status(500).render('error', { message: 'L�i t�i �n h�ng: ' + error.message, user: req.user });
+        res.status(500).render('error', { message: 'Lđi tải đơn hàng: ' + error.message, user: req.user });
     }
 };
 
@@ -1188,7 +1204,7 @@ exports.getOrderDetail = async (req, res) => {
             currentPage: 'orders'
         });
     } catch (error) {
-        res.status(500).render('error', { message: 'L�i t�i �n h�ng: ' + error.message, user: req.user });
+        res.status(500).render('error', { message: 'Lđi tải đơn hàng: ' + error.message, user: req.user });
     }
 };
 
@@ -1245,7 +1261,7 @@ exports.getUsers = async (req, res) => {
             pagination: { totalItems, totalPages, currentPage: page, limit }
         });
     } catch (error) {
-        res.status(500).render('error', { message: 'L�i t�i ng��i d�ng: ' + error.message, user: req.user });
+        res.status(500).render('error', { message: 'Lỗi tải người dùng: ' + error.message, user: req.user });
     }
 };
 
@@ -1260,7 +1276,7 @@ exports.getUserDetail = async (req, res) => {
         );
         const userData = users[0];
         if (!userData) {
-            return res.status(404).json({ success: false, message: 'Kh�ng t�m th�y ng��i d�ng' });
+            return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
         }
         const [addresses] = await pool.execute(
             'SELECT * FROM addresses WHERE user_id = ? ORDER BY is_default DESC',
@@ -1309,7 +1325,7 @@ exports.getBanners = async (req, res) => {
             currentPage: 'banners'
         });
     } catch (error) {
-        res.status(500).render('error', { message: 'L�i t�i banners: ' + error.message, user: req.user });
+        res.status(500).render('error', { message: 'Lỗi tải banners: ' + error.message, user: req.user });
     }
 };
 
@@ -1390,7 +1406,7 @@ exports.getSales = async (req, res) => {
             currentPage: 'sales'
         });
     } catch (error) {
-        res.status(500).render('error', { message: 'L�i t�i khuy�n m�i: ' + error.message, user: req.user });
+        res.status(500).render('error', { message: 'Lỗi tải khuyến mãi: ' + error.message, user: req.user });
     }
 };
 
@@ -1400,8 +1416,8 @@ exports.createSale = async (req, res) => {
         const { name, description, type, value, start_date, end_date } = req.body;
         const productIds = parseSelectedProductIds(req.body);
         const shouldNotifySubscribers = parseChecked(req.body.notify_subscribers);
-        const normalizedValue = normalizeDiscountValueOrThrow(type, value, 'Gi� tr� khuy�n m�i');
-        assertDateRangeValid(start_date, end_date, 'Th�i gian khuy�n m�i');
+        const normalizedValue = normalizeDiscountValueOrThrow(type, value, 'Giá trị khuyến mãi');
+        assertDateRangeValid(start_date, end_date, 'Thời gian khuyến mãi');
         const sale = await Sale.create({
             name,
             description,
@@ -1418,22 +1434,22 @@ exports.createSale = async (req, res) => {
             const result = await sendSaleAnnouncement(createdSale);
 
             if (result.total === 0) {
-                return res.redirect(buildAdminNoticeRedirect('/admin/sales', '� t�o khuy�n m�i nh�ng hi�n ch�a c� ng��i ng k� nh�n th�ng b�o.', 'warning'));
+                return res.redirect(buildAdminNoticeRedirect('/admin/sales', 'đ tđo khuyến mãi nhàng hiđn chđa cđ người ng kđ nhđn thông báo.', 'warning'));
             }
 
             if (result.success === result.total) {
-                return res.redirect(buildAdminNoticeRedirect('/admin/sales', `� t�o khuy�n m�i v� g�i email th�nh c�ng t�i ${result.success} ng��i ng k�.`));
+                return res.redirect(buildAdminNoticeRedirect('/admin/sales', `đ tđo khuyến mãi vđ gửi email thảnh cđng tải ${result.success} người ng kđ.`));
             }
 
             if (result.success > 0) {
-                return res.redirect(buildAdminNoticeRedirect('/admin/sales', `� t�o khuy�n m�i v� g�i email t�i ${result.success}/${result.total} ng��i ng k�.`, 'warning'));
+                return res.redirect(buildAdminNoticeRedirect('/admin/sales', `đ tđo khuyến mãi vĐã gửi email tới ${result.success}/${result.total} người ng kđ.`, 'warning'));
             }
 
-            return res.redirect(buildAdminNoticeRedirect('/admin/sales', '� t�o khuy�n m�i nh�ng ch�a g�i email th�nh c�ng. Vui l�ng ki�m tra c�u h�nh email.', 'error'));
+            return res.redirect(buildAdminNoticeRedirect('/admin/sales', 'Đã tạo khuyến mãi nhưng chưa gửi email thành công. Vui lòng kiểm tra cấu hình email.', 'error'));
         }
-        res.redirect(buildAdminNoticeRedirect('/admin/sales', '� t�o khuy�n m�i th�nh c�ng.'));
+        res.redirect(buildAdminNoticeRedirect('/admin/sales', 'Đã tạo khuyến mãi thành công.'));
     } catch (error) {
-        res.redirect(buildAdminNoticeRedirect('/admin/sales', error.message || 'Kh�ng th� t�o khuy�n m�i.', 'error'));
+        res.redirect(buildAdminNoticeRedirect('/admin/sales', error.message || 'Không thể tạo khuyến mãi.', 'error'));
     }
 };
 
@@ -1444,13 +1460,13 @@ exports.updateSale = async (req, res) => {
         const existingSale = await Sale.findById(id);
 
         if (!existingSale) {
-            return res.status(404).json({ success: false, message: 'Khuy�n m�i kh�ng t�n t�i' });
+            return res.status(404).json({ success: false, message: 'Khuyến mãi không tồn tại' });
         }
 
         const { name, description, type, value, start_date, end_date, is_active } = req.body;
         const productIds = parseSelectedProductIds(req.body);
-        const normalizedValue = normalizeDiscountValueOrThrow(type, value, 'Gi� tr� khuy�n m�i');
-        assertDateRangeValid(start_date, end_date, 'Th�i gian khuy�n m�i');
+        const normalizedValue = normalizeDiscountValueOrThrow(type, value, 'Giá trị khuyến mãi');
+        assertDateRangeValid(start_date, end_date, 'Thời gian khuyến mãi');
 
         await Sale.update(id, {
             name,
@@ -1464,7 +1480,7 @@ exports.updateSale = async (req, res) => {
 
         await Sale.assignProducts(id, productIds);
 
-        res.json({ success: true, message: 'C�p nh�t khuy�n m�i th�nh c�ng' });
+        res.json({ success: true, message: 'Cập nhật khuyến mãi thành công' });
     } catch (error) {
         res.status(400).json({ success: false, message: error.message });
     }
@@ -1477,13 +1493,13 @@ exports.deleteSale = async (req, res) => {
         const existingSale = await Sale.findById(id);
 
         if (!existingSale) {
-            return res.status(404).json({ success: false, message: 'Khuy�n m�i kh�ng t�n t�i' });
+            return res.status(404).json({ success: false, message: 'Khuyến mãi không tồn tại' });
         }
 
         await Sale.clearAssignedProducts(id);
         await Sale.delete(id);
 
-        res.json({ success: true, message: '� ng�ng khuy�n m�i' });
+        res.json({ success: true, message: 'Đã ngừng khuyến mãi' });
     } catch (error) {
         res.status(400).json({ success: false, message: error.message });
     }
@@ -1496,7 +1512,7 @@ exports.sendSaleAnnouncementEmail = async (req, res) => {
         const existingSale = await Sale.findById(id);
 
         if (!existingSale) {
-            return res.status(404).json({ success: false, message: 'Khuy�n m�i kh�ng t�n t�i', toastType: 'error' });
+            return res.status(404).json({ success: false, message: 'Khuyến mãi không tồn tại', toastType: 'error' });
         }
 
         const [sale] = await attachSaleAssignments([existingSale]);
@@ -1506,7 +1522,7 @@ exports.sendSaleAnnouncementEmail = async (req, res) => {
             return res.json({
                 success: true,
                 toastType: 'warning',
-                message: 'Hi�n ch�a c� ng��i d�ng n�o ng k� nh�n th�ng b�o.'
+                message: 'Hiđn chđa cđ người dđng nđo ng kđ nhđn thông báo.'
             });
         }
 
@@ -1514,7 +1530,7 @@ exports.sendSaleAnnouncementEmail = async (req, res) => {
             return res.json({
                 success: true,
                 toastType: 'success',
-                message: `� g�i email th�ng b�o khuy�n m�i t�i ${result.success} ng��i ng k�.`
+                message: `Đã gửi email thông báo khuyến mãi tới ${result.success} người ng kđ.`
             });
         }
 
@@ -1522,14 +1538,14 @@ exports.sendSaleAnnouncementEmail = async (req, res) => {
             return res.json({
                 success: true,
                 toastType: 'warning',
-                message: `� g�i email t�i ${result.success}/${result.total} ng��i ng k�.`
+                message: `Đã gửi email tới ${result.success}/${result.total} người ng kđ.`
             });
         }
 
         return res.status(500).json({
             success: false,
             toastType: 'error',
-            message: 'Kh�ng g�i ��c email th�ng b�o. Vui l�ng ki�m tra c�u h�nh email.'
+            message: 'Khàng gửi đđc email thông báo. Vui lđng kiđm tra cđu hảnh email.'
         });
     } catch (error) {
         res.status(400).json({ success: false, message: error.message, toastType: 'error' });
@@ -1621,7 +1637,7 @@ exports.uploadProductImage = async (req, res) => {
 
         res.json({
             success: true,
-            message: files.length > 1 ? `� t�i l�n ${files.length} �nh` : '� t�i l�n �nh'
+            message: files.length > 1 ? `Đã tải lên ${files.length} ảnh` : 'Đã tải lên ảnh'
         });
     } catch (error) {
         res.status(400).json({ message: error.message });
@@ -1713,7 +1729,7 @@ exports.getVouchers = async (req, res) => {
             currentPage: 'vouchers'
         });
     } catch (error) {
-        res.status(500).render('error', { message: 'L�i t�i vouchers: ' + error.message, user: req.user });
+        res.status(500).render('error', { message: 'Lỗi tải vouchers: ' + error.message, user: req.user });
     }
 };
 
@@ -1727,8 +1743,8 @@ exports.createVoucher = async (req, res) => {
         } = req.body;
         const productIds = parseSelectedProductIds(req.body);
         const shouldNotifySubscribers = parseChecked(req.body.notify_subscribers);
-        const normalizedValue = normalizeDiscountValueOrThrow(type, value, 'Gi� tr� voucher');
-        assertDateRangeValid(start_date, end_date, 'Th�i gian voucher');
+        const normalizedValue = normalizeDiscountValueOrThrow(type, value, 'Giá trị voucher');
+        assertDateRangeValid(start_date, end_date, 'Thời gian voucher');
 
         const createdVoucher = await Voucher.create({
             code,
@@ -1751,24 +1767,24 @@ exports.createVoucher = async (req, res) => {
             const result = await sendVoucherAnnouncement(voucher);
 
             if (result.total === 0) {
-                return res.redirect(buildAdminNoticeRedirect('/admin/vouchers', '� t�o voucher nh�ng hi�n ch�a c� ng��i ng k� nh�n th�ng b�o.', 'warning'));
+                return res.redirect(buildAdminNoticeRedirect('/admin/vouchers', 'đ tđo voucher nhàng hiđn chđa cđ người ng kđ nhđn thông báo.', 'warning'));
             }
 
             if (result.success === result.total) {
-                return res.redirect(buildAdminNoticeRedirect('/admin/vouchers', `� t�o voucher v� g�i email th�nh c�ng t�i ${result.success} ng��i ng k�.`));
+                return res.redirect(buildAdminNoticeRedirect('/admin/vouchers', `đ tđo voucher vđ gửi email thảnh cđng tải ${result.success} người ng kđ.`));
             }
 
             if (result.success > 0) {
-                return res.redirect(buildAdminNoticeRedirect('/admin/vouchers', `� t�o voucher v� g�i email t�i ${result.success}/${result.total} ng��i ng k�.`, 'warning'));
+                return res.redirect(buildAdminNoticeRedirect('/admin/vouchers', `đ tđo voucher vĐã gửi email tới ${result.success}/${result.total} người ng kđ.`, 'warning'));
             }
 
-            return res.redirect(buildAdminNoticeRedirect('/admin/vouchers', '� t�o voucher nh�ng ch�a g�i email th�nh c�ng. Vui l�ng ki�m tra c�u h�nh email.', 'error'));
+            return res.redirect(buildAdminNoticeRedirect('/admin/vouchers', 'Đã tạo voucher nhưng chưa gửi email thành công. Vui lòng kiểm tra cấu hình email.', 'error'));
         }
 
-        res.redirect(buildAdminNoticeRedirect('/admin/vouchers', '� t�o voucher th�nh c�ng.'));
+        res.redirect(buildAdminNoticeRedirect('/admin/vouchers', 'Đã tạo voucher thành công.'));
     } catch (error) {
         console.error('Create voucher error:', error);
-        res.redirect(buildAdminNoticeRedirect('/admin/vouchers', error.message || 'Kh�ng th� t�o voucher.', 'error'));
+        res.redirect(buildAdminNoticeRedirect('/admin/vouchers', error.message || 'Không thể tạo voucher.', 'error'));
     }
 };
 
@@ -1782,8 +1798,8 @@ exports.updateVoucher = async (req, res) => {
             user_limit, start_date, end_date, is_active
         } = req.body;
         const productIds = parseSelectedProductIds(req.body);
-        const normalizedValue = normalizeDiscountValueOrThrow(type, value, 'Gi� tr� voucher');
-        assertDateRangeValid(start_date, end_date, 'Th�i gian voucher');
+        const normalizedValue = normalizeDiscountValueOrThrow(type, value, 'Giá trị voucher');
+        assertDateRangeValid(start_date, end_date, 'Thời gian voucher');
 
         await Voucher.update(id, {
             code,
@@ -1837,7 +1853,7 @@ exports.sendVoucherAnnouncementEmail = async (req, res) => {
         const existingVoucher = await Voucher.findById(id);
 
         if (!existingVoucher) {
-            return res.status(404).json({ success: false, message: 'Voucher kh�ng t�n t�i', toastType: 'error' });
+            return res.status(404).json({ success: false, message: 'Voucher không tồn tại', toastType: 'error' });
         }
 
         const [voucher] = await attachVoucherAssignments([existingVoucher]);
@@ -1847,7 +1863,7 @@ exports.sendVoucherAnnouncementEmail = async (req, res) => {
             return res.json({
                 success: true,
                 toastType: 'warning',
-                message: 'Hi�n ch�a c� ng��i d�ng n�o ng k� nh�n th�ng b�o.'
+                message: 'Hiđn chđa cđ người dđng nđo ng kđ nhđn thông báo.'
             });
         }
 
@@ -1855,7 +1871,7 @@ exports.sendVoucherAnnouncementEmail = async (req, res) => {
             return res.json({
                 success: true,
                 toastType: 'success',
-                message: `� g�i email th�ng b�o voucher t�i ${result.success} ng��i ng k�.`
+                message: `Đã gửi email thông báo voucher tới ${result.success} người ng kđ.`
             });
         }
 
@@ -1863,14 +1879,14 @@ exports.sendVoucherAnnouncementEmail = async (req, res) => {
             return res.json({
                 success: true,
                 toastType: 'warning',
-                message: `� g�i email t�i ${result.success}/${result.total} ng��i ng k�.`
+                message: `Đã gửi email tới ${result.success}/${result.total} người ng kđ.`
             });
         }
 
         return res.status(500).json({
             success: false,
             toastType: 'error',
-            message: 'Kh�ng g�i ��c email th�ng b�o. Vui l�ng ki�m tra c�u h�nh email.'
+            message: 'Khàng gửi đđc email thông báo. Vui lđng kiđm tra cđu hảnh email.'
         });
     } catch (error) {
         res.status(400).json({ success: false, message: error.message, toastType: 'error' });
@@ -1905,12 +1921,12 @@ exports.deleteProductVariant = async (req, res) => {
         if (await Product.isVariantReferenced(req.params.variantId)) {
             return res.status(400).json({
                 success: false,
-                message: 'Kh�ng th� x�a bi�n th� � ��c d�ng trong gi� h�ng ho�c �n h�ng'
+                message: 'Khàng thĐã xóa biến thể đ đđc dđng trong giđ hàng hođc đơn hàng'
             });
         }
 
         await Product.deleteVariant(req.params.variantId);
-        res.json({ success: true, message: '� x�a bi�n th�' });
+        res.json({ success: true, message: 'Đã xóa biến thể' });
     } catch (error) {
         res.status(400).json({ success: false, message: error.message });
     }
@@ -1921,11 +1937,14 @@ exports.deleteProductVariant = async (req, res) => {
 
 exports.getStorefrontSettings = async (req, res) => {
     try {
-        const settings = await StorefrontSetting.getAll();
+        const settingsState = await StorefrontSetting.getAdminState();
         const activeSection = typeof req.query.section === 'string' ? req.query.section : '';
 
         res.render('admin/storefront', {
-            settings,
+            settings: settingsState.values,
+            settingsState,
+            settingGroups: settingsState.groups,
+            settingDefinitions: settingsState.definitions,
             activeSection,
             notice: typeof req.query.notice === 'string' ? req.query.notice : '',
             noticeType: typeof req.query.notice_type === 'string' ? req.query.notice_type : 'success',
@@ -1934,38 +1953,113 @@ exports.getStorefrontSettings = async (req, res) => {
         });
     } catch (error) {
         res.status(500).render('error', {
-            message: 'L�i t�i c�i �t giao di�n: ' + error.message,
+            message: 'Lỗi tải cài đặt giao diện: ' + error.message,
             user: req.user
         });
     }
 };
 
 // Cập nhật storefront settings.
-exports.updateStorefrontSettings = async (req, res) => {
+function getStorefrontGroupFromBody(req) {
+    return String(req.body?.active_group || req.body?.active_section || req.body?.group || '').trim();
+}
+
+function redirectStorefrontWithNotice(group, message, type = 'success') {
+    const section = group ? `?section=${encodeURIComponent(group)}` : '';
+    return buildAdminNoticeRedirect(`/admin/storefront${section}`, message, type);
+}
+
+exports.saveStorefrontSettingsDraft = async (req, res) => {
     try {
-        await StorefrontSetting.updateMany({
-            product_grid_columns: req.body.product_grid_columns,
-            home_category_showcase_count: req.body.home_category_showcase_count,
-            jwt_expire_minutes: req.body.jwt_expire_minutes,
-            payment_window_hours: req.body.payment_window_hours,
-            default_web_email: req.body.default_web_email
-        });
+        const group = getStorefrontGroupFromBody(req);
+        await StorefrontSetting.saveDraft(req.body, req.user?.id, group);
 
-        invalidateStorefrontSettingsCache();
-        const section = typeof req.body.active_section === 'string' && req.body.active_section
-            ? `?section=${encodeURIComponent(req.body.active_section)}`
-            : '';
-
-        return res.redirect(buildAdminNoticeRedirect(
-            `/admin/storefront${section}`,
-            'Đã lưu cài đặt quản lí trang web.'
+        return res.redirect(redirectStorefrontWithNotice(
+            group,
+            'Đã lưu bản nháp. Cấu hình ngoài website chỉ đổi sau khi bấm Áp dụng.'
         ));
+
     } catch (error) {
         return res.redirect(buildAdminNoticeRedirect(
             '/admin/storefront',
-            error.message || 'Kh�ng th� l�u c�i �t giao di�n storefront.',
+            error.message || 'Không thể lưu cài đặt giao diện storefront.',
             'error'
         ));
+    }
+};
+
+exports.updateStorefrontSettings = exports.saveStorefrontSettingsDraft;
+
+exports.publishStorefrontSettings = async (req, res) => {
+    const group = getStorefrontGroupFromBody(req);
+
+    try {
+        await StorefrontSetting.publish(group, req.user?.id);
+        invalidateStorefrontSettingsCache();
+
+        return res.redirect(redirectStorefrontWithNotice(
+            group,
+            'Đã áp dụng cấu hình lên website.'
+        ));
+    } catch (error) {
+        return res.redirect(redirectStorefrontWithNotice(
+            group,
+            error.message || 'Không thể áp dụng cấu hình.',
+            'error'
+        ));
+    }
+};
+
+exports.discardStorefrontSettingsDraft = async (req, res) => {
+    const group = getStorefrontGroupFromBody(req);
+
+    try {
+        await StorefrontSetting.discardDraft(group);
+
+        return res.redirect(redirectStorefrontWithNotice(
+            group,
+            'Đã bỏ bản nháp của nhóm cấu hình này.',
+            'warning'
+        ));
+    } catch (error) {
+        return res.redirect(redirectStorefrontWithNotice(
+            group,
+            error.message || 'Không thể bỏ bản nháp.',
+            'error'
+        ));
+    }
+};
+
+exports.resetStorefrontSettingsDraft = async (req, res) => {
+    const group = getStorefrontGroupFromBody(req);
+
+    try {
+        await StorefrontSetting.resetDraft(group, req.user?.id);
+
+        return res.redirect(redirectStorefrontWithNotice(
+            group,
+            'Đã tạo bản nháp theo giá trị mặc định. Bấm Áp dụng để đưa lên website.',
+            'warning'
+        ));
+    } catch (error) {
+        return res.redirect(redirectStorefrontWithNotice(
+            group,
+            error.message || 'Không thể khôi phục mặc định.',
+            'error'
+        ));
+    }
+};
+
+exports.uploadStorefrontAsset = async (req, res) => {
+    try {
+        const url = req.file?.cloudinaryUrl || '';
+        if (!url) {
+            return res.status(400).json({ success: false, message: 'Không tìm thấy ảnh đã upload.' });
+        }
+
+        res.json({ success: true, url });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message || 'Không thể upload ảnh.' });
     }
 };
 
@@ -1976,7 +2070,7 @@ exports.toggleBannerActive = async (req, res) => {
     try {
         const banner = await Banner.toggleActive(req.params.id);
         if (!banner) {
-            return res.status(404).json({ success: false, message: 'Banner kh�ng t�n t�i' });
+            return res.status(404).json({ success: false, message: 'Banner không tồn tại' });
         }
         res.json({ success: true, is_active: banner.is_active });
     } catch (error) {
@@ -1989,7 +2083,7 @@ exports.reorderBanners = async (req, res) => {
     try {
         const { items } = req.body;
         if (!Array.isArray(items)) {
-            return res.status(400).json({ success: false, message: 'D� li�u kh�ng h�p l�' });
+            return res.status(400).json({ success: false, message: 'Dđ liđu không hợp lệ' });
         }
         await Banner.updateOrder(items);
         res.json({ success: true });
@@ -2004,7 +2098,7 @@ exports.updateBanner = async (req, res) => {
         const { id } = req.params;
         const existing = await Banner.findById(id);
         if (!existing) {
-            return res.status(404).json({ success: false, message: 'Banner kh�ng t�n t�i' });
+            return res.status(404).json({ success: false, message: 'Banner không tồn tại' });
         }
         const { title, subtitle, link_url } = req.body;
 
@@ -2046,7 +2140,7 @@ exports.updateOrderStatus = async (req, res) => {
         const requestedStatus = Order.normalizeStatus(status);
 
         if (requestedStatus === 'completed') {
-            return res.status(403).json({ message: 'Tr�ng th�i � ho�n th�nh ch� ��c x�c nh�n b�i ng��i mua.' });
+            return res.status(403).json({ message: 'Trđng thđi đã hoàn thành chđ đđc xđc nhđn bđi người mua.' });
         }
 
         const previousOrder = await Order.findById(id);
@@ -2056,7 +2150,7 @@ exports.updateOrderStatus = async (req, res) => {
             && previousOrder.payment_status !== 'paid'
             && !['pending_payment', 'cancelled'].includes(requestedStatus)
         ) {
-            return res.status(400).json({ message: '�n thanh to�n online ch�a thanh to�n ch� c� th� � tr�ng th�i Ch� thanh to�n ho�c � h�y.' });
+            return res.status(400).json({ message: 'Đơn thanh toán online chưa thanh toán chỉ có thể ở trạng tháii Chđ thanh tođn hođc đã hủy.' });
         }
 
         const order = await Order.updateStatus(id, status, trackingPayload, {
@@ -2089,9 +2183,11 @@ exports.getReturnRequests = async (req, res) => {
             limit: 100,
             offset: 0
         });
+        const returnStatusCounts = await ReturnRequest.countByStatus();
 
         res.render('admin/returns', {
             returnRequests,
+            returnStatusCounts,
             statusFilter,
             user: req.user,
             currentPage: 'returns'
@@ -2109,7 +2205,7 @@ exports.getReturnRequestDetail = async (req, res) => {
         const returnRequest = await ReturnRequest.findById(id);
 
         if (!returnRequest) {
-            return res.status(404).render('error', { message: 'Kh�ng t�m th�y y�u c�u ho�n h�ng' });
+            return res.status(404).render('error', { message: 'Không tìm thấy yêu cầu hoàn hàng' });
         }
 
         const order = await Order.findById(returnRequest.order_id);
@@ -2151,7 +2247,7 @@ exports.updateReturnRequestStatus = async (req, res) => {
 
         return res.json({
             success: true,
-            message: '� c�p nh�t tr�ng th�i y�u c�u ho�n h�ng',
+            message: 'Đã cập nhật trạng thái yêu cầu hoàn hàng',
             returnRequest
         });
     } catch (error) {

@@ -165,6 +165,36 @@ class ReturnRequest {
         return rows;
     }
 
+    // Đếm số yêu cầu theo trạng thái để hiển thị badge bộ lọc.
+    static async countByStatus() {
+        const counts = RETURN_STATUSES.reduce((result, status) => {
+            result[status] = 0;
+            return result;
+        }, { all: 0 });
+
+        try {
+            const [rows] = await pool.execute(
+                `SELECT status, COUNT(*) AS total
+                 FROM order_return_requests
+                 GROUP BY status`
+            );
+
+            rows.forEach((row) => {
+                const total = Number.parseInt(row.total, 10) || 0;
+                const status = this.normalizeStatus(row.status);
+                counts[status] += total;
+                counts.all += total;
+            });
+        } catch (error) {
+            if (error?.code === 'ER_NO_SUCH_TABLE') {
+                return counts;
+            }
+            throw error;
+        }
+
+        return counts;
+    }
+
     // Cập nhật trạng thái.
     static async updateStatus(id, status, adminNote = null, reviewedBy = null) {
         const normalizedStatus = this.normalizeStatus(status);

@@ -1,4 +1,4 @@
--- File migrations/010_create_storefront_settings.sql: dinh nghia thay doi hoac cau truc du lieu cho he thong.
+-- File migrations/010_create_storefront_settings.sql: định nghĩa thay đổi hoặc cấu trúc dữ liệu cho hệ thống.
 CREATE TABLE IF NOT EXISTS storefront_settings (
     id INT AUTO_INCREMENT PRIMARY KEY,
     setting_key VARCHAR(100) NOT NULL UNIQUE,

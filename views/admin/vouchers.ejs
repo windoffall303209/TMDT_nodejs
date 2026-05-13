@@ -56,12 +56,9 @@
         <div class="admin-toolbar">
             <div class="admin-toolbar__info">
                 <p class="admin-toolbar__title">Tìm voucher nhanh</p>
-                <p class="admin-toolbar__text">
-                    Tìm theo mã, tên hoặc mô tả voucher.
-                    <% if (searchQuery) { %>
-                        Đang lọc với từ khóa: "<strong><%= searchQuery %></strong>"
-                    <% } %>
-                </p>
+                <% if (searchQuery) { %>
+                    <p class="admin-toolbar__text">Đang lọc với từ khóa: "<strong><%= searchQuery %></strong>"</p>
+                <% } %>
             </div>
             <form action="/admin/vouchers" method="GET" class="admin-search-form">
                 <input
@@ -490,7 +487,7 @@
 
 
 
-<%# Bootstrap du lieu JSON cho script phia client. %>
+<%# Bootstrap dữ liệu JSON cho script phía client. %>
 <script type="application/json" id="adminVouchersBootstrap"><%- JSON.stringify({
     products: (products || []).map(product => ({ id: product.id, name: product.name, sku: product.sku || '' })),
     subscriberCount: Number(subscriberCount || 0),

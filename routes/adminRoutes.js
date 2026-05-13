@@ -10,6 +10,8 @@ const { uploadToCloud } = require('../middleware/upload');
 
 router.get('/login', adminAuthController.showLogin);
 router.post('/login', adminAuthController.login);
+router.get('/auth/login', adminAuthController.showLogin);
+router.post('/auth/login', adminAuthController.login);
 router.get('/google', adminAuthController.startGoogleLogin);
 router.get('/google/callback', adminAuthController.handleGoogleCallback);
 router.post('/logout', adminAuthController.logout);
@@ -24,6 +26,11 @@ router.get('/', (req, res) => res.redirect('/admin/dashboard'));
 // Nhóm route cấu hình storefront.
 router.get('/storefront', adminController.getStorefrontSettings);
 router.post('/storefront', adminController.updateStorefrontSettings);
+router.post('/storefront/draft', adminController.saveStorefrontSettingsDraft);
+router.post('/storefront/publish', adminController.publishStorefrontSettings);
+router.post('/storefront/discard', adminController.discardStorefrontSettingsDraft);
+router.post('/storefront/reset', adminController.resetStorefrontSettingsDraft);
+router.post('/storefront/assets', upload.single('asset'), uploadToCloud, adminController.uploadStorefrontAsset);
 router.post('/bulk-actions/verification-code', adminController.requestBulkDeleteVerification);
 
 // Nhóm route quản lý danh mục và import/export danh mục.

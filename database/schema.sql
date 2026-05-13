@@ -425,8 +425,11 @@ CREATE TABLE banners (
 CREATE TABLE storefront_settings (
     id INT AUTO_INCREMENT PRIMARY KEY,
     setting_key VARCHAR(100) NOT NULL UNIQUE,
-    setting_value VARCHAR(255) NOT NULL,
-    value_type ENUM('int', 'string', 'boolean', 'json') NOT NULL DEFAULT 'int',
+    setting_value TEXT NOT NULL,
+    draft_value TEXT NULL,
+    value_type ENUM('int', 'string', 'boolean', 'json', 'color', 'url', 'image', 'select') NOT NULL DEFAULT 'string',
+    updated_by INT NULL,
+    published_at TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_storefront_settings_key (setting_key)
@@ -438,6 +441,7 @@ VALUES
     ('home_category_showcase_count', '3', 'int'),
     ('jwt_expire_minutes', '60', 'int'),
     ('payment_window_hours', '24', 'int'),
+    ('shipping_fee_amount', '30000', 'int'),
     ('default_web_email', 'nvuthanh4@gmail.com', 'string');
 
 -- =============================================================================
