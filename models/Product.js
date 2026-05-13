@@ -268,18 +268,18 @@ ${this.getVariantAggregateSelect(productAlias)}`;
         // Tắt khi caller đã strip dấu (ví dụ chatbot intent search)
         const accentSensitive = options.accentSensitive !== false;
 
-        const searchBase = accentSensitive ? normalizedSearch.toLowerCase() : normalizedSearch;
+        const searchBase = normalizedSearch.toLowerCase();
         const exactSearchTerm = `%${searchBase}%`;
         const terms = Array.from(new Set(
             searchBase
                 .split(/\s+/)
                 .map((term) => term.trim())
-                .filter((term) => term.length >= 2)
+                .filter((term) => term.length >= 1)
         )).slice(0, 8);
 
         const safeLike = accentSensitive
             ? (field) => `BINARY LOWER(${field}) LIKE ?`
-            : (field) => `${field} LIKE ?`;
+            : (field) => `LOWER(${field}) LIKE ?`;
 
         const productFieldClause = `(
             ${safeLike(`${productAlias}.name`)}
@@ -736,7 +736,9 @@ ${this.getVariantAggregateSelect('p')}
         }
 
         if (filters.search) {
-            query += this.buildSearchFilterClause(filters.search, params, 'p');
+            query += this.buildSearchFilterClause(filters.search, params, 'p', {
+                accentSensitive: filters.accent_sensitive !== false
+            });
         }
 
         if (filters.is_featured) {
@@ -1145,7 +1147,9 @@ ${this.getVariantAggregateSelect('p')}
     static async search(searchQuery, limit = 20) {
         const limitNum = parseInt(limit) || 20;
         const params = [];
-        const searchClause = this.buildSearchFilterClause(searchQuery, params, 'p');
+        const searchClause = this.buildSearchFilterClause(searchQuery, params, 'p', {
+            accentSensitive: false
+        });
         const lowerSearch = String(searchQuery || '').trim().toLowerCase();
         const exactPrefixTerm = `${lowerSearch}%`;
         const looseSearchTerm = `%${lowerSearch}%`;
@@ -2025,7 +2029,9 @@ ${this.getListingSelectFields('p', 'c', 'sale_ref')}
         query += this.buildPriceFilterClause(filters, params, priceCol);
 
         if (filters.search) {
-            query += this.buildSearchFilterClause(filters.search, params, 'p');
+            query += this.buildSearchFilterClause(filters.search, params, 'p', {
+                accentSensitive: filters.accent_sensitive !== false
+            });
         }
 
         if (filters.is_featured) {
@@ -2166,7 +2172,9 @@ ${this.getListingSelectFields('p', 'c', 'sale_ref')}
     static async search(searchQuery, limit = 20) {
         const limitNum = parseInt(limit, 10) || 20;
         const params = [];
-        const searchClause = this.buildSearchFilterClause(searchQuery, params, 'p');
+        const searchClause = this.buildSearchFilterClause(searchQuery, params, 'p', {
+            accentSensitive: false
+        });
         const lowerSearch = String(searchQuery || '').trim().toLowerCase();
         const exactPrefixTerm = `${lowerSearch}%`;
         const looseSearchTerm = `%${lowerSearch}%`;
@@ -2175,11 +2183,11 @@ ${this.getListingSelectFields('p', 'c', 'sale_ref')}
             lowerSearch
                 .split(/\s+/)
                 .map((term) => term.trim())
-                .filter((term) => term.length >= 2)
+                .filter((term) => term.length >= 1)
         )).slice(0, 8);
 
-        const safeName = 'BINARY LOWER(p.name)';
-        const safeDesc = 'BINARY LOWER(p.description)';
+        const safeName = 'LOWER(p.name)';
+        const safeDesc = 'LOWER(p.description)';
         const nameMatchScore = terms.length > 0
             ? terms.map(() => `(CASE WHEN ${safeName} LIKE ? THEN 1 ELSE 0 END)`).join(' + ')
             : '0';
@@ -2211,10 +2219,10 @@ ${this.getListingSelectFields('p', 'c', 'sale_ref')}
 
         let [rows] = await pool.query(query, [
             ...params,
-            ...nameMatchParams,
             exactPrefixTerm,
             looseSearchTerm,
-            looseSearchTerm
+            looseSearchTerm,
+            ...nameMatchParams
         ]);
 
         if (rows.length === 0) {
@@ -2228,14 +2236,14 @@ ${this.getListingSelectFields('p', 'c', 'sale_ref')}
     static async fuzzySearch(searchQuery, limit = 20) {
         const limitNum = parseInt(limit, 10) || 20;
         const lowerQuery = String(searchQuery || '').trim().toLowerCase();
-        const words = lowerQuery.split(/\s+/).filter((word) => word.length >= 2);
+        const words = lowerQuery.split(/\s+/).filter((word) => word.length >= 1);
 
         if (words.length === 0) {
             return await this.getBestSellers(limitNum);
         }
 
         // Xử lý an toàn like.
-        const safeLike = (field) => `BINARY LOWER(${field}) LIKE ?`;
+        const safeLike = (field) => `LOWER(${field}) LIKE ?`;
         // Tạo dữ liệu biến thể exists clause.
         const buildVariantExistsClause = () => `EXISTS (
             SELECT 1

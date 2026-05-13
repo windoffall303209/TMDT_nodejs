@@ -177,11 +177,16 @@ function renderParentSelectOptions(selectElement, currentCategoryId = null, sele
         '<option value="">-- Danh mục gốc --</option>',
         ...categories
             .filter((category) => Number(category.id) !== currentId)
-            .map((category) => `
-                <option value="${category.id}" ${Number(category.id) === selectedId ? 'selected' : ''}>
-                    ${escapeHtml(category.name)}
-                </option>
-            `)
+            .map((category) => {
+                const depth = Math.min(Number(category.tree_depth || 0), 6);
+                const prefix = depth > 0 ? `${'-- '.repeat(depth)}` : '';
+
+                return `
+                    <option value="${category.id}" ${Number(category.id) === selectedId ? 'selected' : ''}>
+                        ${escapeHtml(`${prefix}${category.name}`)}
+                    </option>
+                `;
+            })
     ];
 
     selectElement.innerHTML = optionsHtml.join('');

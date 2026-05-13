@@ -2,6 +2,61 @@
 const pool = require('../config/database');
 
 class Category {
+    static sortById(categories = []) {
+        return [...categories].sort((a, b) => {
+            const idDiff = Number(a.id || 0) - Number(b.id || 0);
+            if (idDiff !== 0) {
+                return idDiff;
+            }
+
+            return String(a.name || '').localeCompare(String(b.name || ''), 'vi');
+        });
+    }
+
+    static sortHierarchically(categories = []) {
+        const normalizedCategories = Array.isArray(categories)
+            ? categories.map((category) => ({
+                ...category,
+                tree_depth: 0,
+                tree_path: ''
+            }))
+            : [];
+
+        const categoryMap = new Map(normalizedCategories.map((category) => [Number(category.id), category]));
+        const childrenByParent = new Map();
+        const roots = [];
+
+        normalizedCategories.forEach((category) => {
+            const parentId = category.parent_id ? Number(category.parent_id) : null;
+
+            if (parentId && categoryMap.has(parentId)) {
+                const children = childrenByParent.get(parentId) || [];
+                children.push(category);
+                childrenByParent.set(parentId, children);
+                return;
+            }
+
+            roots.push(category);
+        });
+
+        const result = [];
+        const visit = (category, depth = 0, pathParts = []) => {
+            const idPart = String(category.id || 0).padStart(10, '0');
+            const nextPathParts = [...pathParts, idPart];
+
+            category.tree_depth = depth;
+            category.tree_path = nextPathParts.join('/');
+            result.push(category);
+
+            const children = this.sortById(childrenByParent.get(Number(category.id)) || []);
+            children.forEach((child) => visit(child, depth + 1, nextPathParts));
+        };
+
+        this.sortById(roots).forEach((category) => visit(category));
+
+        return result;
+    }
+
     // Tìm tất cả.
     static async findAll() {
         const query = `
@@ -13,11 +68,11 @@ class Category {
                    ) AS product_count
             FROM categories c
             WHERE c.is_active = TRUE
-            ORDER BY c.display_order ASC, c.name ASC
+            ORDER BY c.id ASC
         `;
 
         const [rows] = await pool.query(query);
-        return rows;
+        return this.sortHierarchically(rows);
     }
 
     // Tìm tất cả any.
@@ -29,13 +84,17 @@ class Category {
         `;
 
         const [rows] = await pool.query(query);
-        return rows;
+        return this.sortHierarchically(rows);
     }
 
     // Tìm root danh mục.
-    static async findRootCategories(limit = null) {
+    static async findRootCategories(limit = null, options = {}) {
         const parsedLimit = Number.parseInt(limit, 10);
         const hasLimit = Number.isInteger(parsedLimit) && parsedLimit > 0;
+        const sortMode = options.sort === 'id' ? 'id' : 'display';
+        const orderBy = sortMode === 'id'
+            ? 'c.id ASC'
+            : 'c.display_order ASC, c.name ASC';
 
         let query = `
             SELECT c.*,
@@ -46,7 +105,7 @@ class Category {
                    ) AS product_count
             FROM categories c
             WHERE c.is_active = TRUE AND c.parent_id IS NULL
-            ORDER BY c.display_order ASC, c.name ASC
+            ORDER BY ${orderBy}
         `;
 
         if (hasLimit) {
@@ -86,10 +145,10 @@ class Category {
             params.push(searchTerm, searchTerm, searchTerm);
         }
 
-        query += ' ORDER BY c.display_order ASC, c.name ASC';
+        query += ' ORDER BY c.id ASC';
 
         const [rows] = await pool.execute(query, params);
-        return rows;
+        return this.sortHierarchically(rows);
     }
 
     // Tìm theo ID.
@@ -335,8 +394,9 @@ class Category {
 
     // Tạo dữ liệu tree.
     static buildTree(categories = []) {
-        const normalizedCategories = Array.isArray(categories)
-            ? categories.map((category) => ({
+        const sortedCategories = this.sortHierarchically(categories);
+        const normalizedCategories = Array.isArray(sortedCategories)
+            ? sortedCategories.map((category) => ({
                 ...category,
                 children: []
             }))

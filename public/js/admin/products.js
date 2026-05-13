@@ -5,6 +5,146 @@ function showToast(message, type = 'success') {
 }
 
 const BULK_DELETE_VERIFICATION_EMAIL = 'nvuthanh4@gmail.com';
+const PRODUCT_IMPORT_TERMINAL_STATUSES = new Set(['completed', 'completed_with_errors', 'failed']);
+
+function getProductImportStatusLabel(status) {
+    const labels = {
+        queued: 'Đang chờ',
+        running: 'Đang import',
+        completed: 'Hoàn tất',
+        completed_with_errors: 'Hoàn tất có lỗi',
+        failed: 'Thất bại'
+    };
+
+    return labels[status] || 'Đang xử lý';
+}
+
+function createProductImportResultList(title, items = []) {
+    const fragment = document.createDocumentFragment();
+    const heading = document.createElement('strong');
+    const list = document.createElement('ul');
+
+    heading.textContent = title;
+    fragment.appendChild(heading);
+
+    items.slice(0, 8).forEach((item) => {
+        const row = document.createElement('li');
+        const name = item?.name || item?.productKey || 'Dòng import';
+        const message = item?.message || item?.productId || '';
+        row.textContent = message ? `${name}: ${message}` : String(name);
+        list.appendChild(row);
+    });
+
+    fragment.appendChild(list);
+    return fragment;
+}
+
+function renderProductImportJob(root, job) {
+    const status = job?.status || 'queued';
+    const totalProducts = Number(job?.totalProducts || 0);
+    const processedCount = Number(job?.processedCount || 0);
+    const createdCount = Number(job?.createdCount || 0);
+    const failedCount = Number(job?.failedCount || 0);
+    const progress = Math.max(0, Math.min(100, Number(job?.progress || 0)));
+
+    const statusElement = root.querySelector('[data-import-job-status]');
+    const messageElement = root.querySelector('[data-import-job-message]');
+    const counterElement = root.querySelector('[data-import-job-counter]');
+    const createdElement = root.querySelector('[data-import-job-created]');
+    const failedElement = root.querySelector('[data-import-job-failed]');
+    const progressBar = root.querySelector('[data-import-job-progress-bar]');
+    const resultElement = root.querySelector('[data-import-job-result]');
+
+    if (statusElement) {
+        statusElement.textContent = getProductImportStatusLabel(status);
+        statusElement.dataset.status = status;
+    }
+
+    if (messageElement) {
+        messageElement.textContent = job?.message || 'Đang xử lý import sản phẩm...';
+    }
+
+    if (counterElement) {
+        counterElement.textContent = totalProducts > 0 ? `${processedCount}/${totalProducts}` : 'Đang đọc file';
+    }
+
+    if (createdElement) {
+        createdElement.textContent = String(createdCount);
+    }
+
+    if (failedElement) {
+        failedElement.textContent = String(failedCount);
+    }
+
+    if (progressBar) {
+        progressBar.style.width = `${progress}%`;
+    }
+
+    if (!resultElement || !PRODUCT_IMPORT_TERMINAL_STATUSES.has(status)) {
+        return;
+    }
+
+    resultElement.hidden = false;
+    resultElement.replaceChildren();
+
+    const summary = document.createElement('p');
+    summary.textContent = job?.message || 'Tiến trình import đã kết thúc.';
+    resultElement.appendChild(summary);
+
+    if (job?.result?.errors?.length) {
+        resultElement.appendChild(createProductImportResultList('Một số lỗi cần kiểm tra:', job.result.errors));
+    }
+
+    const reloadLink = document.createElement('a');
+    reloadLink.href = '/admin/products';
+    reloadLink.className = 'admin-btn admin-btn--ghost';
+    reloadLink.textContent = 'Tải lại danh sách sản phẩm';
+    resultElement.appendChild(reloadLink);
+}
+
+function initProductImportJobPolling() {
+    const root = document.querySelector('[data-product-import-job]');
+    const jobId = root?.dataset.productImportJob;
+
+    if (!root || !jobId) {
+        return;
+    }
+
+    let stopped = false;
+
+    const poll = async () => {
+        if (stopped) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/admin/products/import-jobs/${encodeURIComponent(jobId)}`, {
+                headers: { Accept: 'application/json' }
+            });
+            const payload = await response.json();
+
+            if (!response.ok || !payload.success || !payload.job) {
+                throw new Error(payload.message || 'Không thể đọc tiến trình import.');
+            }
+
+            renderProductImportJob(root, payload.job);
+
+            if (PRODUCT_IMPORT_TERMINAL_STATUSES.has(payload.job.status)) {
+                stopped = true;
+                showToast(payload.job.message || 'Import sản phẩm đã hoàn tất.', payload.job.status === 'failed' ? 'error' : 'success');
+                return;
+            }
+        } catch (error) {
+            stopped = true;
+            showToast(error.message || 'Không thể theo dõi tiến trình import.', 'error');
+            return;
+        }
+
+        window.setTimeout(poll, 2500);
+    };
+
+    poll();
+}
 
 // Xử lý show confirm.
 function showConfirm(message, title = 'Xác nhận', yesText = 'Xác nhận', yesColor = '#f44336', options = {}) {
@@ -165,9 +305,28 @@ const VARIANT_COLOR_SUGGESTIONS = [
     'Be',
     'Kem'
 ];
+const VARIANT_SIZE_SUGGESTIONS = [
+    'XS',
+    'S',
+    'M',
+    'L',
+    'XL',
+    'XXL',
+    '3XL',
+    'Free Size'
+];
 
-// Đảm bảo biến thể color datalist.
-function ensureVariantColorDatalist() {
+// Đảm bảo biến thể datalist.
+function ensureVariantDatalists() {
+    if (!document.getElementById('variantSizeOptions')) {
+        const sizeDatalist = document.createElement('datalist');
+        sizeDatalist.id = 'variantSizeOptions';
+        sizeDatalist.innerHTML = VARIANT_SIZE_SUGGESTIONS
+            .map((size) => `<option value="${escapeHtml(size)}"></option>`)
+            .join('');
+        document.body.appendChild(sizeDatalist);
+    }
+
     if (document.getElementById('variantColorOptions')) {
         return;
     }
@@ -178,34 +337,6 @@ function ensureVariantColorDatalist() {
         .map((color) => `<option value="${escapeHtml(color)}"></option>`)
         .join('');
     document.body.appendChild(datalist);
-}
-
-// Lấy biến thể color tùy chọn html.
-function getVariantColorOptionsHtml(selectedValue = '') {
-    const normalizedSelected = String(selectedValue || '').trim().toLowerCase();
-    const baseOption = '<option value="">Chọn màu có sẵn</option>';
-    const options = VARIANT_COLOR_SUGGESTIONS.map((color) => {
-        const selected = color.toLowerCase() === normalizedSelected ? 'selected' : '';
-        return `<option value="${escapeHtml(color)}" ${selected}>${escapeHtml(color)}</option>`;
-    });
-
-    return [baseOption, ...options].join('');
-}
-
-// Đồng bộ biến thể color select.
-function syncVariantColorSelect(row) {
-    const input = row.querySelector('.variant-color');
-    const select = row.querySelector('.variant-color-select');
-    if (!input || !select) {
-        return;
-    }
-
-    const normalizedValue = input.value.trim().toLowerCase();
-    const matchedOption = Array.from(select.options).find((option) => (
-        option.value && option.value.toLowerCase() === normalizedValue
-    ));
-
-    select.value = matchedOption ? matchedOption.value : '';
 }
 
 // Xử lý revoke preview url.
@@ -894,31 +1025,18 @@ async function addImageByUrl() {
 // Thêm biến thể row.
 function addVariantRow(mode, data = {}) {
     const container = document.getElementById(`${mode}VariantsList`);
-    ensureVariantColorDatalist();
+    ensureVariantDatalists();
     const row = document.createElement('div');
     row.className = 'variant-row';
     row.innerHTML = `
         <input type="hidden" class="variant-id" value="${data.id || ''}">
         <div class="variant-row__field variant-row__field--size">
             <span class="variant-row__label">Size</span>
-            <select class="variant-size">
-                <option value="" ${!data.size ? 'selected' : ''}>Chọn size</option>
-                <option value="S" ${data.size === 'S' ? 'selected' : ''}>S</option>
-                <option value="M" ${data.size === 'M' ? 'selected' : ''}>M</option>
-                <option value="L" ${data.size === 'L' ? 'selected' : ''}>L</option>
-                <option value="XL" ${data.size === 'XL' ? 'selected' : ''}>XL</option>
-                <option value="XXL" ${data.size === 'XXL' ? 'selected' : ''}>XXL</option>
-                <option value="Free Size" ${data.size === 'Free Size' ? 'selected' : ''}>Free Size</option>
-            </select>
+            <input type="text" class="variant-size" list="variantSizeOptions" value="${escapeHtml(data.size || '')}" placeholder="S, M, L...">
         </div>
         <div class="variant-row__field variant-row__field--color">
             <span class="variant-row__label">Màu sắc</span>
-            <div class="variant-color-control">
-                <input type="text" class="variant-color" list="variantColorOptions" value="${escapeHtml(data.color || '')}" placeholder="VD: Xanh navy, Ghi khói">
-                <select class="variant-color-select" aria-label="Chọn màu có sẵn">
-                    ${getVariantColorOptionsHtml(data.color || '')}
-                </select>
-            </div>
+            <input type="text" class="variant-color" list="variantColorOptions" value="${escapeHtml(data.color || '')}" placeholder="Be, Xanh navy...">
         </div>
         <div class="variant-row__field variant-row__field--price">
             <span class="variant-row__label">Giá cộng thêm</span>
@@ -930,9 +1048,9 @@ function addVariantRow(mode, data = {}) {
         </div>
         <div class="variant-row__field variant-row__field--sku">
             <span class="variant-row__label">SKU</span>
-            <div style="display:flex; gap:4px; align-items:center;">
-                <input type="text" placeholder="Mã SKU" value="${data.sku || ''}" class="variant-sku" style="flex:1;">
-                <button type="button" class="variant-auto-sku-btn" title="Tự động tạo mã SKU" style="min-width:32px; height:32px; border:1px solid #ccc; border-radius:8px; background:#f8f8f8; cursor:pointer; font-size:14px;">⚡</button>
+            <div class="variant-sku-control">
+                <input type="text" placeholder="Mã SKU" value="${escapeHtml(data.sku || '')}" class="variant-sku">
+                <button type="button" class="variant-auto-sku-btn" title="Tự động tạo mã SKU" aria-label="Tự động tạo mã SKU">SKU</button>
             </div>
         </div>
         <div class="variant-row__field variant-row__field--image">
@@ -958,19 +1076,6 @@ function addVariantRow(mode, data = {}) {
 
     row.querySelector('.variant-remove-btn').addEventListener('click', function () {
         removeVariantRow(this, mode);
-    });
-
-    row.querySelector('.variant-color-select')?.addEventListener('change', function () {
-        const input = row.querySelector('.variant-color');
-        if (input && this.value) {
-            input.value = this.value;
-            collectVariants(mode);
-        }
-    });
-
-    row.querySelector('.variant-color')?.addEventListener('input', function () {
-        syncVariantColorSelect(row);
-        collectVariants(mode);
     });
 
     // Auto-gen variant SKU
@@ -1075,6 +1180,8 @@ function collectVariants(mode) {
 
 // Khởi tạo quản trị sản phẩm.
 function initAdminProducts() {
+    initProductImportJobPolling();
+
     const createForm = getCreateForm();
     const createImagesInput = getCreateImagesInput();
     const addImageForm = document.getElementById('addImageForm');
