@@ -149,7 +149,11 @@ class User {
         const existingUser = await this.findByEmail(email);
         if (existingUser) {
             if (existingUser.is_active === false || existingUser.is_active === 0) {
-                throw new Error('Tài khoản của bạn đã bị khóa. Vui lòng liên hệ hỗ trợ.');
+                if (!this.isAccountDeletionRecoverable(existingUser)) {
+                    throw new Error('Tài khoản của bạn đã bị khóa. Vui lòng liên hệ hỗ trợ.');
+                }
+
+                await this.restoreDeletedAccount(existingUser.id);
             }
 
             return this.syncGoogleProfile(existingUser.id, {
@@ -163,6 +167,97 @@ class User {
             full_name: fullName,
             avatar_url: avatarUrl
         });
+    }
+
+    // Kiểm tra tài khoản đang trong cửa sổ khôi phục sau khi xóa.
+    static isAccountDeletionRecoverable(user) {
+        if (!user?.account_deleted_at || !user?.account_delete_expires_at) {
+            return false;
+        }
+
+        return new Date(user.account_delete_expires_at).getTime() > Date.now();
+    }
+
+    // Khôi phục tài khoản đã yêu cầu xóa trong vòng 14 ngày.
+    static async restoreDeletedAccount(userId) {
+        await pool.execute(
+            `UPDATE users
+             SET is_active = TRUE,
+                 account_deleted_at = NULL,
+                 account_delete_expires_at = NULL
+             WHERE id = ?`,
+            [userId]
+        );
+    }
+
+    // Đánh dấu tài khoản yêu cầu xóa, cho phép khôi phục trong 14 ngày.
+    static async requestAccountDeletion(userId) {
+        await pool.execute(
+            `UPDATE users
+             SET is_active = FALSE,
+                 account_deleted_at = NOW(),
+                 account_delete_expires_at = DATE_ADD(NOW(), INTERVAL 14 DAY)
+             WHERE id = ?`,
+            [userId]
+        );
+    }
+
+    // Anonymize hồ sơ và xóa địa chỉ của các tài khoản đã quá hạn khôi phục, giữ lại lịch sử đơn hàng.
+    static async purgeExpiredDeletedAccounts() {
+        const [rows] = await pool.execute(
+            `SELECT id FROM users
+             WHERE is_active = FALSE
+               AND account_delete_expires_at IS NOT NULL
+               AND account_delete_expires_at <= NOW()
+               AND email NOT LIKE 'deleted-%@removed.local'
+             LIMIT 200`
+        );
+
+        if (!rows.length) {
+            return { purgedCount: 0 };
+        }
+
+        const connection = await pool.getConnection();
+        let purgedCount = 0;
+
+        try {
+            await connection.beginTransaction();
+
+            for (const row of rows) {
+                const userId = row.id;
+                const anonymizedEmail = `deleted-${userId}-${Date.now()}@removed.local`;
+
+                await connection.execute('DELETE FROM addresses WHERE user_id = ?', [userId]);
+
+                await connection.execute(
+                    `UPDATE users
+                     SET email = ?,
+                         password_hash = '',
+                         full_name = 'Tài khoản đã xóa',
+                         phone = NULL,
+                         avatar_url = NULL,
+                         birthday = NULL,
+                         google_id = NULL,
+                         verification_code = NULL,
+                         reset_code = NULL,
+                         marketing_consent = FALSE,
+                         email_verified = FALSE
+                     WHERE id = ?`,
+                    [anonymizedEmail, userId]
+                );
+
+                purgedCount += 1;
+            }
+
+            await connection.commit();
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            connection.release();
+        }
+
+        return { purgedCount };
     }
 
     // =============================================================================

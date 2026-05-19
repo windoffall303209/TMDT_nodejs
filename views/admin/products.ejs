@@ -1,5 +1,5 @@
 <%# Template admin render màn quản trị sản phẩm với dữ liệu từ controller quản trị. %>
-<%- include('../partials/admin-header', { currentPage: 'products', pageStyles: ['/css/admin/products.css?v=import-job-20260513'] }) %>
+<%- include('../partials/admin-header', { currentPage: 'products', pageStyles: ['/css/admin/products.css?v=image-preview-20260514'] }) %>
 <% const activeImportJobId = typeof productImportJobId !== 'undefined' && productImportJobId ? productImportJobId : ''; %>
 
 <div class="admin-page">
@@ -299,10 +299,24 @@
                 <div class="admin-form__group product-edit-form__variants">
                     <label class="admin-form__label product-edit-form__variants-title">Biến thể sản phẩm (Size / Màu sắc)</label>
                     <small class="admin-form__hint product-edit-form__variants-hint">Thêm các biến thể nếu sản phẩm có nhiều size hoặc màu sắc</small>
-                    <div id="createVariantsList"></div>
-                    <button type="button" data-product-action="add-variant" data-product-mode="create" class="product-edit-form__add-variant">
-                        + Thêm biến thể
-                    </button>
+                    <div class="variant-feedback" id="createVariantFeedback" hidden></div>
+                    <div class="variant-table">
+                        <div class="variant-table__head">
+                            <span>Ảnh</span>
+                            <span>Size</span>
+                            <span>Màu sắc</span>
+                            <span>Giá cộng thêm (+)</span>
+                            <span>Tồn kho</span>
+                            <span>SKU</span>
+                            <span>Hành động</span>
+                        </div>
+                        <div id="createVariantsList" class="variant-table__body"></div>
+                        <div class="variant-table__footer">
+                            <button type="button" data-product-action="add-variant" data-product-mode="create" class="product-edit-form__add-variant">
+                                + Thêm biến thể mới
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="admin-form__actions">
@@ -489,10 +503,24 @@
             <div class="admin-form__group product-edit-form__variants">
                 <label class="admin-form__label product-edit-form__variants-title">Biến thể sản phẩm (Size / Màu sắc)</label>
                 <small class="admin-form__hint product-edit-form__variants-hint">Thêm các biến thể nếu sản phẩm có nhiều size hoặc màu sắc</small>
-                <div id="editVariantsList"></div>
-                <button type="button" data-product-action="add-variant" data-product-mode="edit" class="product-edit-form__add-variant">
-                    + Thêm biến thể
-                </button>
+                <div class="variant-feedback" id="editVariantFeedback" hidden></div>
+                <div class="variant-table">
+                    <div class="variant-table__head">
+                        <span>Ảnh</span>
+                        <span>Size</span>
+                        <span>Màu sắc</span>
+                        <span>Giá cộng thêm (+)</span>
+                        <span>Tồn kho</span>
+                        <span>SKU</span>
+                        <span>Hành động</span>
+                    </div>
+                    <div id="editVariantsList" class="variant-table__body"></div>
+                    <div class="variant-table__footer">
+                        <button type="button" data-product-action="add-variant" data-product-mode="edit" class="product-edit-form__add-variant">
+                            + Thêm biến thể mới
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <div class="admin-modal__buttons">
@@ -536,6 +564,7 @@
             <form id="addImageForm" enctype="multipart/form-data" class="image-upload">
                 <div class="image-upload__file">
                     <input type="file" id="newImageFile" name="images" accept="image/*" multiple class="admin-form__input">
+                    <div id="imageModalUploadPreview" class="product-upload-preview product-upload-preview--modal" hidden></div>
                     <small class="admin-form__hint">Có thể chọn nhiều ảnh cùng lúc</small>
                     <label class="image-upload__checkbox">
                         <input type="checkbox" id="isPrimaryImage"> Đặt làm ảnh chính
@@ -597,6 +626,6 @@
 
 
 
-<script src="/js/admin/products.js?v=variant-combobox-20260514"></script>
+<script src="/js/admin/products.js?v=image-preview-20260514"></script>
 
 <%- include('../partials/admin-footer') %>

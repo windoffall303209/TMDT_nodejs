@@ -1,5 +1,5 @@
 <%# Template admin render màn quản trị danh mục với dữ liệu từ controller quản trị. %>
-<%- include('../partials/admin-header', { currentPage: 'categories', pageStyles: ['/css/admin/categories.css'] }) %>
+<%- include('../partials/admin-header', { currentPage: 'categories', pageStyles: ['/css/admin/categories.css?v=image-preview-20260514'] }) %>
 
 <div class="admin-page">
     <div class="container">
@@ -138,11 +138,12 @@
                     </div>
                     <div class="admin-form__group">
                         <label class="admin-form__label">Ảnh đại diện (URL)</label>
-                        <input type="url" name="image_url" class="admin-form__input" placeholder="https://...">
+                        <input type="url" name="image_url" id="createCategoryImageUrl" class="admin-form__input" placeholder="https://...">
                     </div>
                     <div class="admin-form__group">
                         <label class="admin-form__label">Tải ảnh từ máy</label>
-                        <input type="file" name="image" accept="image/*" class="admin-form__input">
+                        <input type="file" id="createCategoryImage" name="image" accept="image/*" class="admin-form__input">
+                        <div class="category-upload-preview" id="createCategoryImagePreview" hidden></div>
                         <p class="admin-form__hint">Nếu chọn file, ảnh upload sẽ ưu tiên hơn URL.</p>
                     </div>
                 </div>
@@ -296,6 +297,7 @@
                 <div class="admin-form__group">
                     <label class="admin-form__label">Tải ảnh mới</label>
                     <input type="file" id="editCategoryImage" accept="image/*" class="admin-form__input">
+                    <div class="category-upload-preview" id="editCategoryImagePreview" hidden></div>
                     <p class="admin-form__hint">Bỏ trống nếu muốn giữ ảnh hiện tại.</p>
                 </div>
             </div>
@@ -346,6 +348,6 @@
         tree_depth: category.tree_depth || 0
     }))
 }).replace(/</g, '\\u003c') %></script>
-<script src="/js/admin/categories.js?v=tree-sort-20260514"></script>
+<script src="/js/admin/categories.js?v=image-preview-20260514"></script>
 
 <%- include('../partials/admin-footer') %>

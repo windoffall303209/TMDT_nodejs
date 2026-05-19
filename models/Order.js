@@ -526,17 +526,25 @@ class Order {
   // Tự hủy đơn thanh toán online quá hạn và hoàn lại tồn kho/voucher.
   static async expireOverduePendingPayments() {
     let orders = [];
+    const paymentWindowHours = await this.getPaymentWindowHours();
+    const legacyPaymentCutoff = new Date(
+      Date.now() - paymentWindowHours * 60 * 60 * 1000,
+    );
+
     try {
       [orders] = await pool.execute(
         `SELECT id
          FROM orders
-         WHERE status = 'pending_payment'
+         WHERE status IN ('pending_payment', 'pending')
            AND payment_method IN ('vnpay', 'momo')
-           AND payment_status <> 'paid'
-           AND payment_expires_at IS NOT NULL
-           AND payment_expires_at <= NOW()
-         ORDER BY payment_expires_at ASC
+           AND (payment_status IS NULL OR payment_status <> 'paid')
+           AND (
+             (payment_expires_at IS NOT NULL AND payment_expires_at <= NOW())
+             OR (payment_expires_at IS NULL AND created_at <= ?)
+           )
+         ORDER BY COALESCE(payment_expires_at, created_at) ASC
          LIMIT 100`,
+        [legacyPaymentCutoff],
       );
     } catch (error) {
       if (["ER_BAD_FIELD_ERROR", "ER_NO_SUCH_TABLE"].includes(error?.code)) {
@@ -554,13 +562,16 @@ class Order {
           `SELECT id, status, payment_status, voucher_id
            FROM orders
            WHERE id = ?
-             AND status = 'pending_payment'
+             AND status IN ('pending_payment', 'pending')
              AND payment_method IN ('vnpay', 'momo')
-             AND payment_status <> 'paid'
-             AND payment_expires_at <= NOW()
+             AND (payment_status IS NULL OR payment_status <> 'paid')
+             AND (
+               (payment_expires_at IS NOT NULL AND payment_expires_at <= NOW())
+               OR (payment_expires_at IS NULL AND created_at <= ?)
+             )
            LIMIT 1
            FOR UPDATE`,
-          [row.id],
+          [row.id, legacyPaymentCutoff],
         );
         const order = lockedOrders[0];
 
@@ -1294,7 +1305,7 @@ class Order {
       }
 
       const currentStatus = this.normalizeStatus(order.status);
-      if (!["pending", "confirmed"].includes(currentStatus)) {
+      if (!["pending_payment", "pending", "confirmed"].includes(currentStatus)) {
         throw new Error("Order cannot be cancelled at this status");
       }
 

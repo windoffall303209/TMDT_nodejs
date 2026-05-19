@@ -9,8 +9,10 @@ const chatState = window.__tmdtChatWidgetState || (window.__tmdtChatWidgetState 
     conversation: null,
     initialized: false,
     badgeRequest: null,
-    expanded: false
+    expanded: false,
+    attachmentPreviewUrls: []
 });
+chatState.attachmentPreviewUrls = chatState.attachmentPreviewUrls || [];
 
 // Lấy chat elements.
 function getChatElements() {
@@ -24,6 +26,7 @@ function getChatElements() {
         attachButton: document.getElementById('chatAttachBtn'),
         fileInput: document.getElementById('chatMediaInput'),
         attachmentPreview: document.getElementById('chatAttachmentPreview'),
+        attachmentPreviewMedia: document.getElementById('chatAttachmentPreviewMedia'),
         attachmentPreviewText: document.getElementById('chatAttachmentPreviewText'),
         attachmentClearButton: document.getElementById('chatAttachmentClearBtn'),
         expandButton: document.getElementById('chatExpandBtn'),
@@ -155,11 +158,19 @@ function normalizePendingMessageText(value) {
     return typeof value === 'string' ? value.trim() : '';
 }
 
+// Xử lý revoke URL preview tạm của pending message.
+function revokePendingPreviewUrls(pending) {
+    (pending?.previewUrls || []).forEach((url) => URL.revokeObjectURL(url));
+}
+
 // Xử lý set pending customer tin nhắn.
-function setPendingCustomerMessage(text, element) {
+function setPendingCustomerMessage(text, element, options = {}) {
+    clearPendingCustomerMessage();
+
     chatState.pendingCustomerMessage = {
         text: normalizePendingMessageText(text),
-        element: element || null
+        element: element || null,
+        previewUrls: Array.isArray(options.previewUrls) ? options.previewUrls : []
     };
 }
 
@@ -168,9 +179,100 @@ function clearPendingCustomerMessage(options = {}) {
     const pending = chatState.pendingCustomerMessage;
     chatState.pendingCustomerMessage = null;
 
+    revokePendingPreviewUrls(pending);
+
     if (options.removeElement && pending?.element?.isConnected) {
         pending.element.remove();
     }
+}
+
+function parseChatMessageMetadata(rawValue) {
+    if (window.ChatRichMessage?.parseMessageMetadata) {
+        return window.ChatRichMessage.parseMessageMetadata(rawValue);
+    }
+
+    if (!rawValue) {
+        return null;
+    }
+
+    if (typeof rawValue === 'object') {
+        return rawValue;
+    }
+
+    try {
+        return JSON.parse(rawValue);
+    } catch (error) {
+        return null;
+    }
+}
+
+function resolveAttachmentUrl(attachment) {
+    return attachment?.mediaUrl || attachment?.media_url || '';
+}
+
+function updateExistingPendingMedia(wrapper, message, pending) {
+    const metadata = parseChatMessageMetadata(message.message_metadata);
+    const attachments = Array.isArray(metadata?.attachments) ? metadata.attachments : [];
+    if (!attachments.length) {
+        revokePendingPreviewUrls(pending);
+        return true;
+    }
+
+    const mediaElements = Array.from(
+        wrapper.querySelectorAll('.chat-rich-media__image, .chat-rich-media__video')
+    );
+    if (mediaElements.length < attachments.length) {
+        revokePendingPreviewUrls(pending);
+        return false;
+    }
+
+    let pendingLoads = 0;
+    let didRevoke = false;
+    const revokeOnce = () => {
+        if (didRevoke) {
+            return;
+        }
+
+        didRevoke = true;
+        revokePendingPreviewUrls(pending);
+    };
+
+    attachments.forEach((attachment, index) => {
+        const nextUrl = resolveAttachmentUrl(attachment);
+        const mediaElement = mediaElements[index];
+        if (!nextUrl || !mediaElement || mediaElement.src === nextUrl) {
+            return;
+        }
+
+        if (mediaElement.tagName === 'IMG') {
+            pendingLoads += 1;
+            const preload = new Image();
+            const swapImage = () => {
+                mediaElement.src = nextUrl;
+                mediaElement.alt = attachment?.originalName || attachment?.original_name || 'Chat media';
+                pendingLoads -= 1;
+                if (pendingLoads === 0) {
+                    revokeOnce();
+                }
+            };
+
+            preload.onload = swapImage;
+            preload.onerror = swapImage;
+            preload.src = nextUrl;
+            return;
+        }
+
+        mediaElement.src = nextUrl;
+        mediaElement.load?.();
+    });
+
+    if (pendingLoads === 0) {
+        revokeOnce();
+    } else {
+        window.setTimeout(revokeOnce, 15000);
+    }
+
+    return true;
 }
 
 // Xử lý reconcile pending customer tin nhắn.
@@ -188,6 +290,7 @@ function reconcilePendingCustomerMessage(message) {
     chatState.pendingCustomerMessage = null;
 
     if (!wrapper || !wrapper.isConnected) {
+        revokePendingPreviewUrls(pending);
         return false;
     }
 
@@ -195,7 +298,7 @@ function reconcilePendingCustomerMessage(message) {
     chatState.renderedMessageIds.add(message.id);
 
     const content = wrapper.querySelector('.chat-msg__content');
-    if (content) {
+    if (content && !updateExistingPendingMedia(wrapper, message, pending)) {
         content.innerHTML = '';
         window.ChatRichMessage.renderMessageContent(content, message);
     }
@@ -336,9 +439,83 @@ function describeSelectedFiles(files = []) {
         : `${files.length} tệp: ${fileNames}`;
 }
 
+function revokeAttachmentPreviewUrls() {
+    chatState.attachmentPreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+    chatState.attachmentPreviewUrls = [];
+}
+
+function renderAttachmentMediaPreview(files, container) {
+    revokeAttachmentPreviewUrls();
+
+    if (!container) return;
+    container.replaceChildren();
+
+    const previewFiles = files.slice(0, 6);
+    previewFiles.forEach((file) => {
+        const item = document.createElement('div');
+        item.className = 'chat-widget__attachments-item';
+        item.title = file.name;
+
+        if (file.type.startsWith('image/') || file.type.startsWith('video/')) {
+            const url = URL.createObjectURL(file);
+            chatState.attachmentPreviewUrls.push(url);
+
+            const media = file.type.startsWith('video/')
+                ? document.createElement('video')
+                : document.createElement('img');
+            media.src = url;
+            media.title = file.name;
+            if (media.tagName === 'IMG') {
+                media.alt = file.name;
+            } else {
+                media.muted = true;
+                media.playsInline = true;
+                media.preload = 'metadata';
+            }
+            item.appendChild(media);
+        } else {
+            const fallback = document.createElement('span');
+            fallback.textContent = file.name.slice(0, 3).toUpperCase();
+            item.appendChild(fallback);
+        }
+
+        container.appendChild(item);
+    });
+
+    if (files.length > previewFiles.length) {
+        const more = document.createElement('div');
+        more.className = 'chat-widget__attachments-item chat-widget__attachments-item--more';
+        more.textContent = `+${files.length - previewFiles.length}`;
+        container.appendChild(more);
+    }
+}
+
+// Tạo metadata media tạm để ảnh/video hiện ngay trong bubble vừa gửi.
+function createOptimisticAttachmentMetadata(files = []) {
+    const previewUrls = [];
+    const attachments = files.map((file, index) => {
+        const mediaUrl = URL.createObjectURL(file);
+        previewUrls.push(mediaUrl);
+
+        return {
+            mediaType: file.type.startsWith('video/') ? 'video' : 'image',
+            mediaUrl,
+            mimeType: file.type || null,
+            originalName: file.name || null,
+            bytes: Number(file.size) || 0,
+            displayOrder: index
+        };
+    });
+
+    return {
+        metadata: attachments.length ? { attachments } : null,
+        previewUrls
+    };
+}
+
 // Cập nhật attachment preview.
 function updateAttachmentPreview() {
-    const { fileInput, attachmentPreview, attachmentPreviewText } = getChatElements();
+    const { fileInput, attachmentPreview, attachmentPreviewMedia, attachmentPreviewText } = getChatElements();
     if (!fileInput || !attachmentPreview || !attachmentPreviewText) {
         return;
     }
@@ -347,11 +524,13 @@ function updateAttachmentPreview() {
     if (!files.length) {
         attachmentPreview.hidden = true;
         attachmentPreviewText.textContent = '';
+        renderAttachmentMediaPreview([], attachmentPreviewMedia);
         return;
     }
 
     attachmentPreview.hidden = false;
     attachmentPreviewText.textContent = describeSelectedFiles(files);
+    renderAttachmentMediaPreview(files, attachmentPreviewMedia);
 }
 
 // Xử lý clear attachment selection.
@@ -414,22 +593,25 @@ async function sendChatMessage(event) {
         return;
     }
 
-    const textOnlyMessage = files.length === 0;
-    if (textOnlyMessage) {
-        const optimisticMessage = appendMessage('customer', message, new Date().toISOString());
-        setPendingCustomerMessage(message, optimisticMessage);
-    }
-
-    input.value = '';
-    sendButton.disabled = true;
-    attachButton.disabled = true;
-    showTyping();
-
     const formData = new FormData();
     formData.append('message', message);
     files.forEach((file) => {
         formData.append('messageMedia', file);
     });
+
+    const optimisticAttachment = createOptimisticAttachmentMetadata(files);
+    const optimisticMessage = appendMessage('customer', message, new Date().toISOString(), {
+        metadata: optimisticAttachment.metadata
+    });
+    setPendingCustomerMessage(message, optimisticMessage, {
+        previewUrls: optimisticAttachment.previewUrls
+    });
+
+    input.value = '';
+    clearAttachmentSelection();
+    sendButton.disabled = true;
+    attachButton.disabled = true;
+    showTyping();
 
     try {
         const response = await fetch('/chat/send', {
@@ -442,7 +624,7 @@ async function sendChatMessage(event) {
         hideTyping();
 
         if (!response.ok || !data.success) {
-            clearPendingCustomerMessage({ removeElement: textOnlyMessage });
+            clearPendingCustomerMessage({ removeElement: true });
             appendMessage('system', data.message || 'Không thể gửi tin nhắn lúc này.', new Date().toISOString());
             sendButton.disabled = false;
             attachButton.disabled = false;
@@ -468,11 +650,10 @@ async function sendChatMessage(event) {
             appendMessageRecord(data.botMessage);
         }
 
-        clearAttachmentSelection();
         syncInputState();
     } catch (error) {
         hideTyping();
-        clearPendingCustomerMessage({ removeElement: textOnlyMessage });
+        clearPendingCustomerMessage({ removeElement: true });
         appendMessage('system', 'Xin lỗi, có lỗi xảy ra. Vui lòng thử lại!', new Date().toISOString());
     }
 
@@ -653,6 +834,7 @@ function initChatWidget() {
     attachmentClearButton?.addEventListener('click', clearAttachmentSelection);
     expandButton?.addEventListener('click', toggleChatExpand);
     document.addEventListener('visibilitychange', syncChatAfterFocus);
+    window.addEventListener('pagehide', revokeAttachmentPreviewUrls, { passive: true });
     window.addEventListener('pagehide', stopChatPolling, { passive: true });
 }
 document.addEventListener('DOMContentLoaded', initChatWidget);
