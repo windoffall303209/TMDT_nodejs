@@ -147,9 +147,8 @@ class Product {
     static hasSearchTerm(words = [], term = '', options = {}) {
         const allowFuzzy = options.allowFuzzy === true;
         return words.some((word) => (
-            (term.length === 1 && word.includes(term)) ||
             word === term ||
-            (term.length >= 3 && word.startsWith(term)) ||
+            (term.length >= 1 && word.startsWith(term)) ||
             (word.length >= 3 && term.startsWith(word)) ||
             (
                 allowFuzzy &&
@@ -193,6 +192,12 @@ class Product {
         const nameWords = this.getSearchWords(nameText);
         const categoryWords = this.getSearchWords(categoryText);
         const secondaryWords = this.getSearchWords(secondaryText);
+        const isSingleCharacterQuery = terms.length === 1 && terms[0].length === 1;
+
+        if (isSingleCharacterQuery && !name.includes(terms[0])) {
+            return 0;
+        }
+
         const searchableWords = [...nameWords, ...categoryWords, ...secondaryWords];
         const allowFuzzyTerms = terms.length > 1;
 

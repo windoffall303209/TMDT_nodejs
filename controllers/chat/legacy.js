@@ -76,7 +76,7 @@ const CHAT_COLOR_RULES = [
 const CHAT_STOP_WORDS = new Set([
     'shop', 'minh', 'toi', 'cho', 'voi', 'can', 'muon', 'tim', 'goi', 'y', 'giup',
     'tu', 'van', 'san', 'pham', 'loai', 'cua', 'nay', 'kia', 'dep', 'mac', 'mua',
-    'mot', 'nhung', 'dang', 'roi', 'nhe', 'a', 'ah', 'ha', 'nua', 'tam', 'khoang',
+    'mot', 'nhung', 'dang', 'roi', 'nhe', 'a', 'ah', 'ha', 'nua', 'them', 'khac', 'tam', 'khoang',
     'duoi', 'tren', 'tu', 'den', 'ban', 'de', 'xuat', 'cac', 'trong', 'gia',
     'neu', 'ko', 'khong', 'du', 'thi', 'co', 'the', 'chiec', 'danh', 'item', 'top'
 ]);
@@ -277,10 +277,61 @@ function buildMediaOnlyFallbackReply(mediaItems = []) {
 
 function buildGreetingChatReply() {
     return {
-        text: 'Xin chào! Mình là trợ lý AI của WIND OF FALL. Bạn muốn xem sản phẩm, hỏi size màu, hay cần hỗ trợ về đơn hàng để mình trả lời nhanh nhé?',
+        text: 'Xin chào! WIND OF FALL có thể hỗ trợ bạn xem sản phẩm, hỏi size màu hoặc theo dõi đơn hàng nhanh nhé?',
         messageType: 'text',
         metadata: null
     };
+}
+
+function getChatMessageMetadata(message) {
+    const metadata = message?.message_metadata;
+    if (!metadata) {
+        return null;
+    }
+
+    if (typeof metadata === 'object') {
+        return metadata;
+    }
+
+    try {
+        return JSON.parse(metadata);
+    } catch (error) {
+        return null;
+    }
+}
+
+function getPreviouslySuggestedProductIds(messages = []) {
+    const ids = new Set();
+    (Array.isArray(messages) ? messages : []).forEach((message) => {
+        const metadata = getChatMessageMetadata(message);
+        if (!Array.isArray(metadata?.products)) {
+            return;
+        }
+
+        metadata.products.forEach((product) => {
+            const id = Number.parseInt(product?.id, 10);
+            if (Number.isInteger(id) && id > 0) {
+                ids.add(id);
+            }
+        });
+    });
+
+    return ids;
+}
+
+function getLastSuggestedProductCard(messages = [], index = 0) {
+    const safeIndex = Math.max(0, Number.parseInt(index, 10) || 0);
+    const list = Array.isArray(messages) ? messages : [];
+
+    for (let cursor = list.length - 1; cursor >= 0; cursor -= 1) {
+        const metadata = getChatMessageMetadata(list[cursor]);
+        const products = Array.isArray(metadata?.products) ? metadata.products : [];
+        if (products[safeIndex]) {
+            return products[safeIndex];
+        }
+    }
+
+    return null;
 }
 
 function isCapabilityQuestion(normalizedMessage) {
@@ -303,7 +354,7 @@ function isCapabilityQuestion(normalizedMessage) {
 
 function buildCapabilityChatReply() {
     return {
-        text: 'Mình là trợ lý AI của WIND OF FALL. Mình có thể gợi ý sản phẩm theo nhu cầu, màu, size, ngân sách; hỗ trợ tìm mẫu gần đúng từ ảnh; và trả lời các thông tin cơ bản như thanh toán COD/VNPay/MoMo hoặc giao hàng toàn quốc. Nếu bạn cần xử lý sâu hơn về đơn hàng hay tình huống đặc biệt thì admin sẽ hỗ trợ thêm.',
+        text: 'WIND OF FALL có thể gợi ý sản phẩm theo nhu cầu, màu, size, ngân sách; hỗ trợ tìm mẫu gần đúng từ ảnh; và trả lời các thông tin cơ bản như thanh toán COD/VNPay/MoMo hoặc giao hàng toàn quốc. Nếu bạn cần xử lý sâu hơn về đơn hàng hay tình huống đặc biệt thì admin sẽ hỗ trợ thêm.',
         messageType: 'text',
         metadata: null
     };
@@ -337,10 +388,27 @@ function shouldUseLocalCatalogReply(normalizedMessage, intent) {
 
     return isSimpleCatalogQuestion(normalizedMessage)
         || includesChatPhrase(normalizedMessage, 'tim')
+        || includesChatPhrase(normalizedMessage, 'them')
         || includesChatPhrase(normalizedMessage, 'goi y')
         || includesChatPhrase(normalizedMessage, 'de xuat')
         || includesChatPhrase(normalizedMessage, 'tu van')
         || includesChatPhrase(normalizedMessage, 'xem');
+}
+
+function isAdditionalProductRequest(normalizedMessage) {
+    if (!normalizedMessage) {
+        return false;
+    }
+
+    const hasAddSignal = includesChatPhrase(normalizedMessage, 'them')
+        || includesChatPhrase(normalizedMessage, 'san pham nua')
+        || includesChatPhrase(normalizedMessage, 'mau nua')
+        || includesChatPhrase(normalizedMessage, 'mon nua')
+        || includesChatPhrase(normalizedMessage, 'khac');
+    const hasProductSignal = CHAT_PRODUCT_KEYWORDS.some((keyword) => includesChatPhrase(normalizedMessage, keyword))
+        || /\b(?:san pham|mau|mon|item|ao|quan|dam|vay|set|look)\b/.test(normalizedMessage);
+
+    return hasAddSignal && hasProductSignal;
 }
 
 function isChatImageSearchIntent(normalizedMessage) {
@@ -638,7 +706,7 @@ function detectChatColors(normalizedMessage) {
 
 function getChatRequestedProductLimit(userMessage, fallbackLimit = 6) {
     const normalizedMessage = normalizeChatText(userMessage);
-    const requestPattern = /\b(?:goi y|de xuat|tu van|chon|liet ke|show|tim|tim kiem|xem|cho)\b/;
+    const requestPattern = /\b(?:goi y|de xuat|tu van|chon|liet ke|show|tim|tim kiem|xem|cho|them|lay)\b/;
     const quantityPattern = /\b(\d{1,2})\s+(?:(?:chiec|cai|bo|mau|item|mon)\s+)?(?:san pham|ao|quan|dam|vay|set|combo|look)\b/;
     const match = normalizedMessage.match(quantityPattern);
 
@@ -887,6 +955,126 @@ function describeChatNeed(intent) {
     }
 
     return parts.length ? parts.join(' ') : 'nhu cầu của bạn';
+}
+
+function extractChatProductSlug(message = '') {
+    const rawMessage = String(message || '');
+    const match = rawMessage.match(/(?:https?:\/\/[^\s/]+|www\.[^\s/]+)?\/products\/([A-Za-z0-9-]+)/i);
+    return match?.[1] ? match[1].replace(/[).,;!?]+$/, '') : '';
+}
+
+function isProductDetailRequest(normalizedMessage) {
+    if (!normalizedMessage) {
+        return false;
+    }
+
+    const hasDetailSignal = includesChatPhrase(normalizedMessage, 'mo ta')
+        || includesChatPhrase(normalizedMessage, 'thong tin')
+        || includesChatPhrase(normalizedMessage, 'chi tiet')
+        || includesChatPhrase(normalizedMessage, 'noi ve')
+        || includesChatPhrase(normalizedMessage, 'gioi thieu')
+        || includesChatPhrase(normalizedMessage, 'san pham dau tien')
+        || includesChatPhrase(normalizedMessage, 'dau tien');
+    const hasExplicitReference = CHAT_PRODUCT_LINK_PATTERN.test(normalizedMessage)
+        || includesChatPhrase(normalizedMessage, 'san pham dau tien')
+        || includesChatPhrase(normalizedMessage, 'san pham nay')
+        || includesChatPhrase(normalizedMessage, 'mau nay')
+        || includesChatPhrase(normalizedMessage, 'cai nay')
+        || includesChatPhrase(normalizedMessage, 'item nay');
+
+    return hasDetailSignal && hasExplicitReference;
+}
+
+function compactChatDescription(value = '', maxLength = 260) {
+    const normalized = String(value || '').replace(/\s+/g, ' ').trim();
+    if (!normalized || normalized.length <= maxLength) {
+        return normalized;
+    }
+
+    return `${normalized.slice(0, maxLength).replace(/\s+\S*$/, '')}...`;
+}
+
+function getProductVariantValues(product, field) {
+    const values = new Set();
+    const aggregateField = field === 'color' ? 'variant_colors' : field === 'size' ? 'variant_sizes' : '';
+    if (aggregateField && product?.[aggregateField]) {
+        String(product[aggregateField]).split(',').forEach((value) => {
+            const normalizedValue = value.trim();
+            if (normalizedValue) {
+                values.add(normalizedValue);
+            }
+        });
+    }
+
+    if (Array.isArray(product?.variants)) {
+        product.variants.forEach((variant) => {
+            const value = String(variant?.[field] || '').trim();
+            if (value) {
+                values.add(value);
+            }
+        });
+    }
+
+    return [...values].slice(0, 8);
+}
+
+function buildProductDetailReply(product) {
+    const finalPrice = Number(product?.final_price || product?.price || 0);
+    const originalPrice = Number(product?.price || 0);
+    const priceText = finalPrice && originalPrice && finalPrice < originalPrice
+        ? `${formatChatCurrency(finalPrice)} sau giảm, giá gốc ${formatChatCurrency(originalPrice)}`
+        : formatChatCurrency(finalPrice || originalPrice);
+    const description = compactChatDescription(product?.description);
+    const colors = getProductVariantValues(product, 'color');
+    const sizes = getProductVariantValues(product, 'size');
+    const stock = Number(product?.stock_quantity || 0);
+    const parts = [
+        `${product.name} thuộc nhóm ${product.category_name || 'sản phẩm thời trang'} của WIND OF FALL.`,
+        description,
+        priceText ? `Giá hiện tại: ${priceText}.` : '',
+        colors.length ? `Màu hiện có: ${colors.join(', ')}.` : '',
+        sizes.length ? `Size hiện có: ${sizes.join(', ')}.` : '',
+        stock > 0 ? `Tồn kho hiện tại còn ${stock} sản phẩm.` : 'Sản phẩm này hiện chưa thấy tồn kho khả dụng.'
+    ].filter(Boolean);
+
+    return {
+        text: parts.join(' '),
+        messageType: 'text',
+        metadata: null
+    };
+}
+
+async function buildProductDetailReplyFromMessage(message, previousMessages = []) {
+    const normalizedMessage = normalizeChatText(message);
+    if (!isProductDetailRequest(normalizedMessage)) {
+        return null;
+    }
+
+    let slug = extractChatProductSlug(message);
+    let product = null;
+
+    if (slug && typeof Product.findBySlug === 'function') {
+        product = await Product.findBySlug(slug, { incrementView: false }).catch(() => null);
+    }
+
+    if (!product && !slug && includesChatPhrase(normalizedMessage, 'dau tien')) {
+        const productCard = getLastSuggestedProductCard(previousMessages, 0);
+        const productId = Number.parseInt(productCard?.id, 10);
+        if (Number.isInteger(productId) && productId > 0) {
+            const products = await Product.getByIds([productId]).catch(() => []);
+            product = products[0] || null;
+        }
+    }
+
+    if (!product) {
+        return {
+            text: 'Mình chưa xác định được sản phẩm bạn muốn mô tả. Bạn gửi lại link sản phẩm hoặc bấm vào một card sản phẩm cụ thể giúp mình nhé.',
+            messageType: 'text',
+            metadata: null
+        };
+    }
+
+    return buildProductDetailReply(product);
 }
 
 function buildLocalCatalogReply(intent, suggestedProducts = []) {
@@ -1336,7 +1524,11 @@ function selectChatSuggestedProducts(products = [], intent, options = {}) {
     const ignoreBudget = Boolean(options.ignoreBudget);
     const relaxColorFilter = Boolean(options.relaxColorFilter);
     const usePresetScores = Boolean(options.usePresetScores);
+    const excludeProductIds = options.excludeProductIds instanceof Set
+        ? options.excludeProductIds
+        : new Set(Array.isArray(options.excludeProductIds) ? options.excludeProductIds : []);
     const rankedProducts = dedupeChatProducts(products)
+        .filter((product) => !excludeProductIds.has(Number.parseInt(product?.id, 10)))
         .map((product) => {
             if (usePresetScores && typeof product.chat_score === 'number') {
                 return {
@@ -1408,6 +1600,7 @@ function selectChatSuggestedProducts(products = [], intent, options = {}) {
 async function getChatSuggestedProducts(userMessage, messages = [], options = {}) {
     const intent = buildChatIntentFromContext(messages, userMessage);
     const desiredLimit = Number.parseInt(options.limit, 10) || 6;
+    const excludeProductIds = options.excludeProductIds || new Set();
 
     if (!shouldChatSuggestProducts(intent) || !canChatDirectlySuggestProducts(intent)) {
         return [];
@@ -1415,7 +1608,7 @@ async function getChatSuggestedProducts(userMessage, messages = [], options = {}
 
     try {
         const candidates = await collectChatCandidateProducts(intent, userMessage, { limit: desiredLimit });
-        return selectChatSuggestedProducts(candidates, intent, { limit: desiredLimit });
+        return selectChatSuggestedProducts(candidates, intent, { limit: desiredLimit, excludeProductIds });
     } catch (error) {
         console.error('Chat suggestion lookup error:', error);
         return [];
@@ -1429,6 +1622,8 @@ async function buildEnhancedChatSystemPrompt(messages, userMessage, flowOptions 
         ? Boolean(flowOptions.allowImageProductSuggestions)
         : true;
     const intent = buildChatIntentFromContext(messages, userMessage, { forceImageGuided });
+    const additionalRequest = isAdditionalProductRequest(intent.normalizedMessage);
+    const excludeProductIds = additionalRequest ? getPreviouslySuggestedProductIds(messages) : new Set();
     const desiredProductLimit = getChatRequestedProductLimit(userMessage, forceImageGuided ? 4 : 6);
     const hasSupportIntent = CHAT_SUPPORT_KEYWORDS.some((keyword) => includesChatPhrase(intent.normalizedMessage, keyword));
     const looksLikeImageProductSearch = !normalizeMessage(userMessage)
@@ -1473,10 +1668,10 @@ async function buildEnhancedChatSystemPrompt(messages, userMessage, flowOptions 
             return { products: [], knowledge: [] };
         });
     const ragSuggestedProducts = canDirectlySuggest
-        ? selectChatSuggestedProducts(ragContext.products || [], intent, { limit: desiredProductLimit })
+        ? selectChatSuggestedProducts(ragContext.products || [], intent, { limit: desiredProductLimit, excludeProductIds })
         : [];
     const searchSuggestedProducts = canDirectlySuggest
-        ? await getChatSuggestedProducts(userMessage, messages, { limit: desiredProductLimit })
+        ? await getChatSuggestedProducts(userMessage, messages, { limit: desiredProductLimit, excludeProductIds })
         : [];
 
     if (intent.imageGuided && canDirectlySuggest) {
@@ -1484,7 +1679,8 @@ async function buildEnhancedChatSystemPrompt(messages, userMessage, flowOptions 
             imageReferenceProducts = selectChatSuggestedProducts(visualFromEmbeddings, intent, {
                 limit: 2,
                 ignoreBudget: true,
-                skipFocusTermFilter: true
+                skipFocusTermFilter: true,
+                excludeProductIds
             });
         } else {
             const imageCandidateProducts = dedupeChatProducts([
@@ -1494,7 +1690,8 @@ async function buildEnhancedChatSystemPrompt(messages, userMessage, flowOptions 
 
             imageReferenceProducts = selectChatSuggestedProducts(imageCandidateProducts, intent, {
                 limit: 2,
-                ignoreBudget: true
+                ignoreBudget: true,
+                excludeProductIds
             });
         }
     }
@@ -1518,7 +1715,8 @@ async function buildEnhancedChatSystemPrompt(messages, userMessage, flowOptions 
             ignoreBudget: true,
             usePresetScores: true,
             relaxColorFilter: true,
-            skipFocusTermFilter: true
+            skipFocusTermFilter: true,
+            excludeProductIds
         });
     } else if (intent.imageGuided) {
         suggestedProducts = dedupeChatProducts([
@@ -1533,7 +1731,7 @@ async function buildEnhancedChatSystemPrompt(messages, userMessage, flowOptions 
                 ...searchSuggestedProducts
             ]),
             intent,
-            { limit: desiredProductLimit }
+            { limit: desiredProductLimit, excludeProductIds }
         );
     }
     const shouldAskClarifyingQuestion = hasProductIntent && !canDirectlySuggest;
@@ -2171,14 +2369,18 @@ exports.sendMessage = async (req, res) => {
             ? buildCapabilityChatReply()
             : null;
         const localInstantReply = localGreetingReply || localCapabilityReply;
-        const aiContext = localInstantReply
+        const localProductDetailReply = (!uploadedMedia.length && !localInstantReply)
+            ? await buildProductDetailReplyFromMessage(message, previousMessages)
+            : null;
+        const aiContext = (localInstantReply || localProductDetailReply)
             ? null
             : await buildCustomerAiContext(message, uploadedMedia);
-        const quickReply = localInstantReply
+        const quickReply = (localInstantReply || localProductDetailReply)
             ? null
             : buildChatImageSearchQuickReply(normalizedMessage, uploadedMedia);
         const localCatalogReply = (!uploadedMedia.length
             && !localInstantReply
+            && !localProductDetailReply
             && !quickReply
             && aiContext?.effectiveMessage)
             ? await (async () => {
@@ -2188,8 +2390,12 @@ exports.sendMessage = async (req, res) => {
                 }
 
                 const desiredLimit = getChatRequestedProductLimit(aiContext.effectiveMessage, 6);
+                const excludeProductIds = isAdditionalProductRequest(normalizedMessage)
+                    ? getPreviouslySuggestedProductIds(previousMessages)
+                    : new Set();
                 const catalogProducts = await getChatSuggestedProducts(aiContext.effectiveMessage, previousMessages, {
-                    limit: desiredLimit
+                    limit: desiredLimit,
+                    excludeProductIds
                 }).catch((error) => {
                     console.error('Local catalog reply lookup error:', error);
                     return [];
@@ -2197,7 +2403,7 @@ exports.sendMessage = async (req, res) => {
                 let suggestedProducts = selectChatSuggestedProducts(
                     dedupeChatProducts(catalogProducts),
                     localIntent,
-                    { limit: desiredLimit }
+                    { limit: desiredLimit, excludeProductIds }
                 );
 
                 if (suggestedProducts.length < desiredLimit) {
@@ -2215,14 +2421,14 @@ exports.sendMessage = async (req, res) => {
                             ...(ragContext.products || [])
                         ]),
                         localIntent,
-                        { limit: desiredLimit }
+                        { limit: desiredLimit, excludeProductIds }
                     );
                 }
 
                 return buildLocalCatalogReply(localIntent, suggestedProducts);
             })()
             : null;
-        const aiResponse = localInstantReply || quickReply || localCatalogReply || (aiContext && aiContext.effectiveMessage
+        const aiResponse = localInstantReply || localProductDetailReply || quickReply || localCatalogReply || (aiContext && aiContext.effectiveMessage
             ? await callEnhancedAI(previousMessages, aiContext.effectiveMessage, {
                 attachments: uploadedMedia,
                 imageAnalysis: aiContext.imageAnalysis,

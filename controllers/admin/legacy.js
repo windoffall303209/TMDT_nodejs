@@ -387,25 +387,41 @@ async function attachVoucherAssignments(vouchers) {
 
 // Lấy announcement recipients.
 async function getAnnouncementRecipients() {
-    const subscribers = await Newsletter.getActiveSubscribers();
+    const [subscribers, marketingUsers] = await Promise.all([
+        Newsletter.getActiveSubscribers(),
+        User.getMarketingList()
+    ]);
     const seenEmails = new Set();
+    const recipients = [];
 
-    return subscribers.reduce((list, subscriber) => {
-        const email = String(subscriber?.email || '').trim().toLowerCase();
+    const addRecipient = (emailValue, nameValue) => {
+        const email = String(emailValue || '').trim().toLowerCase();
         if (!email || seenEmails.has(email)) {
-            return list;
+            return;
         }
 
         seenEmails.add(email);
         const fallbackName = email.split('@')[0] || 'bạn';
 
-        list.push({
+        recipients.push({
             email,
-            full_name: String(subscriber?.user_name || fallbackName).trim() || 'bạn'
+            full_name: String(nameValue || fallbackName).trim() || 'bạn'
         });
+    };
 
-        return list;
-    }, []);
+    subscribers.forEach((subscriber) => {
+        addRecipient(subscriber?.email, subscriber?.user_name);
+    });
+
+    marketingUsers.forEach((user) => {
+        addRecipient(user?.email, user?.full_name);
+    });
+
+    return recipients;
+}
+
+async function countAnnouncementRecipients() {
+    return (await getAnnouncementRecipients()).length;
 }
 
 // Tạo dữ liệu mã giảm giá announcement campaign.
@@ -1456,7 +1472,7 @@ exports.getSales = async (req, res) => {
                 Sale.findAll(searchQuery ? { search: searchQuery } : {}),
                 Sale.findAll({}),
                 Product.findAll({ limit: ADMIN_PRODUCT_SELECTION_LIMIT, offset: 0, sort_by: 'name', sort_order: 'ASC' }),
-                Newsletter.countActive()
+                countAnnouncementRecipients()
             ]);
             sales = await attachSaleAssignments(salesData, productsData.length);
             const allSales = await attachSaleAssignments(allSalesData, productsData.length);
@@ -1792,7 +1808,7 @@ exports.getVouchers = async (req, res) => {
             const [voucherData, productsData, totalSubscribers] = await Promise.all([
                 Voucher.findAll(searchQuery ? { search: searchQuery } : {}),
                 Product.findAll({ limit: ADMIN_PRODUCT_SELECTION_LIMIT, offset: 0, sort_by: 'name', sort_order: 'ASC' }),
-                Newsletter.countActive()
+                countAnnouncementRecipients()
             ]);
             vouchers = await attachVoucherAssignments(voucherData);
             products = productsData;

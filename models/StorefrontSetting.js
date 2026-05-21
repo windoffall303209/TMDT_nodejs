@@ -145,7 +145,7 @@ const SETTING_DEFINITIONS = {
     chat_enabled: { group: 'chat', type: 'boolean', label: 'Bật chat widget', defaultValue: true },
     chat_title: { group: 'chat', type: 'string', label: 'Tiêu đề chat', defaultValue: 'WIND OF FALL', maxLength: 120 },
     chat_bot_name: { group: 'chat', type: 'string', label: 'Tên bot/thương hiệu trong chat', defaultValue: 'WIND OF FALL', maxLength: 120 },
-    chat_greeting: { group: 'chat', type: 'string', label: 'Lời chào đầu tiên', defaultValue: 'Xin chào! Tôi là trợ lý AI của WIND OF FALL.', maxLength: 260 },
+    chat_greeting: { group: 'chat', type: 'string', label: 'Lời chào đầu tiên', defaultValue: 'Xin chào! WIND OF FALL có thể hỗ trợ bạn tìm sản phẩm, hỏi size màu hoặc theo dõi đơn hàng.', maxLength: 260 },
     chat_prompt_text: { group: 'chat', type: 'string', label: 'Câu hỏi gợi mở', defaultValue: 'Bạn cần hỗ trợ gì?', maxLength: 180 },
     chat_position: { group: 'chat', type: 'select', label: 'Vị trí nút chat', defaultValue: 'right', options: CHAT_POSITION_OPTIONS },
 
